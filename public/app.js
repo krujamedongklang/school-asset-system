@@ -386,6 +386,70 @@ async function deleteMaterial(id) {
   loadMaterials();
 }
 
+// ==================== สำรอง & กู้คืนข้อมูล (Backup & Restore) ====================
+async function exportBackup() {
+  try {
+    const res = await fetch('/api/backup');
+    const data = await res.json();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const dateStr = new Date().toISOString().split('T')[0];
+    a.href = url;
+    a.download = `สำรองข้อมูลพัสดุ_${dateStr}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    alert('เกิดข้อผิดพลาดในการดาวน์โหลดข้อมูลสำรอง');
+  }
+}
+
+async function importBackup() {
+  const fileInput = document.getElementById('restore-file-input');
+  if (!fileInput.files || fileInput.files.length === 0) {
+    alert('กรุณาเลือกไฟล์ .json ที่ต้องการกู้คืนข้อมูล');
+    return;
+  }
+
+  const file = fileInput.files[0];
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.assets || !data.materials) {
+        alert('ไฟล์สำรองไม่ถูกต้อง (ไม่พบข้อมูล assets หรือ materials)');
+        return;
+      }
+
+      if (!confirm('ยืนยันที่จะกู้คืนข้อมูลหรือไม่? ข้อมูลปัจจุบันในระบบจะถูกแทนที่ด้วยข้อมูลจากไฟล์นี้')) {
+        return;
+      }
+
+      const res = await fetch('/api/restore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      const resData = await res.json();
+
+      if (res.ok) {
+        alert(resData.message || 'กู้คืนข้อมูลสำเร็จ');
+        closeModal('restoreModal');
+        fileInput.value = '';
+        loadAssets();
+        loadMaterials();
+      } else {
+        alert('เกิดข้อผิดพลาด: ' + resData.error);
+      }
+    } catch (err) {
+      alert('ไม่สามารถอ่านไฟล์ได้ กรุณาตรวจสอบว่าเป็นไฟล์ JSON ที่ถูกต้อง');
+    }
+  };
+  reader.readAsText(file);
+}
+
 // ==================== Modal Helpers ====================
 function openModal(id) {
   const el = document.getElementById(id);

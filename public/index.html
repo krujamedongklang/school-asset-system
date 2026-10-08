@@ -100,6 +100,12 @@
           <button onclick="openModal('orgModal')" class="px-3 py-2 bg-indigo-950 hover:bg-indigo-800 rounded-lg text-xs font-semibold transition border border-indigo-700">
             ⚙️ ตั้งค่าหน่วยงาน
           </button>
+          <button onclick="exportBackup()" class="px-3 py-2 bg-indigo-950 hover:bg-indigo-800 rounded-lg text-xs font-semibold transition border border-indigo-700 flex items-center gap-1" title="ดาวน์โหลดไฟล์สำรองข้อมูล">
+            📥 สำรองข้อมูล
+          </button>
+          <button onclick="openModal('restoreModal')" class="px-3 py-2 bg-indigo-950 hover:bg-indigo-800 rounded-lg text-xs font-semibold transition border border-indigo-700 flex items-center gap-1" title="นำเข้าข้อมูลจากไฟล์สำรอง">
+            📤 นำเข้าข้อมูล
+          </button>
         </div>
       </div>
     </nav>
@@ -529,6 +535,22 @@
           <button type="submit" class="px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold shadow">บันทึกการตั้งค่า</button>
         </div>
       </form>
+    </div>
+  <!-- MODAL: นำเข้าข้อมูลสำรอง -->
+  <div id="restoreModal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4 z-50 no-print">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+      <div class="flex justify-between items-center mb-4 border-b pb-2">
+        <h3 class="text-lg font-bold text-slate-800">📤 นำเข้าข้อมูลจากไฟล์สำรอง (.json)</h3>
+        <button onclick="closeModal('restoreModal')" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+      </div>
+      <p class="text-xs text-slate-600 mb-4">
+        เลือกไฟล์สำรองข้อมูลที่ดาวน์โหลดไว้ ข้อมูลเดิมในระบบจะถูกแทนที่ด้วยข้อมูลจากไฟล์นี้
+      </p>
+      <input type="file" id="restore-file-input" accept=".json" class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 border p-2 rounded mb-4">
+      <div class="flex justify-end gap-2">
+        <button type="button" onclick="closeModal('restoreModal')" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 font-medium text-xs">ยกเลิก</button>
+        <button type="button" onclick="importBackup()" class="px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold text-xs shadow">เริ่มกู้คืนข้อมูล</button>
+      </div>
     </div>
   </div>
 
