@@ -148,6 +148,8 @@ app.delete('/api/materials/:id', (req, res) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json({ message: 'ลบรายการสำเร็จ', deleted: this.changes });
   });
+});
+
 // ส่งออกข้อมูลสำรอง (Backup All Data)
 app.get('/api/backup', (req, res) => {
   db.all('SELECT * FROM assets', [], (err, assets) => {
