@@ -21,6 +21,16 @@
       }
     }
 
+    /* Mobile view optimizations */
+    @media screen and (max-width: 640px) {
+      input, select, textarea {
+        font-size: 14px !important;
+      }
+      .touch-scroll {
+        -webkit-overflow-scrolling: touch;
+      }
+    }
+
     /* Print view only (A4 Landscape official form) */
     @media print {
       .no-print, .screen-only {
@@ -90,25 +100,25 @@
   <div class="screen-only">
 
     <!-- Navigation Bar (แดง-เหลือง สีประจำโรงเรียนดงกลาง) -->
-    <nav class="bg-gradient-to-r from-red-950 via-red-900 to-rose-950 text-white p-4 shadow-xl border-b-2 border-amber-400 no-print">
-      <div class="container mx-auto flex flex-wrap justify-between items-center gap-3">
-        <h1 class="text-xl font-bold flex items-center gap-3 tracking-wide">
-          <img src="logo.jpg" alt="ตราโรงเรียนดงกลาง" class="w-11 h-11 object-contain rounded-xl shadow-md bg-white p-0.5 border border-amber-300" onerror="this.outerHTML='<span class=\'p-2 bg-gradient-to-br from-amber-400 to-amber-500 text-red-950 rounded-xl shadow-md text-lg leading-none\'>🏫</span>'">
+    <nav class="bg-gradient-to-r from-red-950 via-red-900 to-rose-950 text-white p-3 sm:p-4 shadow-xl border-b-2 border-amber-400 no-print">
+      <div class="container mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5 sm:gap-3">
+        <h1 class="text-lg sm:text-xl font-bold flex items-center gap-2.5 sm:gap-3 tracking-wide">
+          <img src="logo.jpg" alt="ตราโรงเรียนดงกลาง" class="w-10 h-10 sm:w-11 sm:h-11 object-contain rounded-xl shadow-md bg-white p-0.5 border border-amber-300 shrink-0" onerror="this.outerHTML='<span class=\'p-2 bg-gradient-to-br from-amber-400 to-amber-500 text-red-950 rounded-xl shadow-md text-base leading-none\'>🏫</span>'">
           <div class="flex flex-col">
-            <span class="text-white text-base sm:text-lg font-bold leading-tight drop-shadow-sm">ระบบงานพัสดุและครุภัณฑ์สถานศึกษา</span>
-            <span class="text-amber-300/90 text-xs font-medium tracking-wide">โรงเรียนดงกลาง (เอกสารหมายเลข ๓)</span>
+            <span class="text-white text-sm sm:text-lg font-bold leading-tight drop-shadow-sm">ระบบงานพัสดุและครุภัณฑ์สถานศึกษา</span>
+            <span class="text-amber-300/90 text-[11px] sm:text-xs font-medium tracking-wide">โรงเรียนดงกลาง (เอกสารหมายเลข ๓)</span>
           </div>
         </h1>
-        <div class="flex flex-wrap items-center gap-2">
-          <button onclick="switchTab('asset')" id="tab-asset-btn" class="px-4 py-2 bg-gradient-to-r from-amber-400 via-amber-400 to-amber-500 text-red-950 font-bold rounded-xl shadow-md hover:from-amber-300 hover:to-amber-400 transition">
+        <div class="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto justify-between sm:justify-start">
+          <button onclick="switchTab('asset')" id="tab-asset-btn" class="flex-1 sm:flex-initial text-center justify-center px-3 py-2 sm:px-4 sm:py-2 bg-gradient-to-r from-amber-400 via-amber-400 to-amber-500 text-red-950 font-bold rounded-xl shadow-md hover:from-amber-300 hover:to-amber-400 transition text-xs sm:text-sm whitespace-nowrap">
             ทะเบียนคุมครุภัณฑ์
           </button>
-          <button onclick="switchTab('material')" id="tab-material-btn" class="px-4 py-2 bg-red-950/70 hover:bg-red-800/80 text-amber-100 font-medium rounded-xl border border-amber-400/20 transition">
+          <button onclick="switchTab('material')" id="tab-material-btn" class="flex-1 sm:flex-initial text-center justify-center px-3 py-2 sm:px-4 sm:py-2 bg-red-950/70 hover:bg-red-800/80 text-amber-100 font-medium rounded-xl border border-amber-400/20 transition text-xs sm:text-sm whitespace-nowrap">
             บัญชีคุมวัสดุ
           </button>
           <!-- เมนูจัดการระบบ (ซ่อนรวม: ตั้งค่าหน่วยงาน, สำรองข้อมูล, นำเข้าข้อมูล) -->
-          <div class="relative inline-block text-left" id="system-menu-container">
-            <button type="button" onclick="toggleSystemMenu()" id="system-menu-btn" class="px-3.5 py-2 bg-red-950/70 hover:bg-red-800/80 rounded-xl text-xs font-semibold transition border border-amber-400/30 text-amber-200 flex items-center gap-1.5 shadow-xs cursor-pointer focus:outline-none">
+          <div class="relative inline-block text-left shrink-0" id="system-menu-container">
+            <button type="button" onclick="toggleSystemMenu()" id="system-menu-btn" class="px-2.5 py-2 sm:px-3.5 sm:py-2 bg-red-950/70 hover:bg-red-800/80 rounded-xl text-xs font-semibold transition border border-amber-400/30 text-amber-200 flex items-center gap-1 shadow-xs cursor-pointer focus:outline-none whitespace-nowrap">
               <span>⚙️ จัดการระบบ</span>
               <svg id="system-menu-arrow" class="w-3.5 h-3.5 text-amber-300 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
@@ -146,87 +156,94 @@
       </div>
     </nav>
 
-    <div class="container mx-auto p-4 sm:p-6">
+    <div class="container mx-auto p-2.5 sm:p-4 md:p-6">
 
       <!-- === TAB 1 SCREEN: ทะเบียนคุมทรัพย์สิน (ครุภัณฑ์) === -->
       <div id="tab-asset-screen" class="block">
-        <div class="flex flex-wrap justify-between items-center gap-3 mb-4 no-print">
+        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2.5 sm:gap-3 mb-3 sm:mb-4 no-print">
           <div>
-            <div class="flex items-center gap-3">
-              <h2 class="text-2xl font-bold text-red-950 flex items-center gap-2">
-                <span class="w-2.5 h-7 bg-gradient-to-b from-red-700 via-rose-600 to-amber-500 rounded-full inline-block shadow-xs"></span>
+            <div class="flex items-center gap-2 sm:gap-3">
+              <h2 class="text-xl sm:text-2xl font-bold text-red-950 flex items-center gap-2">
+                <span class="w-2.5 h-6 sm:h-7 bg-gradient-to-b from-red-700 via-rose-600 to-amber-500 rounded-full inline-block shadow-xs"></span>
                 <span>ทะเบียนคุมทรัพย์สิน (ครุภัณฑ์)</span>
               </h2>
-              <span id="asset-selected-badge" class="hidden text-xs bg-amber-100 text-amber-900 font-bold px-3 py-1 rounded-full border border-amber-300 shadow-xs">
+              <span id="asset-selected-badge" class="hidden text-[11px] sm:text-xs bg-amber-100 text-amber-900 font-bold px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full border border-amber-300 shadow-xs">
                 เลือกแล้ว <span id="asset-selected-count">0</span> รายการ
               </span>
             </div>
           </div>
-          <div class="flex flex-wrap items-center gap-2">
+          <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <!-- ตัวเลือกรูปแบบการพิมพ์ -->
-            <select id="asset-print-mode" onchange="onAssetPrintModeChange()" class="text-xs border border-amber-200 rounded-xl px-3 py-2 bg-white font-semibold text-slate-700 shadow-sm cursor-pointer focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
-              <option value="single-pages">📄 แยกพิมพ์แผ่นละ 1 รายการ (มาตรฐาน)</option>
+            <select id="asset-print-mode" onchange="onAssetPrintModeChange()" class="flex-1 sm:flex-initial text-xs border border-amber-200 rounded-xl px-2.5 py-2 sm:px-3 sm:py-2 bg-white font-semibold text-slate-700 shadow-xs cursor-pointer focus:ring-2 focus:ring-amber-500">
+              <option value="single-pages">📄 แยกพิมพ์แผ่นละ 1 รายการ</option>
               <option value="combined-table">📑 รวมพิมพ์ในตารางเดียว</option>
             </select>
 
-            <button onclick="openAddAssetModal()" class="bg-gradient-to-r from-red-700 to-red-800 hover:from-red-800 hover:to-red-900 text-white px-4 py-2 rounded-xl font-semibold shadow-sm transition flex items-center gap-1.5 text-xs sm:text-sm border border-red-900/30">
-              <span>+</span> เพิ่มครุภัณฑ์ใหม่
+            <button onclick="openAddAssetModal()" class="flex-1 sm:flex-initial justify-center bg-gradient-to-r from-red-700 to-red-800 hover:from-red-800 hover:to-red-900 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-xl font-semibold shadow-xs transition flex items-center gap-1.5 text-xs sm:text-sm border border-red-900/30 whitespace-nowrap">
+              <span>+</span> <span>เพิ่มครุภัณฑ์ใหม่</span>
             </button>
-            <button onclick="printSelectedAssets()" id="btn-print-assets" class="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold px-4 py-2 rounded-xl shadow-sm transition flex items-center gap-1.5 text-xs sm:text-sm border border-amber-600/30">
+            <button onclick="printSelectedAssets()" id="btn-print-assets" class="flex-1 sm:flex-initial justify-center bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold px-3 py-2 sm:px-4 sm:py-2 rounded-xl shadow-xs transition flex items-center gap-1.5 text-xs sm:text-sm border border-amber-600/30 whitespace-nowrap">
               <span>🖨️</span> <span id="btn-print-text">พิมพ์รายการที่เลือก</span>
             </button>
           </div>
         </div>
 
         <!-- แถบกรองปีงบประมาณ / เดือน / ค้นหาครุภัณฑ์ -->
-        <div class="mb-4 bg-white p-3.5 sm:p-4 rounded-2xl shadow-xs border border-amber-200/80 no-print space-y-3">
-          <div class="flex flex-wrap items-center justify-between gap-3">
-            <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-              <div class="flex items-center gap-1.5 text-xs font-bold text-red-950">
-                <span class="p-1 bg-amber-100 text-amber-900 rounded-lg text-sm leading-none">📅</span>
-                <span>ปีงบประมาณ:</span>
+        <div class="mb-3 sm:mb-4 bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-xs border border-amber-200/80 no-print space-y-2.5 sm:space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
+            <div class="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+              <div class="col-span-1 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-1.5">
+                <span class="text-[11px] sm:text-xs font-bold text-red-950 flex items-center gap-1">
+                  <span class="p-1 bg-amber-100 text-amber-900 rounded-md text-xs leading-none">📅</span>
+                  <span>ปีงบประมาณ:</span>
+                </span>
+                <select id="asset-fiscal-year-select" onchange="onAssetFilterChange()" class="w-full sm:w-auto text-xs font-bold border border-amber-300 rounded-xl px-2.5 py-1.5 bg-amber-50/50 text-red-950 shadow-2xs focus:ring-2 focus:ring-amber-500 cursor-pointer">
+                  <!-- Dynamically populated -->
+                </select>
               </div>
-              <select id="asset-fiscal-year-select" onchange="onAssetFilterChange()" class="text-xs font-bold border border-amber-300 rounded-xl px-3 py-1.5 bg-amber-50/50 text-red-950 shadow-2xs focus:ring-2 focus:ring-amber-500 cursor-pointer">
-                <!-- Dynamically populated -->
-              </select>
 
-              <div class="flex items-center gap-1.5 text-xs font-bold text-red-950 sm:ml-2">
-                <span>เดือน:</span>
+              <div class="col-span-1 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-1.5">
+                <span class="text-[11px] sm:text-xs font-bold text-red-950">
+                  <span>เดือน:</span>
+                </span>
+                <select id="asset-month-select" onchange="onAssetFilterChange()" class="w-full sm:w-auto text-xs font-semibold border border-amber-300 rounded-xl px-2.5 py-1.5 bg-amber-50/50 text-red-950 shadow-2xs focus:ring-2 focus:ring-amber-500 cursor-pointer">
+                  <option value="all">ทุกเดือน (ทั้งปีงบ)</option>
+                  <option value="10">ตุลาคม (ต.ค.)</option>
+                  <option value="11">พฤศจิกายน (พ.ย.)</option>
+                  <option value="12">ธันวาคม (ธ.ค.)</option>
+                  <option value="1">มกราคม (ม.ค.)</option>
+                  <option value="2">กุมภาพันธ์ (ก.พ.)</option>
+                  <option value="3">มีนาคม (มี.ค.)</option>
+                  <option value="4">เมษายน (เม.ย.)</option>
+                  <option value="5">พฤษภาคม (พ.ค.)</option>
+                  <option value="6">มิถุนายน (มิ.ย.)</option>
+                  <option value="7">กรกฎาคม (ก.ค.)</option>
+                  <option value="8">สิงหาคม (ส.ค.)</option>
+                  <option value="9">กันยายน (ก.ย.)</option>
+                </select>
               </div>
-              <select id="asset-month-select" onchange="onAssetFilterChange()" class="text-xs font-semibold border border-amber-300 rounded-xl px-3 py-1.5 bg-amber-50/50 text-red-950 shadow-2xs focus:ring-2 focus:ring-amber-500 cursor-pointer">
-                <option value="all">ทุกเดือน (ทั้งปีงบ)</option>
-                <option value="10">ตุลาคม (ต.ค.)</option>
-                <option value="11">พฤศจิกายน (พ.ย.)</option>
-                <option value="12">ธันวาคม (ธ.ค.)</option>
-                <option value="1">มกราคม (ม.ค.)</option>
-                <option value="2">กุมภาพันธ์ (ก.พ.)</option>
-                <option value="3">มีนาคม (มี.ค.)</option>
-                <option value="4">เมษายน (เม.ย.)</option>
-                <option value="5">พฤษภาคม (พ.ค.)</option>
-                <option value="6">มิถุนายน (มิ.ย.)</option>
-                <option value="7">กรกฎาคม (ก.ค.)</option>
-                <option value="8">สิงหาคม (ส.ค.)</option>
-                <option value="9">กันยายน (ก.ย.)</option>
-              </select>
             </div>
 
             <!-- สรุปจำนวนรายการที่พบ -->
-            <div class="text-xs text-slate-500 font-medium" id="asset-search-result-count"></div>
+            <div class="text-[11px] sm:text-xs text-slate-500 font-medium self-end sm:self-auto" id="asset-search-result-count"></div>
           </div>
 
           <!-- แถบค้นหาข้อความ Real-time -->
           <div class="relative w-full">
-            <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-amber-600/70">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-amber-600/70">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
               </svg>
             </span>
-            <input type="text" id="asset-search-input" oninput="onAssetSearch(this.value)" placeholder="ค้นหาครุภัณฑ์ (ชื่อ, รหัส, สถานที่, ผู้รับผิดชอบ...)" class="w-full pl-10 pr-9 py-2 bg-slate-50/60 hover:bg-white focus:bg-white border border-slate-200 focus:border-amber-400 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 shadow-2xs placeholder-slate-400 text-slate-800 transition">
+            <input type="text" id="asset-search-input" oninput="onAssetSearch(this.value)" placeholder="ค้นหาครุภัณฑ์ (ชื่อ, รหัส, สถานที่, ผู้รับผิดชอบ...)" class="w-full pl-9 pr-8 py-2 bg-slate-50/60 hover:bg-white focus:bg-white border border-slate-200 focus:border-amber-400 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 shadow-2xs placeholder-slate-400 text-slate-800 transition">
             <button type="button" id="asset-search-clear-btn" onclick="clearAssetSearch()" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 text-sm cursor-pointer" title="ล้างการค้นหา">&times;</button>
           </div>
         </div>
 
-        <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-amber-100 overflow-x-auto">
+        <div class="bg-white p-3 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl shadow-xs border border-amber-100 overflow-x-auto touch-scroll">
+          <div class="block sm:hidden text-[10px] text-amber-800/80 mb-2 font-medium text-right">
+            👉 เลื่อนตารางไปทางขวาเพื่อดูข้อมูลทั้งหมด
+          </div>
           <table class="w-full text-left border-collapse text-xs">
             <thead>
               <tr class="bg-gradient-to-r from-red-950 via-red-900 to-rose-950 text-amber-100 border-b border-amber-400/40">
@@ -258,80 +275,87 @@
 
       <!-- === TAB 2 SCREEN: บัญชีคุมวัสดุ === -->
       <div id="tab-material-screen" class="hidden">
-        <div class="flex flex-wrap justify-between items-center gap-3 mb-4 no-print">
+        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2.5 sm:gap-3 mb-3 sm:mb-4 no-print">
           <div>
-            <div class="flex items-center gap-3">
-              <h2 class="text-2xl font-bold text-red-950 flex items-center gap-2">
-                <span class="w-2.5 h-7 bg-gradient-to-b from-amber-500 via-amber-600 to-red-700 rounded-full inline-block shadow-xs"></span>
+            <div class="flex items-center gap-2 sm:gap-3">
+              <h2 class="text-xl sm:text-2xl font-bold text-red-950 flex items-center gap-2">
+                <span class="w-2.5 h-6 sm:h-7 bg-gradient-to-b from-amber-500 via-amber-600 to-red-700 rounded-full inline-block shadow-xs"></span>
                 <span>บัญชีคุมวัสดุ</span>
               </h2>
-              <span id="material-selected-badge" class="hidden text-xs bg-amber-100 text-amber-900 font-bold px-3 py-1 rounded-full border border-amber-300 shadow-xs">
+              <span id="material-selected-badge" class="hidden text-[11px] sm:text-xs bg-amber-100 text-amber-900 font-bold px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full border border-amber-300 shadow-xs">
                 เลือกแล้ว <span id="material-selected-count">0</span> รายการ
               </span>
             </div>
           </div>
-          <div class="flex flex-wrap items-center gap-2">
-            <button onclick="openModal('materialMetaModal')" class="bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow-sm transition flex items-center gap-1 border border-amber-800/30">
-              📝 ข้อมูลหัวบัตรวัสดุ
+          <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <button onclick="openModal('materialMetaModal')" class="flex-1 sm:flex-initial justify-center bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white px-3 py-2 sm:px-3.5 sm:py-2 rounded-xl text-xs font-semibold shadow-xs transition flex items-center gap-1 border border-amber-800/30 whitespace-nowrap">
+              📝 <span>หัวบัตรวัสดุ</span>
             </button>
-            <button onclick="openAddMaterialModal()" class="bg-gradient-to-r from-red-700 to-red-800 hover:from-red-800 hover:to-red-900 text-white px-4 py-2 rounded-xl font-semibold shadow-sm transition text-xs sm:text-sm border border-red-900/30">
-              + บันทึกรับ-จ่ายวัสดุ
+            <button onclick="openAddMaterialModal()" class="flex-1 sm:flex-initial justify-center bg-gradient-to-r from-red-700 to-red-800 hover:from-red-800 hover:to-red-900 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-xl font-semibold shadow-xs transition text-xs sm:text-sm border border-red-900/30 whitespace-nowrap">
+              + <span>รับ-จ่ายวัสดุ</span>
             </button>
-            <button onclick="printSelectedMaterials()" id="btn-print-materials" class="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold px-4 py-2 rounded-xl shadow-sm transition flex items-center gap-1.5 text-xs sm:text-sm border border-amber-600/30">
+            <button onclick="printSelectedMaterials()" id="btn-print-materials" class="flex-1 sm:flex-initial justify-center bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold px-3 py-2 sm:px-4 sm:py-2 rounded-xl shadow-xs transition flex items-center gap-1.5 text-xs sm:text-sm border border-amber-600/30 whitespace-nowrap">
               <span>🖨️</span> <span id="btn-print-material-text">พิมพ์บัญชีคุมวัสดุ (PDF)</span>
             </button>
           </div>
         </div>
 
         <!-- แถบกรองปีงบประมาณ / เดือน / ค้นหาวัสดุ -->
-        <div class="mb-4 bg-white p-3.5 sm:p-4 rounded-2xl shadow-xs border border-amber-200/80 no-print space-y-3">
-          <div class="flex flex-wrap items-center justify-between gap-3">
-            <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-              <div class="flex items-center gap-1.5 text-xs font-bold text-red-950">
-                <span class="p-1 bg-amber-100 text-amber-900 rounded-lg text-sm leading-none">📅</span>
-                <span>ปีงบประมาณ:</span>
+        <div class="mb-3 sm:mb-4 bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-xs border border-amber-200/80 no-print space-y-2.5 sm:space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
+            <div class="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+              <div class="col-span-1 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-1.5">
+                <span class="text-[11px] sm:text-xs font-bold text-red-950 flex items-center gap-1">
+                  <span class="p-1 bg-amber-100 text-amber-900 rounded-md text-xs leading-none">📅</span>
+                  <span>ปีงบประมาณ:</span>
+                </span>
+                <select id="material-fiscal-year-select" onchange="onMaterialFilterChange()" class="w-full sm:w-auto text-xs font-bold border border-amber-300 rounded-xl px-2.5 py-1.5 bg-amber-50/50 text-red-950 shadow-2xs focus:ring-2 focus:ring-amber-500 cursor-pointer">
+                  <!-- Dynamically populated -->
+                </select>
               </div>
-              <select id="material-fiscal-year-select" onchange="onMaterialFilterChange()" class="text-xs font-bold border border-amber-300 rounded-xl px-3 py-1.5 bg-amber-50/50 text-red-950 shadow-2xs focus:ring-2 focus:ring-amber-500 cursor-pointer">
-                <!-- Dynamically populated -->
-              </select>
 
-              <div class="flex items-center gap-1.5 text-xs font-bold text-red-950 sm:ml-2">
-                <span>เดือน:</span>
+              <div class="col-span-1 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-1.5">
+                <span class="text-[11px] sm:text-xs font-bold text-red-950">
+                  <span>เดือน:</span>
+                </span>
+                <select id="material-month-select" onchange="onMaterialFilterChange()" class="w-full sm:w-auto text-xs font-semibold border border-amber-300 rounded-xl px-2.5 py-1.5 bg-amber-50/50 text-red-950 shadow-2xs focus:ring-2 focus:ring-amber-500 cursor-pointer">
+                  <option value="all">ทุกเดือน (ทั้งปีงบ)</option>
+                  <option value="10">ตุลาคม (ต.ค.)</option>
+                  <option value="11">พฤศจิกายน (พ.ย.)</option>
+                  <option value="12">ธันวาคม (ธ.ค.)</option>
+                  <option value="1">มกราคม (ม.ค.)</option>
+                  <option value="2">กุมภาพันธ์ (ก.พ.)</option>
+                  <option value="3">มีนาคม (มี.ค.)</option>
+                  <option value="4">เมษายน (เม.ย.)</option>
+                  <option value="5">พฤษภาคม (พ.ค.)</option>
+                  <option value="6">มิถุนายน (มิ.ย.)</option>
+                  <option value="7">กรกฎาคม (ก.ค.)</option>
+                  <option value="8">สิงหาคม (ส.ค.)</option>
+                  <option value="9">กันยายน (ก.ย.)</option>
+                </select>
               </div>
-              <select id="material-month-select" onchange="onMaterialFilterChange()" class="text-xs font-semibold border border-amber-300 rounded-xl px-3 py-1.5 bg-amber-50/50 text-red-950 shadow-2xs focus:ring-2 focus:ring-amber-500 cursor-pointer">
-                <option value="all">ทุกเดือน (ทั้งปีงบ)</option>
-                <option value="10">ตุลาคม (ต.ค.)</option>
-                <option value="11">พฤศจิกายน (พ.ย.)</option>
-                <option value="12">ธันวาคม (ธ.ค.)</option>
-                <option value="1">มกราคม (ม.ค.)</option>
-                <option value="2">กุมภาพันธ์ (ก.พ.)</option>
-                <option value="3">มีนาคม (มี.ค.)</option>
-                <option value="4">เมษายน (เม.ย.)</option>
-                <option value="5">พฤษภาคม (พ.ค.)</option>
-                <option value="6">มิถุนายน (มิ.ย.)</option>
-                <option value="7">กรกฎาคม (ก.ค.)</option>
-                <option value="8">สิงหาคม (ส.ค.)</option>
-                <option value="9">กันยายน (ก.ย.)</option>
-              </select>
             </div>
 
             <!-- สรุปจำนวนรายการที่พบ -->
-            <div class="text-xs text-slate-500 font-medium" id="material-search-result-count"></div>
+            <div class="text-[11px] sm:text-xs text-slate-500 font-medium self-end sm:self-auto" id="material-search-result-count"></div>
           </div>
 
           <!-- แถบค้นหาข้อความ Real-time -->
           <div class="relative w-full">
-            <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-amber-600/70">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-amber-600/70">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
               </svg>
             </span>
-            <input type="text" id="material-search-input" oninput="onMaterialSearch(this.value)" placeholder="ค้นหาวัสดุ (รับจาก/จ่ายให้, เลขที่เอกสาร, ประเภทเงิน, หมายเหตุ...)" class="w-full pl-10 pr-9 py-2 bg-slate-50/60 hover:bg-white focus:bg-white border border-slate-200 focus:border-amber-400 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 shadow-2xs placeholder-slate-400 text-slate-800 transition">
+            <input type="text" id="material-search-input" oninput="onMaterialSearch(this.value)" placeholder="ค้นหาวัสดุ (รับจาก/จ่ายให้, เลขที่เอกสาร, ประเภทเงิน, หมายเหตุ...)" class="w-full pl-9 pr-8 py-2 bg-slate-50/60 hover:bg-white focus:bg-white border border-slate-200 focus:border-amber-400 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 shadow-2xs placeholder-slate-400 text-slate-800 transition">
             <button type="button" id="material-search-clear-btn" onclick="clearMaterialSearch()" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 text-sm cursor-pointer" title="ล้างการค้นหา">&times;</button>
           </div>
         </div>
 
-        <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-amber-100 overflow-x-auto">
+        <div class="bg-white p-3 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl shadow-xs border border-amber-100 overflow-x-auto touch-scroll">
+          <div class="block sm:hidden text-[10px] text-amber-800/80 mb-2 font-medium text-right">
+            👉 เลื่อนตารางไปทางขวาเพื่อดูข้อมูลทั้งหมด
+          </div>
           <table class="w-full text-left border-collapse text-xs">
             <thead>
               <tr class="bg-gradient-to-r from-red-950 via-red-900 to-rose-950 text-amber-100 border-b border-amber-400/40">
@@ -460,67 +484,67 @@
   <!-- ========================================== -->
 
   <!-- MODAL: เพิ่ม/แก้ไข ครุภัณฑ์ -->
-  <div id="assetModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs hidden flex items-center justify-center p-4 z-50 no-print">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl p-6 max-h-[92vh] overflow-y-auto border border-amber-200/60">
-      <div class="flex justify-between items-center mb-4 border-b border-amber-100 pb-3">
+  <div id="assetModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs hidden flex items-center justify-center p-2.5 sm:p-4 z-50 no-print">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl p-4 sm:p-6 max-h-[92vh] overflow-y-auto touch-scroll border border-amber-200/60">
+      <div class="flex justify-between items-center mb-3 sm:mb-4 border-b border-amber-100 pb-2.5 sm:pb-3">
         <h3 id="modal-asset-title" class="text-base font-bold text-red-950 flex items-center gap-2">
           <span>➕</span> <span>ลงทะเบียนครุภัณฑ์ใหม่</span>
         </h3>
-        <button onclick="closeModal('assetModal')" class="text-slate-400 hover:text-slate-600 text-2xl font-bold leading-none">&times;</button>
+        <button onclick="closeModal('assetModal')" class="text-slate-400 hover:text-slate-600 text-2xl font-bold leading-none p-1 -mr-1">&times;</button>
       </div>
-      <form id="form-asset" onsubmit="saveAsset(event)" class="grid grid-cols-3 gap-3 text-xs">
+      <form id="form-asset" onsubmit="saveAsset(event)" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-3.5 text-xs">
         <input type="hidden" id="edit_asset_id">
-        <div class="col-span-2">
+        <div class="col-span-1 sm:col-span-2 md:col-span-2">
           <label class="font-semibold block mb-1 text-slate-700">รายการ (ชื่อทรัพย์สิน/ยี่ห้อ/รุ่น/รายละเอียด) *</label>
-          <input type="text" id="a_name" required placeholder="เช่น เครื่องฉาย Projector Acer" class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <input type="text" id="a_name" required placeholder="เช่น เครื่องฉาย Projector Acer" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
         </div>
-        <div>
+        <div class="col-span-1 sm:col-span-2 md:col-span-1">
           <label class="font-semibold block mb-1 text-slate-700">รหัสทรัพย์สิน *</label>
-          <input type="text" id="a_code" required placeholder="เช่น 6730-007-0001-1-3/55" class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-medium text-red-950">
+          <input type="text" id="a_code" required placeholder="เช่น 6730-007-0001-1-3/55" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-medium text-red-950">
         </div>
 
         <div>
           <label class="font-semibold block mb-1 text-slate-700">ประเภท</label>
-          <input type="text" id="a_category" placeholder="เช่น ครุภัณฑ์คอมพิวเตอร์" class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <input type="text" id="a_category" placeholder="เช่น ครุภัณฑ์คอมพิวเตอร์" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
         </div>
         <div>
           <label class="font-semibold block mb-1 text-slate-700">คุณสมบัติ (ลักษณะ/สมบัติ)</label>
-          <input type="text" id="a_spec" placeholder="เช่น เครื่องฉาย Projector ความสว่าง 4000lm" class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <input type="text" id="a_spec" placeholder="เช่น เครื่องฉาย Projector ความสว่าง 4000lm" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
         </div>
         <div>
           <label class="font-semibold block mb-1 text-slate-700">รุ่นแบบ</label>
-          <input type="text" id="a_model" placeholder="เช่น Acer X1228H" class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <input type="text" id="a_model" placeholder="เช่น Acer X1228H" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
         </div>
 
         <div>
           <label class="font-semibold block mb-1 text-slate-700">วัน เดือน ปี ที่ได้มา *</label>
-          <input type="date" id="a_date" required class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <input type="date" id="a_date" required class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
         </div>
         <div>
           <label class="font-semibold block mb-1 text-slate-700">เลขที่เอกสาร (ที่เอกสาร)</label>
-          <input type="text" id="a_doc" placeholder="เช่น บซ.01/55" class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <input type="text" id="a_doc" placeholder="เช่น บซ.01/55" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
         </div>
         <div>
           <label class="font-semibold block mb-1 text-slate-700">จำนวนหน่วย *</label>
-          <input type="number" id="a_qty" value="1" min="1" required class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <input type="number" id="a_qty" value="1" min="1" required class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
         </div>
 
         <div>
           <label class="font-semibold block mb-1 text-slate-700">ราคาต่อหน่วย (บาท) *</label>
-          <input type="number" step="0.01" id="a_cost" required placeholder="25000.00" class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-semibold">
+          <input type="number" step="0.01" id="a_cost" required placeholder="25000.00" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-semibold">
         </div>
         <div>
           <label class="font-semibold block mb-1 text-slate-700">อายุการใช้งาน (ปี) *</label>
-          <input type="number" id="a_life" value="5" min="1" required class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <input type="number" id="a_life" value="5" min="1" required class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
         </div>
         <div>
           <label class="font-semibold block mb-1 text-slate-700">สถานที่ตั้ง (ที่ตั้งครุภัณฑ์)</label>
-          <input type="text" id="a_location" placeholder="เช่น อาคาร 1, ห้องคอมพิวเตอร์" class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <input type="text" id="a_location" placeholder="เช่น อาคาร 1, ห้องคอมพิวเตอร์" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
         </div>
 
         <div>
           <label class="font-semibold block mb-1 text-slate-700">สถานะ</label>
-          <select id="a_status" class="w-full border border-slate-300 p-2 rounded-lg font-medium focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <select id="a_status" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl font-medium focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
             <option value="ใช้งานได้ดี">ใช้งานได้ดี</option>
             <option value="ชำรุด">ชำรุด</option>
             <option value="รอซ่อม">รอซ่อม</option>
@@ -529,24 +553,24 @@
         </div>
         <div>
           <label class="font-semibold block mb-1 text-slate-700">ซื้อจาก (ชื่อผู้ขาย/ผู้บริจาค)</label>
-          <input type="text" id="a_vendor" placeholder="เช่น บริษัท เอเซอร์ จำกัด" class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <input type="text" id="a_vendor" placeholder="เช่น บริษัท เอเซอร์ จำกัด" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
         </div>
         <div>
           <label class="font-semibold block mb-1 text-slate-700">ผู้รับผิดชอบ</label>
-          <input type="text" id="a_person" placeholder="เช่น นายวิชิตชัย" class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <input type="text" id="a_person" placeholder="เช่น นายวิชิตชัย" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
         </div>
 
         <div>
           <label class="font-semibold block mb-1 text-slate-700">ที่อยู่ผู้ขาย</label>
-          <input type="text" id="a_vendor_address" placeholder="เช่น 123 ถ.มิตรภาพ" class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <input type="text" id="a_vendor_address" placeholder="เช่น 123 ถ.มิตรภาพ" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
         </div>
         <div>
           <label class="font-semibold block mb-1 text-slate-700">โทรศัพท์</label>
-          <input type="text" id="a_vendor_phone" placeholder="เช่น 044-123456" class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <input type="text" id="a_vendor_phone" placeholder="เช่น 044-123456" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
         </div>
         <div>
           <label class="font-semibold block mb-1 text-slate-700">ประเภทเงิน</label>
-          <select id="a_budget_source" class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <select id="a_budget_source" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
             <option value="เงินงบประมาณ">เงินงบประมาณ</option>
             <option value="เงินนอกงบประมาณ">เงินนอกงบประมาณ</option>
             <option value="เงินบริจาค/เงินช่วยเหลือ">เงินบริจาค/เงินช่วยเหลือ</option>
@@ -556,173 +580,173 @@
 
         <div>
           <label class="font-semibold block mb-1 text-slate-700">วิธีการได้มา</label>
-          <select id="a_acquisition_method" class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <select id="a_acquisition_method" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
             <option value="เฉพาะเจาะจง">เฉพาะเจาะจง</option>
             <option value="ประกาศเชิญชวน">ประกาศเชิญชวน</option>
             <option value="คัดเลือก">คัดเลือก</option>
             <option value="รับบริจาค">รับบริจาค</option>
           </select>
         </div>
-        <div class="col-span-2">
+        <div class="col-span-1 sm:col-span-2 md:col-span-2">
           <label class="font-semibold block mb-1 text-slate-700">หมายเหตุ</label>
-          <input type="text" id="a_remark" placeholder="เช่น โอนย้ายมาจาก..., เครื่องสำรอง" class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <input type="text" id="a_remark" placeholder="เช่น โอนย้ายมาจาก..., เครื่องสำรอง" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
         </div>
 
-        <div class="col-span-3 flex justify-end gap-2 mt-4 pt-3 border-t border-slate-100">
-          <button type="button" onclick="closeModal('assetModal')" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 font-medium transition">ยกเลิก</button>
-          <button type="submit" id="modal-asset-submit-btn" class="px-5 py-2.5 bg-gradient-to-r from-red-700 to-red-800 hover:from-red-800 hover:to-red-900 text-white rounded-xl font-bold shadow-md transition border border-red-900/30">💾 บันทึกข้อมูล</button>
+        <div class="col-span-1 sm:col-span-2 md:col-span-3 flex flex-col-reverse sm:flex-row justify-end gap-2 mt-3 sm:mt-4 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeModal('assetModal')" class="w-full sm:w-auto px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 font-medium transition text-center">ยกเลิก</button>
+          <button type="submit" id="modal-asset-submit-btn" class="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-red-700 to-red-800 hover:from-red-800 hover:to-red-900 text-white rounded-xl font-bold shadow-md transition border border-red-900/30 text-center">💾 บันทึกข้อมูล</button>
         </div>
       </form>
     </div>
   </div>
 
   <!-- MODAL: บันทึกรับ-จ่ายวัสดุ -->
-  <div id="materialModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs hidden flex items-center justify-center p-4 z-50 no-print">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto border border-amber-200/60">
-      <div class="flex justify-between items-center mb-4 border-b border-amber-100 pb-3">
+  <div id="materialModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs hidden flex items-center justify-center p-2.5 sm:p-4 z-50 no-print">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-4 sm:p-6 max-h-[92vh] overflow-y-auto touch-scroll border border-amber-200/60">
+      <div class="flex justify-between items-center mb-3 sm:mb-4 border-b border-amber-100 pb-2.5 sm:pb-3">
         <h3 id="modal-material-title" class="text-base font-bold text-red-950 flex items-center gap-2">
           <span>➕</span> <span>บันทึกรายการบัญชีคุมวัสดุ</span>
         </h3>
-        <button onclick="closeModal('materialModal')" class="text-slate-400 hover:text-slate-600 text-2xl font-bold leading-none">&times;</button>
+        <button onclick="closeModal('materialModal')" class="text-slate-400 hover:text-slate-600 text-2xl font-bold leading-none p-1 -mr-1">&times;</button>
       </div>
-      <form id="form-material" onsubmit="saveMaterial(event)" class="grid grid-cols-2 gap-3 text-xs">
+      <form id="form-material" onsubmit="saveMaterial(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5 text-xs">
         <input type="hidden" id="edit_material_id">
         <div>
           <label class="font-semibold block mb-1 text-slate-700">วันที่ทำรายการ</label>
-          <input type="date" id="m_date" required class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <input type="date" id="m_date" required class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
         </div>
         <div>
           <label class="font-semibold block mb-1 text-slate-700">รับจาก / จ่ายให้</label>
-          <input type="text" id="m_party" required placeholder="เช่น ร้าน ข.สปอร์ต หรือ ครูผู้เบิก" class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <input type="text" id="m_party" required placeholder="เช่น ร้าน ข.สปอร์ต หรือ ครูผู้เบิก" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
         </div>
         <div>
           <label class="font-semibold block mb-1 text-slate-700">เลขที่เอกสาร</label>
-          <input type="text" id="m_doc" placeholder="เช่น ใบส่งของ 102" class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <input type="text" id="m_doc" placeholder="เช่น ใบส่งของ 102" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
         </div>
         <div>
           <label class="font-semibold block mb-1 text-slate-700">ประเภทเงิน/สั่งซื้อ</label>
-          <input type="text" id="m_budget" placeholder="เช่น เงินอุดหนุน / สั่งซื้อ 05/69" class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <input type="text" id="m_budget" placeholder="เช่น เงินอุดหนุน / สั่งซื้อ 05/69" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
         </div>
         <div>
           <label class="font-semibold block mb-1 text-slate-700">ยอดยกมา (ถ้ามี)</label>
-          <input type="number" id="m_open" value="0" class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <input type="number" id="m_open" value="0" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
         </div>
         <div>
           <label class="font-semibold block mb-1 text-slate-700">ราคาต่อหน่วย (รวม VAT)</label>
-          <input type="number" step="0.01" id="m_price" required placeholder="350.00" class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-semibold">
+          <input type="number" step="0.01" id="m_price" required placeholder="350.00" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-semibold">
         </div>
         <div>
           <label class="font-semibold block mb-1 text-emerald-800">จำนวนรับ</label>
-          <input type="number" id="m_in" value="0" class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-bold text-emerald-700">
+          <input type="number" id="m_in" value="0" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-bold text-emerald-700">
         </div>
         <div>
           <label class="font-semibold block mb-1 text-red-800">จำนวนจ่าย</label>
-          <input type="number" id="m_out" value="0" class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-bold text-red-700">
+          <input type="number" id="m_out" value="0" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-bold text-red-700">
         </div>
-        <div class="col-span-2">
+        <div class="col-span-1 sm:col-span-2">
           <label class="font-semibold block mb-1 text-slate-700">หมายเหตุ / วัตถุประสงค์</label>
-          <input type="text" id="m_remark" placeholder="เช่น เบิกจัดการเรียนการสอน ป.4" class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <input type="text" id="m_remark" placeholder="เช่น เบิกจัดการเรียนการสอน ป.4" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
         </div>
-        <div class="col-span-2 flex justify-end gap-2 mt-4 pt-3 border-t border-slate-100">
-          <button type="button" onclick="closeModal('materialModal')" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 font-medium transition">ยกเลิก</button>
-          <button type="submit" id="modal-material-submit-btn" class="px-5 py-2.5 bg-gradient-to-r from-red-700 to-red-800 hover:from-red-800 hover:to-red-900 text-white rounded-xl font-bold shadow-md transition border border-red-900/30">💾 บันทึกข้อมูล</button>
+        <div class="col-span-1 sm:col-span-2 flex flex-col-reverse sm:flex-row justify-end gap-2 mt-3 sm:mt-4 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeModal('materialModal')" class="w-full sm:w-auto px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 font-medium transition text-center">ยกเลิก</button>
+          <button type="submit" id="modal-material-submit-btn" class="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-red-700 to-red-800 hover:from-red-800 hover:to-red-900 text-white rounded-xl font-bold shadow-md transition border border-red-900/30 text-center">💾 บันทึกข้อมูล</button>
         </div>
       </form>
     </div>
   </div>
 
   <!-- MODAL: กำหนดข้อมูลหัวบัตรวัสดุ -->
-  <div id="materialMetaModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs hidden flex items-center justify-center p-4 z-50 no-print">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl p-6 max-h-[90vh] overflow-y-auto border border-amber-200/60">
-      <div class="flex justify-between items-center mb-4 border-b border-amber-100 pb-3">
+  <div id="materialMetaModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs hidden flex items-center justify-center p-2.5 sm:p-4 z-50 no-print">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl p-4 sm:p-6 max-h-[92vh] overflow-y-auto touch-scroll border border-amber-200/60">
+      <div class="flex justify-between items-center mb-3 sm:mb-4 border-b border-amber-100 pb-2.5 sm:pb-3">
         <h3 class="text-base font-bold text-amber-950 flex items-center gap-2">
           <span>📝</span> <span>กำหนดข้อมูลหัวบัตรคุมวัสดุ (สำหรับพิมพ์)</span>
         </h3>
-        <button onclick="closeModal('materialMetaModal')" class="text-slate-400 hover:text-slate-600 text-2xl font-bold leading-none">&times;</button>
+        <button onclick="closeModal('materialMetaModal')" class="text-slate-400 hover:text-slate-600 text-2xl font-bold leading-none p-1 -mr-1">&times;</button>
       </div>
-      <form onsubmit="saveMaterialMeta(event)" class="grid grid-cols-2 gap-3 text-xs">
+      <form onsubmit="saveMaterialMeta(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5 text-xs">
         <div>
           <label class="font-semibold block mb-1 text-slate-700">ประเภท</label>
-          <input type="text" id="inp-meta-category" placeholder="เช่น วัสดุกีฬา หรือ วัสดุสำนักงาน" class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <input type="text" id="inp-meta-category" placeholder="เช่น วัสดุกีฬา หรือ วัสดุสำนักงาน" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
         </div>
         <div>
           <label class="font-semibold block mb-1 text-slate-700">รหัส</label>
-          <input type="text" id="inp-meta-code" placeholder="เช่น ว.67-001" class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <input type="text" id="inp-meta-code" placeholder="เช่น ว.67-001" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
         </div>
-        <div class="col-span-2">
+        <div class="col-span-1 sm:col-span-2">
           <label class="font-semibold block mb-1 text-slate-700">ชื่อ/ ชนิดวัสดุ</label>
-          <input type="text" id="inp-meta-name" placeholder="เช่น ลูกฟุตบอล Molten เบอร์ 5" class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <input type="text" id="inp-meta-name" placeholder="เช่น ลูกฟุตบอล Molten เบอร์ 5" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
         </div>
         <div>
           <label class="font-semibold block mb-1 text-slate-700">ขนาดหรือลักษณะ</label>
-          <input type="text" id="inp-meta-spec" placeholder="เช่น หนังเย็บ เบอร์ 5 มาตรฐาน มอก." class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <input type="text" id="inp-meta-spec" placeholder="เช่น หนังเย็บ เบอร์ 5 มาตรฐาน มอก." class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
         </div>
         <div>
           <label class="font-semibold block mb-1 text-slate-700">จำนวนอย่างต่ำ/ สูง</label>
-          <input type="text" id="inp-meta-minmax" placeholder="เช่น 5 / 30 ลูก" class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <input type="text" id="inp-meta-minmax" placeholder="เช่น 5 / 30 ลูก" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
         </div>
         <div>
           <label class="font-semibold block mb-1 text-slate-700">ที่เก็บ</label>
-          <input type="text" id="inp-meta-location" placeholder="เช่น ตู้เก็บอุปกรณ์กีฬา ชั้น 1" class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <input type="text" id="inp-meta-location" placeholder="เช่น ตู้เก็บอุปกรณ์กีฬา ชั้น 1" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
         </div>
         <div>
           <label class="font-semibold block mb-1 text-slate-700">หน่วยที่นับ</label>
-          <input type="text" id="inp-meta-unit" placeholder="เช่น ลูก, กล่อง, รีม, ชิ้น" class="w-full border border-slate-300 p-2 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <input type="text" id="inp-meta-unit" placeholder="เช่น ลูก, กล่อง, รีม, ชิ้น" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
         </div>
-        <div class="col-span-2 flex justify-end gap-2 mt-4 pt-3 border-t border-slate-100">
-          <button type="button" onclick="closeModal('materialMetaModal')" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 font-medium transition">ยกเลิก</button>
-          <button type="submit" class="px-5 py-2.5 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white rounded-xl font-bold shadow-md transition border border-amber-800/30">💾 บันทึกหัวบัตร</button>
+        <div class="col-span-1 sm:col-span-2 flex flex-col-reverse sm:flex-row justify-end gap-2 mt-3 sm:mt-4 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeModal('materialMetaModal')" class="w-full sm:w-auto px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 font-medium transition text-center">ยกเลิก</button>
+          <button type="submit" class="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white rounded-xl font-bold shadow-md transition border border-amber-800/30 text-center">💾 บันทึกหัวบัตร</button>
         </div>
       </form>
     </div>
   </div>
 
   <!-- MODAL: ตั้งค่าหน่วยงาน / ส่วนราชการ -->
-  <div id="orgModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs hidden flex items-center justify-center p-4 z-50 no-print">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl p-6 border border-amber-200/60">
-      <div class="flex justify-between items-center mb-4 border-b border-amber-100 pb-3">
+  <div id="orgModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs hidden flex items-center justify-center p-2.5 sm:p-4 z-50 no-print">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl p-4 sm:p-6 border border-amber-200/60 max-h-[92vh] overflow-y-auto touch-scroll">
+      <div class="flex justify-between items-center mb-3 sm:mb-4 border-b border-amber-100 pb-2.5 sm:pb-3">
         <h3 class="text-base font-bold text-red-950 flex items-center gap-2">
           <span>⚙️</span> <span>ตั้งค่าส่วนราชการและหน่วยงาน (สำหรับพิมพ์)</span>
         </h3>
-        <button onclick="closeModal('orgModal')" class="text-slate-400 hover:text-slate-600 text-2xl font-bold leading-none">&times;</button>
+        <button onclick="closeModal('orgModal')" class="text-slate-400 hover:text-slate-600 text-2xl font-bold leading-none p-1 -mr-1">&times;</button>
       </div>
       <form onsubmit="saveOrgSettings(event)" class="space-y-3 text-xs">
         <div>
           <label class="font-semibold block mb-1 text-slate-700">ส่วนราชการ</label>
-          <input type="text" id="inp-org-name" class="w-full border border-slate-300 p-2.5 rounded-lg font-medium focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <input type="text" id="inp-org-name" class="w-full border border-slate-300 p-2.5 rounded-xl font-medium focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
         </div>
         <div>
           <label class="font-semibold block mb-1 text-slate-700">หน่วยงาน</label>
-          <input type="text" id="inp-dept-name" class="w-full border border-slate-300 p-2.5 rounded-lg font-medium focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <input type="text" id="inp-dept-name" class="w-full border border-slate-300 p-2.5 rounded-xl font-medium focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
         </div>
-        <div class="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-100">
-          <button type="button" onclick="closeModal('orgModal')" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 font-medium transition">ยกเลิก</button>
-          <button type="submit" class="px-5 py-2.5 bg-gradient-to-r from-red-800 to-red-900 hover:from-red-900 hover:to-rose-950 text-white rounded-xl font-bold shadow-md transition border border-red-900/30">💾 บันทึกการตั้งค่า</button>
+        <div class="flex flex-col-reverse sm:flex-row justify-end gap-2 mt-4 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeModal('orgModal')" class="w-full sm:w-auto px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 font-medium transition text-center">ยกเลิก</button>
+          <button type="submit" class="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-red-800 to-red-900 hover:from-red-900 hover:to-rose-950 text-white rounded-xl font-bold shadow-md transition border border-red-900/30 text-center">💾 บันทึกการตั้งค่า</button>
         </div>
       </form>
     </div>
   </div>
 
   <!-- MODAL: นำเข้าข้อมูลสำรอง -->
-  <div id="restoreModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs hidden flex items-center justify-center p-4 z-50 no-print">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 border border-amber-200/60">
-      <div class="flex justify-between items-center mb-4 border-b border-amber-100 pb-3">
+  <div id="restoreModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs hidden flex items-center justify-center p-2.5 sm:p-4 z-50 no-print">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-4 sm:p-6 border border-amber-200/60 max-h-[92vh] overflow-y-auto touch-scroll">
+      <div class="flex justify-between items-center mb-3 sm:mb-4 border-b border-amber-100 pb-2.5 sm:pb-3">
         <h3 class="text-base font-bold text-red-950 flex items-center gap-2">
           <span>📤</span> <span>นำเข้าข้อมูลจากไฟล์สำรอง (.json)</span>
         </h3>
-        <button onclick="closeModal('restoreModal')" class="text-slate-400 hover:text-slate-600 text-2xl font-bold leading-none">&times;</button>
+        <button onclick="closeModal('restoreModal')" class="text-slate-400 hover:text-slate-600 text-2xl font-bold leading-none p-1 -mr-1">&times;</button>
       </div>
       <p class="text-xs text-slate-600 mb-4 leading-relaxed">
         เลือกไฟล์สำรองข้อมูลที่ดาวน์โหลดไว้ ข้อมูลเดิมในระบบจะถูกแทนที่ด้วยข้อมูลจากไฟล์นี้
       </p>
       <input type="file" id="restore-file-input" accept=".json" class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-red-900 hover:file:bg-amber-100 border border-slate-300 p-2 rounded-xl mb-4">
-      <div class="flex justify-end gap-2 pt-2">
-        <button type="button" onclick="closeModal('restoreModal')" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 font-medium text-xs transition">ยกเลิก</button>
-        <button type="button" onclick="importBackup()" class="px-5 py-2.5 bg-gradient-to-r from-red-800 to-red-900 hover:from-red-900 hover:to-rose-950 text-white rounded-xl font-bold text-xs shadow-md transition border border-red-900/30">เริ่มกู้คืนข้อมูล</button>
+      <div class="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
+        <button type="button" onclick="closeModal('restoreModal')" class="w-full sm:w-auto px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 font-medium text-xs transition text-center">ยกเลิก</button>
+        <button type="button" onclick="importBackup()" class="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-red-800 to-red-900 hover:from-red-900 hover:to-rose-950 text-white rounded-xl font-bold text-xs shadow-md transition border border-red-900/30 text-center">เริ่มกู้คืนข้อมูล</button>
       </div>
     </div>
   </div>
 
-  <script src="app.js?v=4.0"></script>
+  <script src="app.js?v=4.1"></script>
 </body>
 </html>
