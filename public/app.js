@@ -423,16 +423,9 @@ async function loadAssets() {
     const res = await fetch('/api/assets');
     if (res.ok) {
       const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
+      if (Array.isArray(data)) {
         assetList = data;
         localStorage.setItem('cached_assets', JSON.stringify(assetList));
-      } else {
-        const cached = localStorage.getItem('cached_assets');
-        if (cached) {
-          try { assetList = JSON.parse(cached); } catch(e) { assetList = data; }
-        } else {
-          assetList = data;
-        }
       }
     } else {
       throw new Error('Server status ' + res.status);
@@ -1104,10 +1097,54 @@ async function saveAsset(e) {
 }
 
 async function deleteAsset(id) {
-  if (!confirm('ยืนยันที่จะลบรายการครุภัณฑ์นี้หรือไม่?')) return;
-  await fetch(`/api/assets/${id}`, { method: 'DELETE' });
+  if (!id) return;
+  const item = assetList.find(a => String(a.id) === String(id));
+  const itemName = item ? (item.asset_name || item.asset_code || 'รายการนี้') : 'รายการนี้';
+
+  if (!confirm(`ยืนยันที่จะลบ "${itemName}" หรือไม่?\nข้อมูลจะถูกลบออกจากระบบ`)) {
+    return;
+  }
+
+  // 1. นำออกจาก memory และ local storage ทันทีเพื่อให้หน้าจออัปเดตตอบสนองทันใจ
+  assetList = assetList.filter(a => String(a.id) !== String(id));
+  localStorage.setItem('cached_assets', JSON.stringify(assetList));
+  selectedAssetIds.delete(Number(id));
   selectedAssetIds.delete(id);
-  loadAssets();
+
+  // 2. อัปเดตหน้าจอทันที
+  populateFiscalYearOptions('asset');
+  renderAssetTable();
+  updateAssetSelectionUI();
+  renderAssetPrint();
+
+  try {
+    // 3. ส่งคำขอลบไปยังเซิร์ฟเวอร์
+    const res = await fetch(`/api/assets/${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert('เกิดข้อผิดพลาดจากเซิร์ฟเวอร์: ' + (err.error || res.statusText));
+      await loadAssets();
+      return;
+    }
+
+    // 4. ซิงค์ข้อมูลล่าสุดกับเซิร์ฟเวอร์
+    const refreshedRes = await fetch('/api/assets');
+    if (refreshedRes.ok) {
+      const refreshedData = await refreshedRes.json();
+      if (Array.isArray(refreshedData)) {
+        assetList = refreshedData;
+        localStorage.setItem('cached_assets', JSON.stringify(assetList));
+        populateFiscalYearOptions('asset');
+        renderAssetTable();
+        updateAssetSelectionUI();
+        renderAssetPrint();
+      }
+    }
+  } catch (err) {
+    console.error('Delete error:', err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์: ' + err.message);
+    await loadAssets();
+  }
 }
 
 // ==============================================================
@@ -1118,16 +1155,9 @@ async function loadMaterials() {
     const res = await fetch('/api/materials');
     if (res.ok) {
       const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
+      if (Array.isArray(data)) {
         materialList = data;
         localStorage.setItem('cached_materials', JSON.stringify(materialList));
-      } else {
-        const cached = localStorage.getItem('cached_materials');
-        if (cached) {
-          try { materialList = JSON.parse(cached); } catch(e) { materialList = data; }
-        } else {
-          materialList = data;
-        }
       }
     } else {
       throw new Error('Server status ' + res.status);
@@ -1437,10 +1467,50 @@ async function saveMaterial(e) {
 }
 
 async function deleteMaterial(id) {
-  if (!confirm('ยืนยันที่จะลบรายการวัสดุนี้หรือไม่?')) return;
-  await fetch(`/api/materials/${id}`, { method: 'DELETE' });
+  if (!id) return;
+  const item = materialList.find(m => String(m.id) === String(id));
+  const itemName = item ? (item.party || item.doc_no || 'รายการนี้') : 'รายการนี้';
+
+  if (!confirm(`ยืนยันที่จะลบ "${itemName}" หรือไม่?\nข้อมูลจะถูกลบออกจากระบบ`)) {
+    return;
+  }
+
+  materialList = materialList.filter(m => String(m.id) !== String(id));
+  localStorage.setItem('cached_materials', JSON.stringify(materialList));
+  selectedMaterialIds.delete(Number(id));
   selectedMaterialIds.delete(id);
-  loadMaterials();
+
+  populateFiscalYearOptions('material');
+  renderMaterialTable();
+  updateMaterialSelectionUI();
+  renderMaterialPrint();
+
+  try {
+    const res = await fetch(`/api/materials/${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert('เกิดข้อผิดพลาดจากเซิร์ฟเวอร์: ' + (err.error || res.statusText));
+      await loadMaterials();
+      return;
+    }
+
+    const refreshedRes = await fetch('/api/materials');
+    if (refreshedRes.ok) {
+      const refreshedData = await refreshedRes.json();
+      if (Array.isArray(refreshedData)) {
+        materialList = refreshedData;
+        localStorage.setItem('cached_materials', JSON.stringify(materialList));
+        populateFiscalYearOptions('material');
+        renderMaterialTable();
+        updateMaterialSelectionUI();
+        renderMaterialPrint();
+      }
+    }
+  } catch (err) {
+    console.error('Delete material error:', err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์: ' + err.message);
+    await loadMaterials();
+  }
 }
 
 // ==================== สำรอง & กู้คืนข้อมูล ====================

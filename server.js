@@ -152,8 +152,8 @@ function autoBackupDatabase() {
 function selfHealDatabase() {
   db.all('SELECT * FROM assets', [], (err, rows) => {
     if (err) return;
-    // ตรวจสอบว่าข้อมูลมีเครื่องหมาย ? (UTF-8 corrupt) หรือตารางว่างหรือไม่
-    const isCorrupted = rows.length === 0 || rows.some(r => 
+    // ตรวจสอบว่าข้อมูลมีเครื่องหมาย ? (UTF-8 corrupt) หรือไม่ (ไม่ซ่อมแซมกรณีตารางว่าง เพราะผู้ใช้อาจลบรายการทั้งหมด)
+    const isCorrupted = rows && rows.length > 0 && rows.some(r => 
       (r.asset_name && r.asset_name.includes('?')) || 
       (r.spec && r.spec.includes('?')) ||
       (r.vendor && r.vendor.includes('?'))
