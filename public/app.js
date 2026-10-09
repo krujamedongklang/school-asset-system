@@ -1,4 +1,4 @@
-// ค่าเริ่มต้นของส่วนราชการและหน่วยงาน (ตามแบบฟอร์มในภาพ)
+// ค่าเริ่มต้นของส่วนราชการและหน่วยงาน (สำหรับแบบฟอร์มพิมพ์)
 const DEFAULT_ORG = 'สำนักงานส่งเสริมการศึกษานอกระบบและการศึกษาตามอัธยาศัย';
 const DEFAULT_DEPT = 'สำนักงานส่งเสริมการศึกษานอกระบบและการศึกษาตามอัธยาศัยจังหวัดนครราชสีมา';
 
@@ -20,28 +20,40 @@ document.addEventListener('DOMContentLoaded', () => {
   if (mDate) mDate.value = today;
 });
 
-// ==================== สลับแท็บ ====================
+// ==================== สลับแท็บ (Screen & Print Sync) ====================
 function switchTab(tab) {
   currentTab = tab;
-  const tabAsset = document.getElementById('tab-asset');
-  const tabMaterial = document.getElementById('tab-material');
+  const screenAsset = document.getElementById('tab-asset-screen');
+  const screenMaterial = document.getElementById('tab-material-screen');
+  const printAsset = document.getElementById('print-asset-section');
+  const printMaterial = document.getElementById('print-material-section');
   const btnAsset = document.getElementById('tab-asset-btn');
   const btnMaterial = document.getElementById('tab-material-btn');
 
   if (tab === 'asset') {
-    tabAsset.classList.remove('hidden');
-    tabMaterial.classList.add('hidden');
+    screenAsset.classList.remove('hidden');
+    screenMaterial.classList.add('hidden');
+    printAsset.classList.remove('hidden');
+    printAsset.classList.add('block');
+    printMaterial.classList.add('hidden');
+    printMaterial.classList.remove('block');
+
     btnAsset.className = 'px-4 py-2 bg-indigo-700 rounded-lg font-semibold hover:bg-indigo-600 transition';
     btnMaterial.className = 'px-4 py-2 bg-indigo-950 rounded-lg font-semibold hover:bg-indigo-600 transition';
   } else {
-    tabAsset.classList.add('hidden');
-    tabMaterial.classList.remove('hidden');
+    screenAsset.classList.add('hidden');
+    screenMaterial.classList.remove('hidden');
+    printAsset.classList.add('hidden');
+    printAsset.classList.remove('block');
+    printMaterial.classList.remove('hidden');
+    printMaterial.classList.add('block');
+
     btnAsset.className = 'px-4 py-2 bg-indigo-950 rounded-lg font-semibold hover:bg-indigo-600 transition';
     btnMaterial.className = 'px-4 py-2 bg-indigo-700 rounded-lg font-semibold hover:bg-indigo-600 transition';
   }
 }
 
-// ==================== ส่วนราชการ & หน่วยงาน ====================
+// ==================== ส่วนราชการ & หน่วยงาน (สำหรับพิมพ์) ====================
 function initOrgSettings() {
   const org = localStorage.getItem('gov_org') || DEFAULT_ORG;
   const dept = localStorage.getItem('gov_dept') || DEFAULT_DEPT;
@@ -74,7 +86,7 @@ function saveOrgSettings(e) {
   closeModal('orgModal');
 }
 
-// ==================== หัวบัตรวัสดุ ====================
+// ==================== หัวบัตรวัสดุ (สำหรับพิมพ์) ====================
 function initMaterialMeta() {
   const meta = JSON.parse(localStorage.getItem('material_card_meta') || '{}');
   
@@ -123,7 +135,7 @@ function formatThaiDate(dateStr) {
   return dateStr;
 }
 
-// ==================== อัปเดตข้อมูลหัวบัตรครุภัณฑ์ ====================
+// ==================== อัปเดตข้อมูลหัวบัตรสำหรับพิมพ์ ====================
 function updateAssetHeaderCard(item) {
   if (!item) {
     document.getElementById('card-asset-category').innerText = 'ครุภัณฑ์คอมพิวเตอร์';
@@ -135,7 +147,6 @@ function updateAssetHeaderCard(item) {
     document.getElementById('card-asset-address').innerText = '...................................................................................................';
     document.getElementById('card-asset-phone').innerText = '...................................................';
     
-    // Checkboxes default
     setCheckbox('chk-budget-1', true);
     setCheckbox('chk-budget-2', false);
     setCheckbox('chk-budget-3', false);
@@ -157,14 +168,12 @@ function updateAssetHeaderCard(item) {
   document.getElementById('card-asset-address').innerText = item.vendor_address || '...................................................................................................';
   document.getElementById('card-asset-phone').innerText = item.vendor_phone || '...................................................';
 
-  // Checkboxes ประเภทเงิน
   const b = item.budget_source || 'เงินงบประมาณ';
   setCheckbox('chk-budget-1', b === 'เงินงบประมาณ');
   setCheckbox('chk-budget-2', b === 'เงินนอกงบประมาณ');
   setCheckbox('chk-budget-3', b === 'เงินบริจาค/เงินช่วยเหลือ');
   setCheckbox('chk-budget-4', b === 'อื่นๆ');
 
-  // Checkboxes วิธีการได้มา
   const m = item.acquisition_method || 'เฉพาะเจาะจง';
   setCheckbox('chk-method-1', m === 'ประกาศเชิญชวน');
   setCheckbox('chk-method-2', m === 'คัดเลือก');
@@ -179,34 +188,70 @@ function setCheckbox(id, isChecked) {
   }
 }
 
-// ==================== ทะเบียนคุมทรัพย์สิน (ตารางใหม่ 11 คอลัมน์) ====================
+// ==================== ทะเบียนคุมทรัพย์สิน (ครุภัณฑ์) ====================
 async function loadAssets() {
   try {
     const res = await fetch('/api/assets');
     assetList = await res.json();
-    const tbody = document.getElementById('asset-table-body');
-    tbody.innerHTML = '';
 
-    const TARGET_ROWS = 15; // เติมแถวว่างให้เต็มหน้ากระดาษพิมพ์เหมือนในภาพ
-
-    // อัปเดตข้อมูลหัวบัตรตามรายการล่าสุดหรือรายการที่เลือก
-    if (assetList.length > 0) {
-      updateAssetHeaderCard(assetList[selectedAssetIndex] || assetList[0]);
-    } else {
-      updateAssetHeaderCard(null);
-    }
+    // -------------------------------------------------------------
+    // 1. เรนเดอร์บนหน้าจอหลัก (Screen View - แบบเดิมที่คุณชอบ 100%)
+    // -------------------------------------------------------------
+    const screenTbody = document.getElementById('screen-asset-table-body');
+    screenTbody.innerHTML = '';
 
     assetList.forEach((item, index) => {
       const tr = document.createElement('tr');
-      tr.className = 'hover:bg-slate-50 cursor-pointer';
+      tr.className = 'hover:bg-slate-50 border-b cursor-pointer';
       tr.onclick = (e) => {
-        // ถ้าไม่ได้กดปุ่มลบ ให้อัปเดตหัวบัตรตามรายการนี้
+        // เมื่อคลิกแถวในหน้าจอ จะอัปเดตหัวบัตรพิมพ์ตามรายการนี้
         if (!e.target.closest('button')) {
           selectedAssetIndex = index;
           updateAssetHeaderCard(item);
         }
       };
 
+      tr.innerHTML = `
+        <td class="p-2 border text-center">${index + 1}</td>
+        <td class="p-2 border">${item.received_date || ''}</td>
+        <td class="p-2 border font-semibold">${item.asset_code || ''}</td>
+        <td class="p-2 border">${item.asset_name || ''}</td>
+        <td class="p-2 border">${item.spec || ''}</td>
+        <td class="p-2 border">${item.doc_no || ''}</td>
+        <td class="p-2 border text-right">${Number(item.cost).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+        <td class="p-2 border text-center">${item.useful_life}</td>
+        <td class="p-2 border text-right text-slate-500">${Number(item.depr_per_year).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+        <td class="p-2 border text-right font-bold text-indigo-700">${Number(item.net_book_value).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+        <td class="p-2 border">${item.location || ''}</td>
+        <td class="p-2 border text-center">
+          <span class="px-2 py-0.5 rounded text-xs ${item.status === 'ใช้งานได้ดี' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+            ${item.status}
+          </span>
+        </td>
+        <td class="p-2 border">${item.responsible_person || ''}</td>
+        <td class="p-2 border text-center">
+          <button onclick="deleteAsset(${item.id})" class="text-red-500 hover:text-red-700 px-1" title="ลบรายการ">🗑️</button>
+        </td>
+      `;
+      screenTbody.appendChild(tr);
+    });
+
+    // -------------------------------------------------------------
+    // 2. เรนเดอร์เฉพาะตอนพิมพ์ (Print View - แบบฟอร์มใหม่ตามภาพ 100%)
+    // -------------------------------------------------------------
+    const printTbody = document.getElementById('print-asset-table-body');
+    printTbody.innerHTML = '';
+    const TARGET_ROWS = 15;
+
+    // อัปเดตข้อมูลหัวบัตรพิมพ์ตามรายการล่าสุดหรือที่เลือก
+    if (assetList.length > 0) {
+      updateAssetHeaderCard(assetList[selectedAssetIndex] || assetList[0]);
+    } else {
+      updateAssetHeaderCard(null);
+    }
+
+    assetList.forEach((item) => {
+      const tr = document.createElement('tr');
       tr.innerHTML = `
         <td class="text-center font-normal whitespace-nowrap">${formatThaiDate(item.received_date)}</td>
         <td class="text-center font-normal">${item.doc_no || ''}</td>
@@ -217,16 +262,13 @@ async function loadAssets() {
         <td class="text-center">${item.useful_life ? item.useful_life + ' ปี' : ''}</td>
         <td class="text-center">${item.depr_rate || '20%'}</td>
         <td class="text-right whitespace-nowrap text-slate-600">${item.acc_depr ? Number(item.acc_depr).toLocaleString('th-TH', {minimumFractionDigits: 2}) : '0.00'}</td>
-        <td class="text-right font-bold text-indigo-900 whitespace-nowrap">${item.net_book_value ? Number(item.net_book_value).toLocaleString('th-TH', {minimumFractionDigits: 2}) : '-'}</td>
+        <td class="text-right font-bold text-black whitespace-nowrap">${item.net_book_value ? Number(item.net_book_value).toLocaleString('th-TH', {minimumFractionDigits: 2}) : '-'}</td>
         <td class="text-left">${item.remark || item.location || ''}</td>
-        <td class="text-center no-print">
-          <button onclick="deleteAsset(${item.id})" class="text-red-500 hover:text-red-700 px-1 py-0.5 rounded text-xs" title="ลบรายการ">🗑️</button>
-        </td>
       `;
-      tbody.appendChild(tr);
+      printTbody.appendChild(tr);
     });
 
-    // เติมแถวว่างให้ครบ 15 แถวพอดีเต็มหน้ากระดาษ
+    // เติมแถวว่างให้ครบ 15 แถวสำหรับการพิมพ์
     const emptyRowsCount = Math.max(0, TARGET_ROWS - assetList.length);
     for (let i = 0; i < emptyRowsCount; i++) {
       const tr = document.createElement('tr');
@@ -243,9 +285,8 @@ async function loadAssets() {
         <td>&nbsp;</td>
         <td>&nbsp;</td>
         <td>&nbsp;</td>
-        <td class="no-print">&nbsp;</td>
       `;
-      tbody.appendChild(tr);
+      printTbody.appendChild(tr);
     }
 
   } catch (err) {
@@ -267,6 +308,7 @@ async function saveAsset(e) {
     cost: parseFloat(document.getElementById('a_cost').value) || 0,
     useful_life: parseInt(document.getElementById('a_life').value) || 5,
     location: document.getElementById('a_location').value.trim(),
+    status: document.getElementById('a_status').value,
     vendor: document.getElementById('a_vendor').value.trim(),
     vendor_address: document.getElementById('a_vendor_address').value.trim(),
     vendor_phone: document.getElementById('a_vendor_phone').value.trim(),
@@ -291,7 +333,7 @@ async function saveAsset(e) {
 }
 
 async function deleteAsset(id) {
-  if (!confirm('ยืนยันที่จะลบรายการทรัพย์สินนี้หรือไม่?')) return;
+  if (!confirm('ยืนยันที่จะลบรายการครุภัณฑ์นี้หรือไม่?')) return;
   await fetch(`/api/assets/${id}`, { method: 'DELETE' });
   loadAssets();
 }
@@ -301,9 +343,36 @@ async function loadMaterials() {
   try {
     const res = await fetch('/api/materials');
     const data = await res.json();
-    const tbody = document.getElementById('material-table-body');
-    tbody.innerHTML = '';
 
+    // 1. หน้าจอหลัก
+    const screenTbody = document.getElementById('screen-material-table-body');
+    screenTbody.innerHTML = '';
+
+    data.forEach((item) => {
+      const tr = document.createElement('tr');
+      tr.className = 'hover:bg-slate-50 border-b';
+      tr.innerHTML = `
+        <td class="p-2 border">${item.trans_date || ''}</td>
+        <td class="p-2 border font-semibold">${item.party || ''}</td>
+        <td class="p-2 border">${item.doc_no || ''}</td>
+        <td class="p-2 border">${item.budget_type || ''}</td>
+        <td class="p-2 border text-center">${item.opening_stock || 0}</td>
+        <td class="p-2 border text-center text-green-600 font-semibold">${item.qty_in || 0}</td>
+        <td class="p-2 border text-center text-red-600 font-semibold">${item.qty_out || 0}</td>
+        <td class="p-2 border text-center font-bold bg-slate-100">${item.balance}</td>
+        <td class="p-2 border text-right">${Number(item.unit_price).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+        <td class="p-2 border text-right font-bold text-emerald-700">${Number(item.total_amount).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+        <td class="p-2 border text-slate-500">${item.remark || ''}</td>
+        <td class="p-2 border text-center">
+          <button onclick="deleteMaterial(${item.id})" class="text-red-500 hover:text-red-700 px-1" title="ลบรายการ">🗑️</button>
+        </td>
+      `;
+      screenTbody.appendChild(tr);
+    });
+
+    // 2. สำหรับพิมพ์
+    const printTbody = document.getElementById('print-material-table-body');
+    printTbody.innerHTML = '';
     const TARGET_ROWS = 15;
 
     data.forEach((item, index) => {
@@ -312,7 +381,6 @@ async function loadMaterials() {
       const qtyOut = item.qty_out > 0 ? item.qty_out : '';
 
       const tr = document.createElement('tr');
-      tr.className = 'hover:bg-slate-50';
       tr.innerHTML = `
         <td class="text-center whitespace-nowrap">${formatThaiDate(item.trans_date)}</td>
         <td class="text-left font-medium">${item.party || ''}</td>
@@ -325,11 +393,8 @@ async function loadMaterials() {
         <td class="text-right whitespace-nowrap">${item.unit_price ? Number(item.unit_price).toLocaleString('th-TH', {minimumFractionDigits: 2}) : ''}</td>
         <td class="text-right font-bold text-emerald-800 whitespace-nowrap">${item.total_amount ? Number(item.total_amount).toLocaleString('th-TH', {minimumFractionDigits: 2}) : ''}</td>
         <td class="text-left">${item.remark || ''}</td>
-        <td class="text-center no-print">
-          <button onclick="deleteMaterial(${item.id})" class="text-red-500 hover:text-red-700 px-1 py-0.5 rounded text-xs" title="ลบรายการ">🗑️</button>
-        </td>
       `;
-      tbody.appendChild(tr);
+      printTbody.appendChild(tr);
     });
 
     const emptyRowsCount = Math.max(0, TARGET_ROWS - data.length);
@@ -348,9 +413,8 @@ async function loadMaterials() {
         <td>&nbsp;</td>
         <td>&nbsp;</td>
         <td>&nbsp;</td>
-        <td class="no-print">&nbsp;</td>
       `;
-      tbody.appendChild(tr);
+      printTbody.appendChild(tr);
     }
   } catch (err) {
     console.error('Error loading materials:', err);
