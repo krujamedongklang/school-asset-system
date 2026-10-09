@@ -7,6 +7,10 @@ const crypto = require('crypto');
 // โหลดการตั้งค่า Supabase จากไฟล์ config หรือ Environment Variables
 const CONFIG_FILE = path.join(__dirname, 'supabase_config.json');
 
+// ค่าเริ่มต้นสำหรับการเชื่อมต่อ Supabase ของโรงเรียนบ้านดงกลาง
+const DEFAULT_SUPABASE_URL = 'https://xolrvzpcssveioybpsxp.supabase.co';
+const DEFAULT_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhvbHJ2enBjc3N2ZWlveWJwc3hwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE1NDA2MjIsImV4cCI6MjEwNzExNjYyMn0.MiUHy8fvUz66UmKGWZ_YxV-ZlwanXe1EvRTki2JJqmA';
+
 function getSupabaseConfig() {
   let url = process.env.SUPABASE_URL || '';
   let key = process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -17,6 +21,11 @@ function getSupabaseConfig() {
       url = cfg.supabase_url || url;
       key = cfg.supabase_key || key;
     } catch (e) {}
+  }
+
+  if (!url || !key) {
+    url = DEFAULT_SUPABASE_URL;
+    key = DEFAULT_SUPABASE_KEY;
   }
 
   return { url: url.trim(), key: key.trim() };
