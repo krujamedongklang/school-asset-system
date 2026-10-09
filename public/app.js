@@ -4,6 +4,8 @@ const DEFAULT_DEPT = 'สำนักงานส่งเสริมการ�
 
 let currentTab = 'asset';
 let assetList = [];
+let materialList = [];
+let selectedAssetPrintId = 'all'; // 'all' หรือ ID ของครุภัณฑ์ที่ต้องการพิมพ์
 let selectedAssetIndex = 0;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -188,15 +190,122 @@ function setCheckbox(id, isChecked) {
   }
 }
 
+// ==================== การจัดการพิมพ์แบบเลือกได้ ====================
+function updateAssetPrintDropdown() {
+  const select = document.getElementById('asset-print-select');
+  if (!select) return;
+
+  const currentVal = selectedAssetPrintId;
+  select.innerHTML = '<option value="all">📋 พิมพ์รวมทุกรายการ</option>';
+
+  assetList.forEach((item) => {
+    const opt = document.createElement('option');
+    opt.value = String(item.id);
+    opt.textContent = `🏷️ [${item.asset_code || '-'}] ${item.asset_name}`;
+    select.appendChild(opt);
+  });
+
+  if (currentVal && (currentVal === 'all' || assetList.some(a => String(a.id) === String(currentVal)))) {
+    select.value = currentVal;
+  } else {
+    select.value = 'all';
+    selectedAssetPrintId = 'all';
+  }
+}
+
+function onAssetPrintSelectChange(val) {
+  selectedAssetPrintId = val;
+  renderAssetPrint();
+}
+
+function printSingleAsset(id) {
+  selectedAssetPrintId = String(id);
+  const select = document.getElementById('asset-print-select');
+  if (select) select.value = selectedAssetPrintId;
+  renderAssetPrint();
+  window.print();
+}
+
+function triggerPrintAsset() {
+  renderAssetPrint();
+  window.print();
+}
+
+function renderAssetPrint() {
+  const printTbody = document.getElementById('print-asset-table-body');
+  if (!printTbody) return;
+  printTbody.innerHTML = '';
+  const TARGET_ROWS = 15;
+
+  let printItems = [];
+
+  if (selectedAssetPrintId === 'all') {
+    // พิมพ์รวมทุกรายการ
+    printItems = assetList;
+    if (assetList.length > 0) {
+      updateAssetHeaderCard(assetList[selectedAssetIndex] || assetList[0]);
+    } else {
+      updateAssetHeaderCard(null);
+    }
+  } else {
+    // พิมพ์เฉพาะรายการที่เลือก (บัตรเดี่ยวตามแบบฟอร์มราชการ)
+    const found = assetList.find(a => String(a.id) === String(selectedAssetPrintId));
+    if (found) {
+      printItems = [found];
+      updateAssetHeaderCard(found);
+    } else {
+      printItems = assetList;
+      updateAssetHeaderCard(assetList[0] || null);
+    }
+  }
+
+  printItems.forEach((item) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="text-center font-normal whitespace-nowrap">${formatThaiDate(item.received_date)}</td>
+      <td class="text-center font-normal">${item.doc_no || ''}</td>
+      <td class="text-left font-medium">${item.asset_name || ''}</td>
+      <td class="text-center">${item.qty || 1}</td>
+      <td class="text-right whitespace-nowrap">${item.cost ? Number(item.cost).toLocaleString('th-TH', {minimumFractionDigits: 2}) : '-'}</td>
+      <td class="text-right whitespace-nowrap">${item.total_cost ? Number(item.total_cost).toLocaleString('th-TH', {minimumFractionDigits: 2}) : '-'}</td>
+      <td class="text-center">${item.useful_life ? item.useful_life + ' ปี' : ''}</td>
+      <td class="text-center">${item.depr_rate || '20%'}</td>
+      <td class="text-right whitespace-nowrap text-slate-600">${item.acc_depr ? Number(item.acc_depr).toLocaleString('th-TH', {minimumFractionDigits: 2}) : '0.00'}</td>
+      <td class="text-right font-bold text-black whitespace-nowrap">${item.net_book_value ? Number(item.net_book_value).toLocaleString('th-TH', {minimumFractionDigits: 2}) : '-'}</td>
+      <td class="text-left">${item.remark || item.location || ''}</td>
+    `;
+    printTbody.appendChild(tr);
+  });
+
+  // เติมแถวว่างให้ครบ 15 แถวสำหรับการพิมพ์
+  const emptyRowsCount = Math.max(0, TARGET_ROWS - printItems.length);
+  for (let i = 0; i < emptyRowsCount; i++) {
+    const tr = document.createElement('tr');
+    tr.className = 'empty-row';
+    tr.innerHTML = `
+      <td class="text-center">&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+    `;
+    printTbody.appendChild(tr);
+  }
+}
+
 // ==================== ทะเบียนคุมทรัพย์สิน (ครุภัณฑ์) ====================
 async function loadAssets() {
   try {
     const res = await fetch('/api/assets');
     assetList = await res.json();
 
-    // -------------------------------------------------------------
     // 1. เรนเดอร์บนหน้าจอหลัก (Screen View - แบบเดิมที่คุณชอบ 100%)
-    // -------------------------------------------------------------
     const screenTbody = document.getElementById('screen-asset-table-body');
     screenTbody.innerHTML = '';
 
@@ -207,7 +316,9 @@ async function loadAssets() {
         // เมื่อคลิกแถวในหน้าจอ จะอัปเดตหัวบัตรพิมพ์ตามรายการนี้
         if (!e.target.closest('button')) {
           selectedAssetIndex = index;
-          updateAssetHeaderCard(item);
+          if (selectedAssetPrintId === 'all') {
+            updateAssetHeaderCard(item);
+          }
         }
       };
 
@@ -229,73 +340,71 @@ async function loadAssets() {
           </span>
         </td>
         <td class="p-2 border">${item.responsible_person || ''}</td>
-        <td class="p-2 border text-center">
-          <button onclick="deleteAsset(${item.id})" class="text-red-500 hover:text-red-700 px-1" title="ลบรายการ">🗑️</button>
+        <td class="p-2 border text-center whitespace-nowrap space-x-1">
+          <button onclick="printSingleAsset(${item.id})" class="text-blue-600 hover:text-blue-800 p-1 font-semibold rounded hover:bg-blue-50" title="พิมพ์บัตรรายการนี้">🖨️</button>
+          <button onclick="editAsset(${item.id})" class="text-amber-600 hover:text-amber-800 p-1 font-semibold rounded hover:bg-amber-50" title="แก้ไขรายการนี้">✏️</button>
+          <button onclick="deleteAsset(${item.id})" class="text-red-500 hover:text-red-700 p-1 font-semibold rounded hover:bg-red-50" title="ลบรายการ">🗑️</button>
         </td>
       `;
       screenTbody.appendChild(tr);
     });
 
-    // -------------------------------------------------------------
-    // 2. เรนเดอร์เฉพาะตอนพิมพ์ (Print View - แบบฟอร์มใหม่ตามภาพ 100%)
-    // -------------------------------------------------------------
-    const printTbody = document.getElementById('print-asset-table-body');
-    printTbody.innerHTML = '';
-    const TARGET_ROWS = 15;
+    // 2. อัปเดต Dropdown เลือกพิมพ์
+    updateAssetPrintDropdown();
 
-    // อัปเดตข้อมูลหัวบัตรพิมพ์ตามรายการล่าสุดหรือที่เลือก
-    if (assetList.length > 0) {
-      updateAssetHeaderCard(assetList[selectedAssetIndex] || assetList[0]);
-    } else {
-      updateAssetHeaderCard(null);
-    }
-
-    assetList.forEach((item) => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td class="text-center font-normal whitespace-nowrap">${formatThaiDate(item.received_date)}</td>
-        <td class="text-center font-normal">${item.doc_no || ''}</td>
-        <td class="text-left font-medium">${item.asset_name || ''}</td>
-        <td class="text-center">${item.qty || 1}</td>
-        <td class="text-right whitespace-nowrap">${item.cost ? Number(item.cost).toLocaleString('th-TH', {minimumFractionDigits: 2}) : '-'}</td>
-        <td class="text-right whitespace-nowrap">${item.total_cost ? Number(item.total_cost).toLocaleString('th-TH', {minimumFractionDigits: 2}) : '-'}</td>
-        <td class="text-center">${item.useful_life ? item.useful_life + ' ปี' : ''}</td>
-        <td class="text-center">${item.depr_rate || '20%'}</td>
-        <td class="text-right whitespace-nowrap text-slate-600">${item.acc_depr ? Number(item.acc_depr).toLocaleString('th-TH', {minimumFractionDigits: 2}) : '0.00'}</td>
-        <td class="text-right font-bold text-black whitespace-nowrap">${item.net_book_value ? Number(item.net_book_value).toLocaleString('th-TH', {minimumFractionDigits: 2}) : '-'}</td>
-        <td class="text-left">${item.remark || item.location || ''}</td>
-      `;
-      printTbody.appendChild(tr);
-    });
-
-    // เติมแถวว่างให้ครบ 15 แถวสำหรับการพิมพ์
-    const emptyRowsCount = Math.max(0, TARGET_ROWS - assetList.length);
-    for (let i = 0; i < emptyRowsCount; i++) {
-      const tr = document.createElement('tr');
-      tr.className = 'empty-row';
-      tr.innerHTML = `
-        <td class="text-center">&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-      `;
-      printTbody.appendChild(tr);
-    }
+    // 3. เรนเดอร์ส่วนพิมพ์
+    renderAssetPrint();
 
   } catch (err) {
     console.error('Error loading assets:', err);
   }
 }
 
+function openAddAssetModal() {
+  document.getElementById('edit_asset_id').value = '';
+  document.getElementById('modal-asset-title').innerText = '➕ ลงทะเบียนครุภัณฑ์ใหม่';
+  document.getElementById('modal-asset-submit-btn').innerText = '💾 บันทึกข้อมูล';
+  document.getElementById('form-asset').reset();
+  document.getElementById('a_date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('a_qty').value = '1';
+  document.getElementById('a_life').value = '5';
+  openModal('assetModal');
+}
+
+function editAsset(id) {
+  const item = assetList.find(a => a.id === id);
+  if (!item) return;
+
+  document.getElementById('edit_asset_id').value = item.id;
+  document.getElementById('modal-asset-title').innerText = '✏️ แก้ไขข้อมูลครุภัณฑ์';
+  document.getElementById('modal-asset-submit-btn').innerText = '💾 บันทึกการแก้ไข';
+
+  document.getElementById('a_name').value = item.asset_name || '';
+  document.getElementById('a_code').value = item.asset_code || '';
+  document.getElementById('a_category').value = item.category || '';
+  document.getElementById('a_spec').value = item.spec || '';
+  document.getElementById('a_model').value = item.model || '';
+  document.getElementById('a_date').value = item.received_date || '';
+  document.getElementById('a_doc').value = item.doc_no || '';
+  document.getElementById('a_qty').value = item.qty || 1;
+  document.getElementById('a_cost').value = item.cost || 0;
+  document.getElementById('a_life').value = item.useful_life || 5;
+  document.getElementById('a_location').value = item.location || '';
+  document.getElementById('a_status').value = item.status || 'ใช้งานได้ดี';
+  document.getElementById('a_vendor').value = item.vendor || '';
+  document.getElementById('a_person').value = item.responsible_person || '';
+  document.getElementById('a_vendor_address').value = item.vendor_address || '';
+  document.getElementById('a_vendor_phone').value = item.vendor_phone || '';
+  document.getElementById('a_budget_source').value = item.budget_source || 'เงินงบประมาณ';
+  document.getElementById('a_acquisition_method').value = item.acquisition_method || 'เฉพาะเจาะจง';
+  document.getElementById('a_remark').value = item.remark || '';
+
+  openModal('assetModal');
+}
+
 async function saveAsset(e) {
   e.preventDefault();
+  const editId = document.getElementById('edit_asset_id').value;
   const body = {
     asset_name: document.getElementById('a_name').value.trim(),
     asset_code: document.getElementById('a_code').value.trim(),
@@ -318,18 +427,22 @@ async function saveAsset(e) {
     remark: document.getElementById('a_remark').value.trim()
   };
 
-  await fetch('/api/assets', {
-    method: 'POST',
+  const url = editId ? `/api/assets/${editId}` : '/api/assets';
+  const method = editId ? 'PUT' : 'POST';
+
+  const res = await fetch(url, {
+    method,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   });
 
-  closeModal('assetModal');
-  document.getElementById('form-asset').reset();
-  document.getElementById('a_date').value = new Date().toISOString().split('T')[0];
-  document.getElementById('a_qty').value = '1';
-  document.getElementById('a_life').value = '5';
-  loadAssets();
+  if (res.ok) {
+    closeModal('assetModal');
+    loadAssets();
+  } else {
+    const err = await res.json();
+    alert('เกิดข้อผิดพลาด: ' + (err.error || 'ไม่สามารถบันทึกได้'));
+  }
 }
 
 async function deleteAsset(id) {
@@ -342,13 +455,13 @@ async function deleteAsset(id) {
 async function loadMaterials() {
   try {
     const res = await fetch('/api/materials');
-    const data = await res.json();
+    materialList = await res.json();
 
-    // 1. หน้าจอหลัก
+    // 1. หน้าจอหลัก (Screen View)
     const screenTbody = document.getElementById('screen-material-table-body');
     screenTbody.innerHTML = '';
 
-    data.forEach((item) => {
+    materialList.forEach((item) => {
       const tr = document.createElement('tr');
       tr.className = 'hover:bg-slate-50 border-b';
       tr.innerHTML = `
@@ -363,8 +476,9 @@ async function loadMaterials() {
         <td class="p-2 border text-right">${Number(item.unit_price).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
         <td class="p-2 border text-right font-bold text-emerald-700">${Number(item.total_amount).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
         <td class="p-2 border text-slate-500">${item.remark || ''}</td>
-        <td class="p-2 border text-center">
-          <button onclick="deleteMaterial(${item.id})" class="text-red-500 hover:text-red-700 px-1" title="ลบรายการ">🗑️</button>
+        <td class="p-2 border text-center whitespace-nowrap space-x-1">
+          <button onclick="editMaterial(${item.id})" class="text-amber-600 hover:text-amber-800 p-1 font-semibold rounded hover:bg-amber-50" title="แก้ไขรายการนี้">✏️</button>
+          <button onclick="deleteMaterial(${item.id})" class="text-red-500 hover:text-red-700 p-1 font-semibold rounded hover:bg-red-50" title="ลบรายการ">🗑️</button>
         </td>
       `;
       screenTbody.appendChild(tr);
@@ -375,7 +489,7 @@ async function loadMaterials() {
     printTbody.innerHTML = '';
     const TARGET_ROWS = 15;
 
-    data.forEach((item, index) => {
+    materialList.forEach((item, index) => {
       const openStock = (index === 0 && item.opening_stock > 0) ? item.opening_stock : (item.opening_stock || '');
       const qtyIn = item.qty_in > 0 ? item.qty_in : '';
       const qtyOut = item.qty_out > 0 ? item.qty_out : '';
@@ -397,7 +511,7 @@ async function loadMaterials() {
       printTbody.appendChild(tr);
     });
 
-    const emptyRowsCount = Math.max(0, TARGET_ROWS - data.length);
+    const emptyRowsCount = Math.max(0, TARGET_ROWS - materialList.length);
     for (let i = 0; i < emptyRowsCount; i++) {
       const tr = document.createElement('tr');
       tr.className = 'empty-row';
@@ -421,8 +535,42 @@ async function loadMaterials() {
   }
 }
 
+function openAddMaterialModal() {
+  document.getElementById('edit_material_id').value = '';
+  document.getElementById('modal-material-title').innerText = '➕ บันทึกรายการบัญชีคุมวัสดุ';
+  document.getElementById('modal-material-submit-btn').innerText = '💾 บันทึกข้อมูล';
+  document.getElementById('form-material').reset();
+  document.getElementById('m_date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('m_open').value = '0';
+  document.getElementById('m_in').value = '0';
+  document.getElementById('m_out').value = '0';
+  openModal('materialModal');
+}
+
+function editMaterial(id) {
+  const item = materialList.find(m => m.id === id);
+  if (!item) return;
+
+  document.getElementById('edit_material_id').value = item.id;
+  document.getElementById('modal-material-title').innerText = '✏️ แก้ไขรายการบัญชีคุมวัสดุ';
+  document.getElementById('modal-material-submit-btn').innerText = '💾 บันทึกการแก้ไข';
+
+  document.getElementById('m_date').value = item.trans_date || '';
+  document.getElementById('m_party').value = item.party || '';
+  document.getElementById('m_doc').value = item.doc_no || '';
+  document.getElementById('m_budget').value = item.budget_type || '';
+  document.getElementById('m_open').value = item.opening_stock || 0;
+  document.getElementById('m_price').value = item.unit_price || 0;
+  document.getElementById('m_in').value = item.qty_in || 0;
+  document.getElementById('m_out').value = item.qty_out || 0;
+  document.getElementById('m_remark').value = item.remark || '';
+
+  openModal('materialModal');
+}
+
 async function saveMaterial(e) {
   e.preventDefault();
+  const editId = document.getElementById('edit_material_id').value;
   const body = {
     trans_date: document.getElementById('m_date').value,
     material_code: '',
@@ -437,16 +585,22 @@ async function saveMaterial(e) {
     remark: document.getElementById('m_remark').value.trim()
   };
 
-  await fetch('/api/materials', {
-    method: 'POST',
+  const url = editId ? `/api/materials/${editId}` : '/api/materials';
+  const method = editId ? 'PUT' : 'POST';
+
+  const res = await fetch(url, {
+    method,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   });
 
-  closeModal('materialModal');
-  document.getElementById('form-material').reset();
-  document.getElementById('m_date').value = new Date().toISOString().split('T')[0];
-  loadMaterials();
+  if (res.ok) {
+    closeModal('materialModal');
+    loadMaterials();
+  } else {
+    const err = await res.json();
+    alert('เกิดข้อผิดพลาด: ' + (err.error || 'ไม่สามารถบันทึกได้'));
+  }
 }
 
 async function deleteMaterial(id) {

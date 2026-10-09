@@ -108,13 +108,22 @@
 
       <!-- === TAB 1 SCREEN: ทะเบียนคุมทรัพย์สิน (ครุภัณฑ์) หน้าแรกแบบเดิมที่คุณชอบ === -->
       <div id="tab-asset-screen" class="block">
-        <div class="flex justify-between items-center mb-4 no-print">
-          <h2 class="text-2xl font-bold text-slate-700">ทะเบียนคุมทรัพย์สิน (ครุภัณฑ์)</h2>
-          <div class="flex gap-2">
-            <button onclick="openModal('assetModal')" class="bg-emerald-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-emerald-700 shadow transition flex items-center gap-1">
+        <div class="flex flex-wrap justify-between items-center gap-3 mb-4 no-print">
+          <div>
+            <h2 class="text-2xl font-bold text-slate-700">ทะเบียนคุมทรัพย์สิน (ครุภัณฑ์)</h2>
+            <p class="text-xs text-slate-500 mt-0.5">กด ✏️ เพื่อแก้ไขข้อมูล หรือ 🖨️ ในตารางเพื่อพิมพ์บัตรเฉพาะรายการนั้น</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <div class="flex items-center gap-1.5 bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 shadow-sm text-xs">
+              <span class="font-semibold text-slate-700 whitespace-nowrap">🖨️ เลือกพิมพ์:</span>
+              <select id="asset-print-select" onchange="onAssetPrintSelectChange(this.value)" class="bg-transparent border-0 font-semibold text-indigo-900 focus:ring-0 cursor-pointer max-w-[220px]">
+                <option value="all">พิมพ์รวมทุกรายการ</option>
+              </select>
+            </div>
+            <button onclick="openAddAssetModal()" class="bg-emerald-600 text-white px-3.5 py-2 rounded-lg font-semibold hover:bg-emerald-700 shadow transition flex items-center gap-1 text-xs sm:text-sm">
               <span>+</span> เพิ่มครุภัณฑ์ใหม่
             </button>
-            <button onclick="window.print()" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 shadow transition flex items-center gap-1">
+            <button onclick="triggerPrintAsset()" class="bg-blue-600 text-white px-3.5 py-2 rounded-lg font-semibold hover:bg-blue-700 shadow transition flex items-center gap-1 text-xs sm:text-sm">
               <span>🖨️</span> พิมพ์เอกสารหมายเลข ๓ (PDF)
             </button>
           </div>
@@ -149,16 +158,19 @@
 
       <!-- === TAB 2 SCREEN: บัญชีคุมวัสดุ หน้าแรกแบบเดิมที่คุณชอบ === -->
       <div id="tab-material-screen" class="hidden">
-        <div class="flex justify-between items-center mb-4 no-print">
-          <h2 class="text-2xl font-bold text-slate-700">บัญชีคุมวัสดุ</h2>
-          <div class="flex gap-2">
+        <div class="flex flex-wrap justify-between items-center gap-3 mb-4 no-print">
+          <div>
+            <h2 class="text-2xl font-bold text-slate-700">บัญชีคุมวัสดุ</h2>
+            <p class="text-xs text-slate-500 mt-0.5">กด ✏️ เพื่อแก้ไขรายการ หรือ 🗑️ เพื่อลบ</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
             <button onclick="openModal('materialMetaModal')" class="bg-amber-600 text-white px-3 py-2 rounded-lg font-semibold hover:bg-amber-700 shadow text-xs transition">
               📝 ข้อมูลหัวบัตรวัสดุ
             </button>
-            <button onclick="openModal('materialModal')" class="bg-emerald-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-emerald-700 shadow transition">
+            <button onclick="openAddMaterialModal()" class="bg-emerald-600 text-white px-3.5 py-2 rounded-lg font-semibold hover:bg-emerald-700 shadow transition text-xs sm:text-sm">
               + บันทึกรับ-จ่ายวัสดุ
             </button>
-            <button onclick="window.print()" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 shadow transition flex items-center gap-1">
+            <button onclick="window.print()" class="bg-blue-600 text-white px-3.5 py-2 rounded-lg font-semibold hover:bg-blue-700 shadow transition flex items-center gap-1 text-xs sm:text-sm">
               <span>🖨️</span> พิมพ์บัญชีคุมวัสดุ (PDF)
             </button>
           </div>
@@ -423,11 +435,11 @@
   <div id="assetModal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4 z-50 no-print">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl p-6 max-h-[92vh] overflow-y-auto">
       <div class="flex justify-between items-center mb-4 border-b pb-2">
-        <h3 class="text-base font-bold text-indigo-900">➕ ลงทะเบียนครุภัณฑ์ใหม่</h3>
+        <h3 id="modal-asset-title" class="text-base font-bold text-indigo-900">➕ ลงทะเบียนครุภัณฑ์ใหม่</h3>
         <button onclick="closeModal('assetModal')" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
       </div>
       <form id="form-asset" onsubmit="saveAsset(event)" class="grid grid-cols-3 gap-3 text-xs">
-        
+        <input type="hidden" id="edit_asset_id">
         <div class="col-span-2">
           <label class="font-semibold block mb-1">รายการ (ชื่อทรัพย์สิน/ยี่ห้อ/รุ่น/รายละเอียด) *</label>
           <input type="text" id="a_name" required placeholder="เช่น เครื่องฉาย Projector Acer" class="w-full border p-2 rounded focus:ring-1 focus:ring-indigo-500">
@@ -528,7 +540,7 @@
 
         <div class="col-span-3 flex justify-end gap-2 mt-4 pt-2 border-t">
           <button type="button" onclick="closeModal('assetModal')" class="px-4 py-2 bg-gray-200 text-slate-700 rounded-lg hover:bg-gray-300 font-semibold">ยกเลิก</button>
-          <button type="submit" class="px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold shadow">💾 บันทึกข้อมูล</button>
+          <button type="submit" id="modal-asset-submit-btn" class="px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold shadow">💾 บันทึกข้อมูล</button>
         </div>
       </form>
     </div>
@@ -538,10 +550,11 @@
   <div id="materialModal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4 z-50 no-print">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center mb-4 border-b pb-2">
-        <h3 class="text-base font-bold text-emerald-900">➕ บันทึกรายการบัญชีคุมวัสดุ</h3>
+        <h3 id="modal-material-title" class="text-base font-bold text-emerald-900">➕ บันทึกรายการบัญชีคุมวัสดุ</h3>
         <button onclick="closeModal('materialModal')" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
       </div>
       <form id="form-material" onsubmit="saveMaterial(event)" class="grid grid-cols-2 gap-3 text-xs">
+        <input type="hidden" id="edit_material_id">
         <div>
           <label class="font-semibold block mb-1">วันที่ทำรายการ</label>
           <input type="date" id="m_date" required class="w-full border p-2 rounded">
@@ -580,7 +593,7 @@
         </div>
         <div class="col-span-2 flex justify-end gap-2 mt-4 pt-2 border-t">
           <button type="button" onclick="closeModal('materialModal')" class="px-4 py-2 bg-gray-200 text-slate-700 rounded-lg hover:bg-gray-300 font-semibold">ยกเลิก</button>
-          <button type="submit" class="px-5 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-semibold shadow">💾 บันทึกข้อมูล</button>
+          <button type="submit" id="modal-material-submit-btn" class="px-5 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-semibold shadow">💾 บันทึกข้อมูล</button>
         </div>
       </form>
     </div>

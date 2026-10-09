@@ -138,6 +138,28 @@ app.post('/api/assets', (req, res) => {
   });
 });
 
+// แก้ไขครุภัณฑ์
+app.put('/api/assets/:id', (req, res) => {
+  const d = req.body;
+  const sql = `UPDATE assets SET 
+    asset_code = ?, received_date = ?, asset_name = ?, spec = ?, doc_no = ?, cost = ?, useful_life = ?,
+    location = ?, status = ?, vendor = ?, responsible_person = ?, department = ?, remark = ?,
+    category = ?, model = ?, qty = ?, vendor_address = ?, vendor_phone = ?, budget_source = ?, acquisition_method = ?
+    WHERE id = ?`;
+  
+  const params = [
+    d.asset_code, d.received_date, d.asset_name, d.spec, d.doc_no, Number(d.cost) || 0, Number(d.useful_life) || 5,
+    d.location, d.status || 'ใช้งานได้ดี', d.vendor, d.responsible_person, d.department, d.remark,
+    d.category, d.model, Number(d.qty) || 1, d.vendor_address, d.vendor_phone, d.budget_source, d.acquisition_method,
+    req.params.id
+  ];
+  
+  db.run(sql, params, function(err) {
+    if (err) return res.status(400).json({ error: err.message });
+    res.json({ message: 'แก้ไขข้อมูลครุภัณฑ์เรียบร้อยแล้ว', changes: this.changes });
+  });
+});
+
 // ลบครุภัณฑ์
 app.delete('/api/assets/:id', (req, res) => {
   db.run('DELETE FROM assets WHERE id = ?', [req.params.id], function(err) {
@@ -180,6 +202,21 @@ app.post('/api/materials', (req, res) => {
   db.run(sql, params, function(err) {
     if (err) return res.status(400).json({ error: err.message });
     res.json({ message: 'บันทึกรายการวัสดุเรียบร้อยแล้ว', id: this.lastID });
+  });
+});
+
+// แก้ไขรายการวัสดุ
+app.put('/api/materials/:id', (req, res) => {
+  const d = req.body;
+  const sql = `UPDATE materials SET trans_date = ?, material_code = ?, material_name = ?, size_spec = ?, unit = ?, party = ?, doc_no = ?, budget_type = ?, opening_stock = ?, qty_in = ?, qty_out = ?, unit_price = ?, remark = ? WHERE id = ?`;
+  const params = [
+    d.trans_date, d.material_code, d.material_name, d.size_spec, d.unit, d.party, d.doc_no, d.budget_type,
+    Number(d.opening_stock) || 0, Number(d.qty_in) || 0, Number(d.qty_out) || 0, Number(d.unit_price) || 0,
+    d.remark, req.params.id
+  ];
+  db.run(sql, params, function(err) {
+    if (err) return res.status(400).json({ error: err.message });
+    res.json({ message: 'แก้ไขข้อมูลวัสดุเรียบร้อยแล้ว', changes: this.changes });
   });
 });
 
