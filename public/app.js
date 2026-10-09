@@ -138,6 +138,76 @@ function formatThaiDate(dateStr) {
   return dateStr;
 }
 
+// ==================== Helper ฟังก์ชันค้นหาและ Escape HTML ====================
+let assetSearchQuery = '';
+let materialSearchQuery = '';
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function onAssetSearch(val) {
+  assetSearchQuery = val || '';
+  renderAssetTable();
+  updateAssetSelectionUI();
+}
+
+function clearAssetSearch() {
+  assetSearchQuery = '';
+  const inp = document.getElementById('asset-search-input');
+  if (inp) inp.value = '';
+  renderAssetTable();
+  updateAssetSelectionUI();
+}
+
+function getFilteredAssets() {
+  if (!assetSearchQuery || !assetSearchQuery.trim()) return assetList;
+  const q = assetSearchQuery.trim().toLowerCase();
+  return assetList.filter(item => {
+    return (item.asset_name && item.asset_name.toLowerCase().includes(q)) ||
+           (item.asset_code && item.asset_code.toLowerCase().includes(q)) ||
+           (item.category && item.category.toLowerCase().includes(q)) ||
+           (item.spec && item.spec.toLowerCase().includes(q)) ||
+           (item.location && item.location.toLowerCase().includes(q)) ||
+           (item.responsible_person && item.responsible_person.toLowerCase().includes(q)) ||
+           (item.doc_no && item.doc_no.toLowerCase().includes(q)) ||
+           (item.vendor && item.vendor.toLowerCase().includes(q)) ||
+           (item.status && item.status.toLowerCase().includes(q));
+  });
+}
+
+function onMaterialSearch(val) {
+  materialSearchQuery = val || '';
+  renderMaterialTable();
+  updateMaterialSelectionUI();
+}
+
+function clearMaterialSearch() {
+  materialSearchQuery = '';
+  const inp = document.getElementById('material-search-input');
+  if (inp) inp.value = '';
+  renderMaterialTable();
+  updateMaterialSelectionUI();
+}
+
+function getFilteredMaterials() {
+  if (!materialSearchQuery || !materialSearchQuery.trim()) return materialList;
+  const q = materialSearchQuery.trim().toLowerCase();
+  return materialList.filter(item => {
+    return (item.party && item.party.toLowerCase().includes(q)) ||
+           (item.doc_no && item.doc_no.toLowerCase().includes(q)) ||
+           (item.budget_type && item.budget_type.toLowerCase().includes(q)) ||
+           (item.remark && item.remark.toLowerCase().includes(q)) ||
+           (item.trans_date && item.trans_date.toLowerCase().includes(q));
+  });
+}
+
 // ==============================================================
 // ทะเบียนคุมทรัพย์สิน (ครุภัณฑ์)
 // ==============================================================
@@ -163,13 +233,41 @@ async function loadAssets() {
   }
 }
 
-// เรนเดอร์ตารางบนหน้าจอเว็บ (แบบเดิม 100% เพิ่มเติมคือช่องติ๊กเลือกด้านหน้า)
+// เรนเดอร์ตารางบนหน้าจอเว็บ (กรองตามคำค้นหาอัตโนมัติ)
 function renderAssetTable() {
   const screenTbody = document.getElementById('screen-asset-table-body');
   if (!screenTbody) return;
   screenTbody.innerHTML = '';
 
-  assetList.forEach((item, index) => {
+  const list = getFilteredAssets();
+  const clearBtn = document.getElementById('asset-search-clear-btn');
+  const countSpan = document.getElementById('asset-search-result-count');
+
+  if (clearBtn) {
+    if (assetSearchQuery.trim()) clearBtn.classList.remove('hidden');
+    else clearBtn.classList.add('hidden');
+  }
+
+  if (countSpan) {
+    if (assetSearchQuery.trim()) {
+      countSpan.innerHTML = `พบ <span class="font-bold text-amber-800">${list.length}</span> รายการ (จากทั้งหมด ${assetList.length} รายการ)`;
+    } else {
+      countSpan.innerHTML = `ทั้งหมด <span class="font-bold text-slate-700">${assetList.length}</span> รายการ`;
+    }
+  }
+
+  if (list.length === 0) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td colspan="15" class="p-8 text-center text-slate-400 text-xs sm:text-sm">
+        🔍 ไม่พบรายการครุภัณฑ์ที่ตรงกับคำค้นหา "${escapeHtml(assetSearchQuery)}"
+      </td>
+    `;
+    screenTbody.appendChild(tr);
+    return;
+  }
+
+  list.forEach((item, index) => {
     const isSelected = selectedAssetIds.has(item.id);
     const tr = document.createElement('tr');
     tr.className = `hover:bg-amber-50/60 border-b border-amber-100/70 cursor-pointer transition ${isSelected ? 'bg-amber-50/40' : ''}`;
@@ -228,12 +326,13 @@ function toggleAssetItemSelection(id, explicitChecked = null) {
   renderAssetPrint();
 }
 
-// ติ๊กเลือกทั้งหมด หรือ ยกเลิกทั้งหมด
+// ติ๊กเลือกทั้งหมด หรือ ยกเลิกทั้งหมด (คำนึงถึงผลการค้นหา)
 function toggleSelectAllAssets(isChecked) {
+  const list = getFilteredAssets();
   if (isChecked) {
-    assetList.forEach(a => selectedAssetIds.add(a.id));
+    list.forEach(a => selectedAssetIds.add(a.id));
   } else {
-    selectedAssetIds.clear();
+    list.forEach(a => selectedAssetIds.delete(a.id));
   }
   renderAssetTable();
   updateAssetSelectionUI();
@@ -241,10 +340,11 @@ function toggleSelectAllAssets(isChecked) {
 }
 
 function selectAllAssets(select) {
+  const list = getFilteredAssets();
   if (select) {
-    assetList.forEach(a => selectedAssetIds.add(a.id));
+    list.forEach(a => selectedAssetIds.add(a.id));
   } else {
-    selectedAssetIds.clear();
+    list.forEach(a => selectedAssetIds.delete(a.id));
   }
   renderAssetTable();
   updateAssetSelectionUI();
@@ -271,10 +371,12 @@ function updateAssetSelectionUI() {
   }
 
   if (selectAllChk) {
-    if (assetList.length > 0 && count === assetList.length) {
+    const list = getFilteredAssets();
+    const visibleSelectedCount = list.filter(a => selectedAssetIds.has(a.id)).length;
+    if (list.length > 0 && visibleSelectedCount === list.length) {
       selectAllChk.checked = true;
       selectAllChk.indeterminate = false;
-    } else if (count > 0 && count < assetList.length) {
+    } else if (visibleSelectedCount > 0 && visibleSelectedCount < list.length) {
       selectAllChk.checked = false;
       selectAllChk.indeterminate = true;
     } else {
@@ -779,7 +881,35 @@ function renderMaterialTable() {
   if (!screenTbody) return;
   screenTbody.innerHTML = '';
 
-  materialList.forEach((item) => {
+  const list = getFilteredMaterials();
+  const clearBtn = document.getElementById('material-search-clear-btn');
+  const countSpan = document.getElementById('material-search-result-count');
+
+  if (clearBtn) {
+    if (materialSearchQuery.trim()) clearBtn.classList.remove('hidden');
+    else clearBtn.classList.add('hidden');
+  }
+
+  if (countSpan) {
+    if (materialSearchQuery.trim()) {
+      countSpan.innerHTML = `พบ <span class="font-bold text-amber-800">${list.length}</span> รายการ (จากทั้งหมด ${materialList.length} รายการ)`;
+    } else {
+      countSpan.innerHTML = `ทั้งหมด <span class="font-bold text-slate-700">${materialList.length}</span> รายการ`;
+    }
+  }
+
+  if (list.length === 0) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td colspan="13" class="p-8 text-center text-slate-400 text-xs sm:text-sm">
+        🔍 ไม่พบรายการวัสดุที่ตรงกับคำค้นหา "${escapeHtml(materialSearchQuery)}"
+      </td>
+    `;
+    screenTbody.appendChild(tr);
+    return;
+  }
+
+  list.forEach((item) => {
     const isSelected = selectedMaterialIds.has(item.id);
     const tr = document.createElement('tr');
     tr.className = `hover:bg-amber-50/60 border-b border-amber-100/70 cursor-pointer transition ${isSelected ? 'bg-amber-50/40' : ''}`;
@@ -830,10 +960,11 @@ function toggleMaterialItemSelection(id, explicitChecked = null) {
 }
 
 function toggleSelectAllMaterials(isChecked) {
+  const list = getFilteredMaterials();
   if (isChecked) {
-    materialList.forEach(m => selectedMaterialIds.add(m.id));
+    list.forEach(m => selectedMaterialIds.add(m.id));
   } else {
-    selectedMaterialIds.clear();
+    list.forEach(m => selectedMaterialIds.delete(m.id));
   }
   renderMaterialTable();
   updateMaterialSelectionUI();
@@ -841,10 +972,11 @@ function toggleSelectAllMaterials(isChecked) {
 }
 
 function selectAllMaterials(select) {
+  const list = getFilteredMaterials();
   if (select) {
-    materialList.forEach(m => selectedMaterialIds.add(m.id));
+    list.forEach(m => selectedMaterialIds.add(m.id));
   } else {
-    selectedMaterialIds.clear();
+    list.forEach(m => selectedMaterialIds.delete(m.id));
   }
   renderMaterialTable();
   updateMaterialSelectionUI();
@@ -870,10 +1002,12 @@ function updateMaterialSelectionUI() {
   }
 
   if (selectAllChk) {
-    if (materialList.length > 0 && count === materialList.length) {
+    const list = getFilteredMaterials();
+    const visibleSelectedCount = list.filter(m => selectedMaterialIds.has(m.id)).length;
+    if (list.length > 0 && visibleSelectedCount === list.length) {
       selectAllChk.checked = true;
       selectAllChk.indeterminate = false;
-    } else if (count > 0 && count < materialList.length) {
+    } else if (visibleSelectedCount > 0 && visibleSelectedCount < list.length) {
       selectAllChk.checked = false;
       selectAllChk.indeterminate = true;
     } else {
