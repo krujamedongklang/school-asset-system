@@ -497,7 +497,7 @@ function initMaterialMeta() {
     const el = document.getElementById(id);
     if (!el) return;
     const clean = cleanFieldText(val);
-    el.innerHTML = clean || '&nbsp;';
+    el.innerHTML = safeThaiWordBreak(escapeHtml(clean)) || '&nbsp;';
   };
 
   setField('disp-category', meta.category);
@@ -1192,19 +1192,19 @@ function generateAssetCardHtml(item, isPageBreak = false) {
         <div class="grid grid-cols-12 gap-x-3 items-end">
           <div class="col-span-3 flex items-end">
             <span class="whitespace-nowrap font-medium">ประเภท&nbsp;</span>
-            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${category || '&nbsp;'}</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${safeThaiWordBreak(escapeHtml(category)) || '&nbsp;'}</span>
           </div>
           <div class="col-span-3 flex items-end">
             <span class="whitespace-nowrap font-medium">รหัส&nbsp;</span>
-            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${assetCode || '&nbsp;'}</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${escapeHtml(assetCode) || '&nbsp;'}</span>
           </div>
           <div class="col-span-3 flex items-end">
             <span class="whitespace-nowrap font-medium">ลักษณะ/สมบัติ&nbsp;</span>
-            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${spec || '&nbsp;'}</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${safeThaiWordBreak(escapeHtml(spec)) || '&nbsp;'}</span>
           </div>
           <div class="col-span-3 flex items-end">
             <span class="whitespace-nowrap font-medium">รุ่นแบบ&nbsp;</span>
-            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${model || '&nbsp;'}</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${safeThaiWordBreak(escapeHtml(model)) || '&nbsp;'}</span>
           </div>
         </div>
 
@@ -1212,11 +1212,11 @@ function generateAssetCardHtml(item, isPageBreak = false) {
         <div class="grid grid-cols-12 gap-x-4 items-end">
           <div class="col-span-6 flex items-end">
             <span class="whitespace-nowrap font-medium">สถานที่ตั้ง/หน่วยที่รับผิดชอบ&nbsp;</span>
-            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${location || '&nbsp;'}</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${safeThaiWordBreak(escapeHtml(location)) || '&nbsp;'}</span>
           </div>
           <div class="col-span-6 flex items-end">
             <span class="whitespace-nowrap font-medium">ชื่อผู้ขาย/ผู้รับจ้าง/ผู้บริจาค&nbsp;</span>
-            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${vendor || '&nbsp;'}</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${safeThaiWordBreak(escapeHtml(vendor)) || '&nbsp;'}</span>
           </div>
         </div>
 
@@ -1224,11 +1224,11 @@ function generateAssetCardHtml(item, isPageBreak = false) {
         <div class="grid grid-cols-12 gap-x-4 items-end">
           <div class="col-span-8 flex items-end">
             <span class="whitespace-nowrap font-medium">ที่อยู่&nbsp;</span>
-            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${vendorAddress || '&nbsp;'}</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${safeThaiWordBreak(escapeHtml(vendorAddress)) || '&nbsp;'}</span>
           </div>
           <div class="col-span-4 flex items-end">
             <span class="whitespace-nowrap font-medium">โทรศัพท์&nbsp;</span>
-            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${vendorPhone || '&nbsp;'}</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${escapeHtml(vendorPhone) || '&nbsp;'}</span>
           </div>
         </div>
 
@@ -1342,41 +1342,41 @@ function generateCombinedAssetCardHtml(items) {
         <div class="grid grid-cols-12 gap-x-3 items-end">
           <div class="col-span-3 flex items-end">
             <span class="whitespace-nowrap font-medium">ประเภท&nbsp;</span>
-            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${category || '&nbsp;'}</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${safeThaiWordBreak(escapeHtml(category)) || '&nbsp;'}</span>
           </div>
           <div class="col-span-3 flex items-end">
             <span class="whitespace-nowrap font-medium">รหัส&nbsp;</span>
-            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${assetCode || '&nbsp;'}</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${escapeHtml(assetCode) || '&nbsp;'}</span>
           </div>
           <div class="col-span-3 flex items-end">
             <span class="whitespace-nowrap font-medium">ลักษณะ/สมบัติ&nbsp;</span>
-            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${spec || '&nbsp;'}</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${safeThaiWordBreak(escapeHtml(spec)) || '&nbsp;'}</span>
           </div>
           <div class="col-span-3 flex items-end">
             <span class="whitespace-nowrap font-medium">รุ่นแบบ&nbsp;</span>
-            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${model || '&nbsp;'}</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${safeThaiWordBreak(escapeHtml(model)) || '&nbsp;'}</span>
           </div>
         </div>
 
         <div class="grid grid-cols-12 gap-x-4 items-end">
           <div class="col-span-6 flex items-end">
             <span class="whitespace-nowrap font-medium">สถานที่ตั้ง/หน่วยที่รับผิดชอบ&nbsp;</span>
-            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${location || '&nbsp;'}</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${safeThaiWordBreak(escapeHtml(location)) || '&nbsp;'}</span>
           </div>
           <div class="col-span-6 flex items-end">
             <span class="whitespace-nowrap font-medium">ชื่อผู้ขาย/ผู้รับจ้าง/ผู้บริจาค&nbsp;</span>
-            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${vendor || '&nbsp;'}</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${safeThaiWordBreak(escapeHtml(vendor)) || '&nbsp;'}</span>
           </div>
         </div>
 
         <div class="grid grid-cols-12 gap-x-4 items-end">
           <div class="col-span-8 flex items-end">
             <span class="whitespace-nowrap font-medium">ที่อยู่&nbsp;</span>
-            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${vendorAddress || '&nbsp;'}</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${safeThaiWordBreak(escapeHtml(vendorAddress)) || '&nbsp;'}</span>
           </div>
           <div class="col-span-4 flex items-end">
             <span class="whitespace-nowrap font-medium">โทรศัพท์&nbsp;</span>
-            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${vendorPhone || '&nbsp;'}</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${escapeHtml(vendorPhone) || '&nbsp;'}</span>
           </div>
         </div>
 
@@ -1870,16 +1870,16 @@ function renderMaterialPrint() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="text-center whitespace-nowrap">${formatThaiDate(item.trans_date)}</td>
-      <td class="text-left font-medium">${item.party || ''}</td>
-      <td class="text-center">${item.doc_no || ''}</td>
-      <td class="text-left">${item.budget_type || ''}</td>
+      <td class="text-left font-medium">${safeThaiWordBreak(escapeHtml(item.party || ''))}</td>
+      <td class="text-center whitespace-nowrap">${escapeHtml(item.doc_no || '')}</td>
+      <td class="text-left">${safeThaiWordBreak(escapeHtml(item.budget_type || ''))}</td>
       <td class="text-center">${openStock}</td>
       <td class="text-center text-green-700 font-semibold">${qtyIn}</td>
       <td class="text-center text-red-700 font-semibold">${qtyOut}</td>
       <td class="text-center font-bold bg-slate-50">${item.balance}</td>
       <td class="text-right whitespace-nowrap">${item.unit_price ? Number(item.unit_price).toLocaleString('th-TH', {minimumFractionDigits: 2}) : ''}</td>
       <td class="text-right font-bold text-black whitespace-nowrap">${item.total_amount ? Number(item.total_amount).toLocaleString('th-TH', {minimumFractionDigits: 2}) : ''}</td>
-      <td class="text-left">${item.remark || ''}</td>
+      <td class="text-left">${renderPrintRemark(item.remark, '')}</td>
     `;
     printTbody.appendChild(tr);
   });
