@@ -3,4 +3,3 @@ npm-debug.log*
 .DS_Store
 data_backup.json
 supabase_config.json
-ai_config.json
