@@ -580,6 +580,49 @@ function extractDisposalInfo(item) {
   return { reason, method, date, cleanRemark };
 }
 
+// ป้องกันคำภาษาไทยขาดท่อน/ตัดคำผิดกลางคำ (ใช้ Unicode Word Joiner U+2060 และ Non-breaking tags)
+function safeThaiWordBreak(text) {
+  if (!text) return '';
+  return String(text)
+    // ผูกคำว่า "วันที่" ไม่ให้แยกท่อนเป็น "วัน" กับ "ที่"
+    .replace(/วันที่/g, 'วัน\u2060ที่')
+    .replace(/ชำรุด/g, 'ชำ\u2060รุด')
+    .replace(/เสื่อมสภาพ/g, 'เสื่อม\u2060สภาพ')
+    .replace(/ขายทอดตลาด/g, 'ขาย\u2060ทอด\u2060ตลาด')
+    .replace(/สามารถ/g, 'สา\u2060มารถ')
+    .replace(/ผู้รับผิดชอบ/g, 'ผู้\u2060รับ\u2060ผิด\u2060ชอบ')
+    .replace(/ประจำปี/g, 'ประจำ\u2060ปี')
+    .replace(/ราคาต่อหน่วย/g, 'ราคา\u2060ต่อ\u2060หน่วย')
+    .replace(/มูลค่าสุทธิ/g, 'มูล\u2060ค่า\u2060สุทธิ')
+    .replace(/ค่าเสื่อมราคา/g, 'ค่า\u2060เสื่อม\u2060ราคา');
+}
+
+// จัดรูปแบบการแสดงผลช่องหมายเหตุสำหรับพิมพ์ ป้องกันข้อความอัดกันจนคำขาด
+function renderPrintRemark(remark, fallbackLocation = '') {
+  const text = (remark || fallbackLocation || '').trim();
+  if (!text) return '-';
+
+  // ตรวจจับกรณีมีแท็กขอจำหน่าย [จำหน่าย: ... | วิธี: ... | วันที่: ...]
+  const match = text.match(/\[จำหน่าย:\s*(.*?)\s*\|\s*วิธี:\s*(.*?)(?:\s*\|\s*วันที่:\s*(.*?))?\]\s*(.*)/);
+  if (match) {
+    const reason = match[1] || '';
+    const method = match[2] || '';
+    const date = match[3] || '';
+    const extra = (match[4] || '').trim();
+
+    return `
+      <div class="space-y-0.5 leading-tight text-[10px]">
+        <div><span class="font-bold text-rose-800">[ขอจำหน่าย]</span> ${safeThaiWordBreak(escapeHtml(reason))}</div>
+        <div class="whitespace-nowrap text-slate-800"><span class="font-medium">วิธี:</span> ${safeThaiWordBreak(escapeHtml(method))}</div>
+        ${date ? `<div class="whitespace-nowrap text-slate-800"><span class="font-medium">วันที่:</span> ${formatThaiDate(date)}</div>` : ''}
+        ${extra ? `<div class="text-slate-600 text-[9.5px]">${safeThaiWordBreak(escapeHtml(extra))}</div>` : ''}
+      </div>
+    `.trim();
+  }
+
+  return `<div class="leading-snug text-[10.5px]">${safeThaiWordBreak(escapeHtml(text))}</div>`;
+}
+
 function onAssetStatusChange(status) {
   const group = document.getElementById('disposal-fields-group');
   if (!group) return;
@@ -1246,7 +1289,7 @@ function generateAssetCardHtml(item, isPageBreak = false) {
             <th class="w-16 leading-tight">อัตราค่า<br>เสื่อมราคา</th>
             <th class="w-24 leading-tight">ค่าเสื่อม<br>ราคา</th>
             <th class="w-24 leading-tight">มูลค่า<br>สุทธิ</th>
-            <th class="w-28">หมายเหตุ</th>
+            <th class="min-w-[145px] w-36">หมายเหตุ</th>
           </tr>
         </thead>
         <tbody>
@@ -1391,7 +1434,7 @@ function generateCombinedAssetCardHtml(items) {
             <th class="w-16 leading-tight">อัตราค่า<br>เสื่อมราคา</th>
             <th class="w-24 leading-tight">ค่าเสื่อม<br>ราคา</th>
             <th class="w-24 leading-tight">มูลค่า<br>สุทธิ</th>
-            <th class="w-28">หมายเหตุ</th>
+            <th class="min-w-[145px] w-36">หมายเหตุ</th>
           </tr>
         </thead>
         <tbody>
@@ -1410,7 +1453,7 @@ function generateAssetTableRowsHtml(items) {
       <tr>
         <td class="text-center font-normal whitespace-nowrap">${formatThaiDate(item.received_date)}</td>
         <td class="text-center font-normal">${item.doc_no || ''}</td>
-        <td class="text-left font-medium">${item.asset_name || ''}</td>
+        <td class="text-left font-medium">${safeThaiWordBreak(escapeHtml(item.asset_name || ''))}</td>
         <td class="text-center">${item.qty || 1}</td>
         <td class="text-right whitespace-nowrap">${item.cost ? Number(item.cost).toLocaleString('th-TH', {minimumFractionDigits: 2}) : '-'}</td>
         <td class="text-right whitespace-nowrap">${item.total_cost ? Number(item.total_cost).toLocaleString('th-TH', {minimumFractionDigits: 2}) : '-'}</td>
@@ -1418,7 +1461,7 @@ function generateAssetTableRowsHtml(items) {
         <td class="text-center">${item.depr_rate || '20%'}</td>
         <td class="text-right whitespace-nowrap text-slate-600">${item.acc_depr ? Number(item.acc_depr).toLocaleString('th-TH', {minimumFractionDigits: 2}) : '0.00'}</td>
         <td class="text-right font-bold text-black whitespace-nowrap">${item.net_book_value ? Number(item.net_book_value).toLocaleString('th-TH', {minimumFractionDigits: 2}) : '-'}</td>
-        <td class="text-left">${item.remark || item.location || ''}</td>
+        <td class="text-left">${renderPrintRemark(item.remark, item.location)}</td>
       </tr>
     `;
   });
@@ -2284,16 +2327,16 @@ function generateAnnualInspectionPrintHtml(fiscalYear, orderNo, orderDate, inspe
       <tr>
         <td class="text-center font-normal">${idx + 1}</td>
         <td class="text-left font-medium whitespace-nowrap">${escapeHtml(item.asset_code || '')}</td>
-        <td class="text-left font-medium">${escapeHtml(item.asset_name || '')} ${item.spec ? `<span class="text-[9px] text-slate-600 block">(${escapeHtml(item.spec)})</span>` : ''}</td>
+        <td class="text-left font-medium">${safeThaiWordBreak(escapeHtml(item.asset_name || ''))} ${item.spec ? `<span class="text-[9px] text-slate-600 block">(${safeThaiWordBreak(escapeHtml(item.spec))})</span>` : ''}</td>
         <td class="text-center whitespace-nowrap">${formatThaiDate(item.received_date)}</td>
         <td class="text-center">${item.useful_life ? item.useful_life + ' ปี' : '-'}</td>
         <td class="text-right whitespace-nowrap">${Number(item.cost || 0).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
         <td class="text-right whitespace-nowrap font-semibold">${Number(item.net_book_value || 0).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-        <td class="text-left text-[10px]">${escapeHtml(item.location || item.responsible_person || '-')}</td>
+        <td class="text-left text-[10px]">${safeThaiWordBreak(escapeHtml(item.location || item.responsible_person || '-'))}</td>
         <td class="text-center whitespace-nowrap text-[10px]">
           ${isGood ? '☑ ใช้ได้ดี' : (isRepair ? '☑ ชำรุดซ่อมได้' : (isDisposal ? '☑ ขอจำหน่าย' : (isLost ? '☑ สูญหาย' : escapeHtml(s))))}
         </td>
-        <td class="text-left text-[9px]">${escapeHtml(item.remark || '')}</td>
+        <td class="text-left text-[9px]">${renderPrintRemark(item.remark, '')}</td>
       </tr>
     `;
   }).join('');
@@ -2620,14 +2663,14 @@ function generateDisposalReportPrintHtml(fiscalYear, reportDate, docNo, officer,
       <tr>
         <td class="text-center font-normal">${idx + 1}</td>
         <td class="text-left font-medium whitespace-nowrap">${escapeHtml(item.asset_code || '')}</td>
-        <td class="text-left font-medium">${escapeHtml(item.asset_name || '')} ${item.spec ? `<span class="text-[9px] text-slate-600 block">(${escapeHtml(item.spec)})</span>` : ''}</td>
+        <td class="text-left font-medium">${safeThaiWordBreak(escapeHtml(item.asset_name || ''))} ${item.spec ? `<span class="text-[9px] text-slate-600 block">(${safeThaiWordBreak(escapeHtml(item.spec))})</span>` : ''}</td>
         <td class="text-center whitespace-nowrap">${formatThaiDate(item.received_date)}</td>
         <td class="text-center">${item.useful_life ? item.useful_life + ' ปี' : '-'}</td>
         <td class="text-right whitespace-nowrap">${Number(item.cost || 0).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
         <td class="text-right whitespace-nowrap font-bold">${Number(item.net_book_value || 0).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-        <td class="text-left">${escapeHtml(info.reason || 'ชำรุดจนไม่สามารถซ่อมแซมได้')}</td>
-        <td class="text-center font-semibold">${escapeHtml(info.method || 'ขายทอดตลาด')}</td>
-        <td class="text-left text-[9px]">${escapeHtml(info.cleanRemark || '')}</td>
+        <td class="text-left">${safeThaiWordBreak(escapeHtml(info.reason || 'ชำรุดจนไม่สามารถซ่อมแซมได้'))}</td>
+        <td class="text-center font-semibold whitespace-nowrap">${safeThaiWordBreak(escapeHtml(info.method || 'ขายทอดตลาด'))}</td>
+        <td class="text-left text-[9px]">${renderPrintRemark(info.cleanRemark, '')}</td>
       </tr>
     `;
   }).join('');

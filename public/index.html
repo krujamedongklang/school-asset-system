@@ -12,6 +12,14 @@
   <style>
     body {
       font-family: 'Sarabun', sans-serif;
+      word-break: normal;
+      line-break: strict;
+      overflow-wrap: break-word;
+    }
+
+    /* Helper ป้องกันคำภาษาไทยขาดท่อน */
+    .keep-word, .whitespace-nowrap {
+      white-space: nowrap !important;
     }
 
     /* Screen view only */
@@ -42,6 +50,8 @@
         color: #000 !important;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
+        word-break: normal !important;
+        line-break: strict !important;
       }
       .no-print, .screen-only {
         display: none !important;
@@ -76,6 +86,9 @@
         padding: 3px 4px !important;
         color: #000 !important;
         vertical-align: middle;
+        word-break: normal !important;
+        line-break: strict !important;
+        overflow-wrap: break-word !important;
       }
       .form-table th {
         background-color: #fff !important;
