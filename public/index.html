@@ -722,8 +722,36 @@
           <input type="text" id="a_vendor" placeholder="เช่น บริษัท เอเซอร์ จำกัด" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
         </div>
         <div>
-          <label class="font-semibold block mb-1 text-slate-700">ผู้รับผิดชอบ</label>
-          <input type="text" id="a_person" placeholder="เช่น นายวิชิตชัย" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <div class="flex items-center justify-between mb-1">
+            <label class="font-semibold text-slate-700">ผู้รับผิดชอบ</label>
+            <span class="text-[10px] font-semibold text-amber-900 bg-amber-100/70 border border-amber-300 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
+              <span>👥</span> <span>เลือกครู/บุคลากร</span>
+            </span>
+          </div>
+          <select id="a_person_select" onchange="onResponsiblePersonSelectChange(this.value)" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white font-medium text-slate-800 text-xs sm:text-sm cursor-pointer shadow-2xs">
+            <option value="">-- เลือกบุคลากรในโรงเรียน --</option>
+            <option value="นางสายสายใจ  วิลัยทอง">1. นางสายสายใจ วิลัยทอง (ผู้อำนวยการโรงเรียน)</option>
+            <option value="นางชูชื่น  บุตรฉิม">2. นางชูชื่น บุตรฉิม (ครูชำนาญการพิเศษ)</option>
+            <option value="นางสาวนพรัตน์  วิสพันธ์">3. นางสาวนพรัตน์ วิสพันธ์ (ครูชำนาญการ)</option>
+            <option value="นางสาวใบเฟิร์น  รัตนสร้อย">4. นางสาวใบเฟิร์น รัตนสร้อย (ครูชำนาญการพิเศษ)</option>
+            <option value="นางสาวสิริมน  จันทสาร">5. นางสาวสิริมน จันทสาร (ครูชำนาญการ)</option>
+            <option value="นางสาวชัญญา  กลิ่นกำเนิด">6. นางสาวชัญญา กลิ่นกำเนิด (ครูชำนาญการ)</option>
+            <option value="นางสาวฐิติวรดา  สายพานิช">7. นางสาวฐิติวรดา สายพานิช (ครูชำนาญการ)</option>
+            <option value="นางสาวญาณินท์  มนัสสนิท">8. นางสาวญาณินท์ มนัสสนิท (ครูชำนาญการ)</option>
+            <option value="นางสาวสมัญญา  บูรณศิล">9. นางสาวสมัญญา บูรณศิล (ครูชำนาญการ)</option>
+            <option value="นางธีรกานต์  กุมภะ">10. นางธีรกานต์ กุมภะ (ครูชำนาญการ)</option>
+            <option value="นางสาวทวีพร  ทองสาย">11. นางสาวทวีพร ทองสาย (ครูชำนาญการ)</option>
+            <option value="นางสาวบุญยาวี  รัตนวิจิตร">12. นางสาวบุญยาวี รัตนวิจิตร (ครู)</option>
+            <option value="นายวิชิตชัย  นุชโสภณ">13. นายวิชิตชัย นุชโสภณ (ครู)</option>
+            <option value="นางสาวบุหงา  กองสุข">14. นางสาวบุหงา กองสุข (ครู)</option>
+            <option value="นางสาวณิชาภัทร  หัดรัดชัย">15. นางสาวณิชาภัทร หัดรัดชัย (ครูผู้ช่วย)</option>
+            <option value="นางสาวเอวรินทร์  ชาวดอนคา">16. นางสาวเอวรินทร์ ชาวดอนคา (ครูอัตราจ้าง)</option>
+            <option value="นางสาวภัฐธีรา  จุลพันธ์">17. นางสาวภัฐธีรา จุลพันธ์ (ธุรการโรงเรียน)</option>
+            <option value="__custom__">✏️ ระบุชื่ออื่น / กรอกเอง...</option>
+          </select>
+          <div id="a_person_custom_wrap" class="mt-1.5 hidden">
+            <input type="text" id="a_person" placeholder="พิมพ์ชื่อ-สกุล ผู้รับผิดชอบ..." class="w-full border border-amber-300 bg-amber-50/50 p-2 sm:p-2 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 shadow-2xs font-medium">
+          </div>
         </div>
 
         <div>
@@ -1080,15 +1108,15 @@
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             <div>
               <label class="font-medium block mb-0.5 text-slate-600">1. ประธานกรรมการ</label>
-              <input type="text" id="ai-chair-name" placeholder="นาย/นาง/นางสาว..." class="w-full border border-slate-300 p-2 rounded-xl">
+              <input type="text" id="ai-chair-name" list="school-staff-datalist" placeholder="นาย/นาง/นางสาว..." class="w-full border border-slate-300 p-2 rounded-xl">
             </div>
             <div>
               <label class="font-medium block mb-0.5 text-slate-600">2. กรรมการ</label>
-              <input type="text" id="ai-member1-name" placeholder="นาย/นาง/นางสาว..." class="w-full border border-slate-300 p-2 rounded-xl">
+              <input type="text" id="ai-member1-name" list="school-staff-datalist" placeholder="นาย/นาง/นางสาว..." class="w-full border border-slate-300 p-2 rounded-xl">
             </div>
             <div>
               <label class="font-medium block mb-0.5 text-slate-600">3. กรรมการและเลขานุการ</label>
-              <input type="text" id="ai-member2-name" placeholder="นาย/นาง/นางสาว..." class="w-full border border-slate-300 p-2 rounded-xl">
+              <input type="text" id="ai-member2-name" list="school-staff-datalist" placeholder="นาย/นาง/นางสาว..." class="w-full border border-slate-300 p-2 rounded-xl">
             </div>
           </div>
         </div>
@@ -1096,7 +1124,7 @@
         <div class="border-t border-slate-100 pt-2.5">
           <div>
             <label class="font-bold block mb-1 text-slate-800">ผู้อำนวยการโรงเรียน (ผู้สั่งการ/อนุมัติ):</label>
-            <input type="text" id="ai-director-name" placeholder="นาย/นาง/นางสาว... ผู้อำนวยการโรงเรียนบ้านดงกลาง" class="w-full border border-slate-300 p-2 rounded-xl">
+            <input type="text" id="ai-director-name" list="school-staff-datalist" placeholder="นางสายสายใจ  วิลัยทอง ผู้อำนวยการโรงเรียนบ้านดงกลาง" class="w-full border border-slate-300 p-2 rounded-xl font-medium text-slate-800">
           </div>
         </div>
 
@@ -1155,15 +1183,15 @@
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             <div>
               <label class="font-medium block mb-0.5 text-slate-600">เจ้าหน้าที่พัสดุ</label>
-              <input type="text" id="dr-officer-name" placeholder="นาย/นาง/นางสาว..." class="w-full border border-slate-300 p-2 rounded-xl">
+              <input type="text" id="dr-officer-name" list="school-staff-datalist" placeholder="นาย/นาง/นางสาว..." class="w-full border border-slate-300 p-2 rounded-xl">
             </div>
             <div>
               <label class="font-medium block mb-0.5 text-slate-600">หัวหน้าเจ้าหน้าที่พัสดุ</label>
-              <input type="text" id="dr-head-name" placeholder="นาย/นาง/นางสาว..." class="w-full border border-slate-300 p-2 rounded-xl">
+              <input type="text" id="dr-head-name" list="school-staff-datalist" placeholder="นาย/นาง/นางสาว..." class="w-full border border-slate-300 p-2 rounded-xl">
             </div>
             <div>
               <label class="font-medium block mb-0.5 text-slate-600">ผู้อำนวยการโรงเรียน (ผู้อนุมัติ)</label>
-              <input type="text" id="dr-director-name" placeholder="นาย/นาง/นางสาว..." class="w-full border border-slate-300 p-2 rounded-xl">
+              <input type="text" id="dr-director-name" list="school-staff-datalist" placeholder="นางสายสายใจ  วิลัยทอง ผู้อำนวยการโรงเรียนบ้านดงกลาง" class="w-full border border-slate-300 p-2 rounded-xl font-medium text-slate-800">
             </div>
           </div>
         </div>
@@ -1204,6 +1232,27 @@
     </div>
   </div>
 
-  <script src="app.js?v=6.0"></script>
+  <!-- Datalist รายชื่อครูและบุคลากรโรงเรียนบ้านดงกลาง สำหรับ Auto-complete -->
+  <datalist id="school-staff-datalist">
+    <option value="นางสายสายใจ  วิลัยทอง">ผู้อำนวยการโรงเรียน</option>
+    <option value="นางชูชื่น  บุตรฉิม">ครูชำนาญการพิเศษ</option>
+    <option value="นางสาวนพรัตน์  วิสพันธ์">ครูชำนาญการ</option>
+    <option value="นางสาวใบเฟิร์น  รัตนสร้อย">ครูชำนาญการพิเศษ</option>
+    <option value="นางสาวสิริมน  จันทสาร">ครูชำนาญการ</option>
+    <option value="นางสาวชัญญา  กลิ่นกำเนิด">ครูชำนาญการ</option>
+    <option value="นางสาวฐิติวรดา  สายพานิช">ครูชำนาญการ</option>
+    <option value="นางสาวญาณินท์  มนัสสนิท">ครูชำนาญการ</option>
+    <option value="นางสาวสมัญญา  บูรณศิล">ครูชำนาญการ</option>
+    <option value="นางธีรกานต์  กุมภะ">ครูชำนาญการ</option>
+    <option value="นางสาวทวีพร  ทองสาย">ครูชำนาญการ</option>
+    <option value="นางสาวบุญยาวี  รัตนวิจิตร">ครู</option>
+    <option value="นายวิชิตชัย  นุชโสภณ">ครู</option>
+    <option value="นางสาวบุหงา  กองสุข">ครู</option>
+    <option value="นางสาวณิชาภัทร  หัดรัดชัย">ครูผู้ช่วย</option>
+    <option value="นางสาวเอวรินทร์  ชาวดอนคา">ครูอัตราจ้าง</option>
+    <option value="นางสาวภัฐธีรา  จุลพันธ์">ธุรการโรงเรียน</option>
+  </datalist>
+
+  <script src="app.js?v=6.1"></script>
 </body>
 </html>

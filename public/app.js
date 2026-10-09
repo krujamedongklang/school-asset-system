@@ -1487,6 +1487,49 @@ function generateAssetTableRowsHtml(items) {
   return html;
 }
 
+// ==================== รายชื่อครูและบุคลากรในโรงเรียน ====================
+const SCHOOL_STAFF_LIST = [
+  { name: 'นางสายสายใจ  วิลัยทอง', role: 'ผู้อำนวยการโรงเรียน' },
+  { name: 'นางชูชื่น  บุตรฉิม', role: 'ครูชำนาญการพิเศษ' },
+  { name: 'นางสาวนพรัตน์  วิสพันธ์', role: 'ครูชำนาญการ' },
+  { name: 'นางสาวใบเฟิร์น  รัตนสร้อย', role: 'ครูชำนาญการพิเศษ' },
+  { name: 'นางสาวสิริมน  จันทสาร', role: 'ครูชำนาญการ' },
+  { name: 'นางสาวชัญญา  กลิ่นกำเนิด', role: 'ครูชำนาญการ' },
+  { name: 'นางสาวฐิติวรดา  สายพานิช', role: 'ครูชำนาญการ' },
+  { name: 'นางสาวญาณินท์  มนัสสนิท', role: 'ครูชำนาญการ' },
+  { name: 'นางสาวสมัญญา  บูรณศิล', role: 'ครูชำนาญการ' },
+  { name: 'นางธีรกานต์  กุมภะ', role: 'ครูชำนาญการ' },
+  { name: 'นางสาวทวีพร  ทองสาย', role: 'ครูชำนาญการ' },
+  { name: 'นางสาวบุญยาวี  รัตนวิจิตร', role: 'ครู' },
+  { name: 'นายวิชิตชัย  นุชโสภณ', role: 'ครู' },
+  { name: 'นางสาวบุหงา  กองสุข', role: 'ครู' },
+  { name: 'นางสาวณิชาภัทร  หัดรัดชัย', role: 'ครูผู้ช่วย' },
+  { name: 'นางสาวเอวรินทร์  ชาวดอนคา', role: 'ครูอัตราจ้าง' },
+  { name: 'นางสาวภัฐธีรา  จุลพันธ์', role: 'ธุรการโรงเรียน' }
+];
+
+function normalizePersonName(str) {
+  if (!str) return '';
+  return String(str).replace(/\s+/g, ' ').trim();
+}
+
+function onResponsiblePersonSelectChange(val) {
+  const customWrap = document.getElementById('a_person_custom_wrap');
+  const customInp = document.getElementById('a_person');
+  if (val === '__custom__') {
+    if (customWrap) customWrap.classList.remove('hidden');
+    if (customInp) {
+      customInp.value = '';
+      customInp.focus();
+    }
+  } else {
+    if (customWrap) customWrap.classList.add('hidden');
+    if (customInp) {
+      customInp.value = val || '';
+    }
+  }
+}
+
 // ==================== ฟังก์ชัน Modal และ CRUD ครุภัณฑ์ ====================
 function openAddAssetModal() {
   document.getElementById('edit_asset_id').value = '';
@@ -1503,6 +1546,14 @@ function openAddAssetModal() {
   if (rSel) rSel.value = 'ชำรุดจนไม่สามารถซ่อมแซมได้';
   if (mSel) mSel.value = 'ขายทอดตลาด';
   if (dInp) dInp.value = new Date().toISOString().split('T')[0];
+
+  const pSel = document.getElementById('a_person_select');
+  const pWrap = document.getElementById('a_person_custom_wrap');
+  const pInp = document.getElementById('a_person');
+  if (pSel) pSel.value = '';
+  if (pWrap) pWrap.classList.add('hidden');
+  if (pInp) pInp.value = '';
+
   onAssetStatusChange('ใช้งานได้ดี');
   openModal('assetModal');
 }
@@ -1528,7 +1579,41 @@ function editAsset(id) {
   document.getElementById('a_location').value = item.location || '';
   document.getElementById('a_status').value = item.status || 'ใช้งานได้ดี';
   document.getElementById('a_vendor').value = item.vendor || '';
-  document.getElementById('a_person').value = item.responsible_person || '';
+
+  const person = cleanFieldText(item.responsible_person || '');
+  const pSel = document.getElementById('a_person_select');
+  const pWrap = document.getElementById('a_person_custom_wrap');
+  const pInp = document.getElementById('a_person');
+  if (pInp) pInp.value = person;
+
+  if (pSel) {
+    if (!person) {
+      pSel.value = '';
+      if (pWrap) pWrap.classList.add('hidden');
+    } else {
+      const normPerson = normalizePersonName(person);
+      let matchedOpt = Array.from(pSel.options).find(opt => {
+        return opt.value && opt.value !== '__custom__' && normalizePersonName(opt.value) === normPerson;
+      });
+
+      if (!matchedOpt) {
+        matchedOpt = Array.from(pSel.options).find(opt => {
+          if (!opt.value || opt.value === '__custom__') return false;
+          const optNorm = normalizePersonName(opt.value);
+          return (normPerson.length >= 3 && optNorm.includes(normPerson)) || (optNorm.length >= 3 && normPerson.includes(optNorm));
+        });
+      }
+
+      if (matchedOpt) {
+        pSel.value = matchedOpt.value;
+        if (pWrap) pWrap.classList.add('hidden');
+      } else {
+        pSel.value = '__custom__';
+        if (pWrap) pWrap.classList.remove('hidden');
+      }
+    }
+  }
+
   document.getElementById('a_vendor_address').value = item.vendor_address || '';
   document.getElementById('a_vendor_phone').value = item.vendor_phone || '';
   document.getElementById('a_budget_source').value = item.budget_source || 'เงินงบประมาณ';
@@ -1563,6 +1648,16 @@ async function saveAsset(e) {
     }
   }
 
+  const pSel = document.getElementById('a_person_select');
+  let chosenPerson = '';
+  if (pSel && pSel.value === '__custom__') {
+    chosenPerson = cleanFieldText(document.getElementById('a_person')?.value);
+  } else if (pSel && pSel.value) {
+    chosenPerson = cleanFieldText(pSel.value);
+  } else {
+    chosenPerson = cleanFieldText(document.getElementById('a_person')?.value);
+  }
+
   const body = {
     asset_name: cleanFieldText(document.getElementById('a_name').value),
     asset_code: cleanFieldText(document.getElementById('a_code').value),
@@ -1581,7 +1676,7 @@ async function saveAsset(e) {
     vendor_phone: cleanFieldText(document.getElementById('a_vendor_phone').value),
     budget_source: document.getElementById('a_budget_source').value,
     acquisition_method: document.getElementById('a_acquisition_method').value,
-    responsible_person: cleanFieldText(document.getElementById('a_person').value),
+    responsible_person: chosenPerson,
     remark: fullRemark
   };
 
@@ -2167,7 +2262,7 @@ function openAnnualInspectionModal() {
   const mem1 = localStorage.getItem('ai_member1_name') || '';
   const mem2 = localStorage.getItem('ai_member2_name') || '';
   let director = localStorage.getItem('ai_director_name') || '';
-  if (!director) director = 'ผู้อำนวยการโรงเรียนบ้านดงกลาง';
+  if (!director || director === 'ผู้อำนวยการโรงเรียนบ้านดงกลาง') director = 'นางสายสายใจ  วิลัยทอง';
 
   const orderNo = localStorage.getItem('ai_order_no') || '45/2570';
   const docNo = localStorage.getItem('ai_doc_no') || 'ศธ 04153.25/...';
@@ -2531,7 +2626,7 @@ function openDisposalReportModal() {
   const officer = localStorage.getItem('dr_officer_name') || '';
   const head = localStorage.getItem('dr_head_name') || '';
   let director = localStorage.getItem('dr_director_name') || localStorage.getItem('ai_director_name') || '';
-  if (!director) director = 'ผู้อำนวยการโรงเรียนบ้านดงกลาง';
+  if (!director || director === 'ผู้อำนวยการโรงเรียนบ้านดงกลาง') director = 'นางสายสายใจ  วิลัยทอง';
   const docNo = localStorage.getItem('dr_doc_no') || 'ศธ 04153.25/...';
 
   const inpOff = document.getElementById('dr-officer-name');
