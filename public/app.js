@@ -138,9 +138,130 @@ function formatThaiDate(dateStr) {
   return dateStr;
 }
 
-// ==================== Helper ฟังก์ชันค้นหาและ Escape HTML ====================
+// ==================== ตัวแปรและฟังก์ชันระบบปีงบประมาณและค้นหา ====================
+const START_FISCAL_YEAR = 2570; // เริ่มต้นที่ปีงบประมาณ 2570 (ปีงบ 70)
+let assetFiscalYear = '2570';
+let assetMonth = 'all';
+let materialFiscalYear = '2570';
+let materialMonth = 'all';
+
 let assetSearchQuery = '';
 let materialSearchQuery = '';
+
+function getCurrentFiscalYear() {
+  const now = new Date();
+  const beYear = now.getFullYear() + 543;
+  const month = now.getMonth() + 1;
+  return month >= 10 ? beYear + 1 : beYear;
+}
+
+// แยกปีงบประมาณและเดือนจากวันที่ (ต.ค.-ธ.ค. นับเป็นปีงบของ พ.ศ. ถัดไป)
+function getFiscalYearAndMonth(dateStr) {
+  if (!dateStr) return { fiscalYear: null, month: null, beYear: null };
+  let year, month;
+  if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+    const parts = dateStr.split('-');
+    year = parseInt(parts[0], 10);
+    month = parseInt(parts[1], 10);
+  } else {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return { fiscalYear: null, month: null, beYear: null };
+    year = d.getFullYear();
+    month = d.getMonth() + 1;
+  }
+
+  const beYear = year < 2400 ? year + 543 : year;
+  const fiscalYear = month >= 10 ? beYear + 1 : beYear;
+  return { fiscalYear, month, beYear };
+}
+
+// รวมปีงบประมาณ เริ่มต้นที่ 2570 และเพิ่มปีถัดไปข้างหน้าอัตโนมัติ
+function getAvailableFiscalYears(dataList, dateField) {
+  const currentFY = getCurrentFiscalYear();
+  const yearsSet = new Set();
+
+  // ปีเริ่มต้น 2570 (ปีงบ 70) เสมอ
+  yearsSet.add(START_FISCAL_YEAR);
+
+  // เพิ่มปีปัจจุบัน และเพิ่มปีถัดไปข้างหน้าอัตโนมัติ
+  const maxBase = Math.max(currentFY, START_FISCAL_YEAR);
+  yearsSet.add(maxBase);
+  yearsSet.add(maxBase + 1); // ปีถัดไปเพิ่มอัตโนมัติ
+
+  // ดึงปีงบประมาณจากข้อมูลทั้งหมดในระบบ
+  if (Array.isArray(dataList)) {
+    dataList.forEach(item => {
+      const dateVal = item[dateField];
+      if (dateVal) {
+        const { fiscalYear } = getFiscalYearAndMonth(dateVal);
+        if (fiscalYear) {
+          yearsSet.add(fiscalYear);
+        }
+      }
+    });
+  }
+
+  return Array.from(yearsSet).sort((a, b) => b - a);
+}
+
+// อัปเดตตัวเลือกใน Dropdown ปีงบประมาณ
+function populateFiscalYearOptions(tab) {
+  const selectId = tab === 'asset' ? 'asset-fiscal-year-select' : 'material-fiscal-year-select';
+  const selectEl = document.getElementById(selectId);
+  if (!selectEl) return;
+
+  const dataList = tab === 'asset' ? assetList : materialList;
+  const dateField = tab === 'asset' ? 'received_date' : 'trans_date';
+  const availableYears = getAvailableFiscalYears(dataList, dateField);
+  const currentVal = tab === 'asset' ? assetFiscalYear : materialFiscalYear;
+
+  selectEl.innerHTML = '';
+
+  const optAll = document.createElement('option');
+  optAll.value = 'all';
+  optAll.innerText = 'ทุกปีงบประมาณ (ทั้งหมด)';
+  selectEl.appendChild(optAll);
+
+  availableYears.forEach(year => {
+    const opt = document.createElement('option');
+    opt.value = String(year);
+    const shortYear = String(year).slice(-2);
+    opt.innerText = `ปีงบประมาณ ${year} (ปีงบ ${shortYear})`;
+    selectEl.appendChild(opt);
+  });
+
+  if (currentVal === 'all') {
+    selectEl.value = 'all';
+  } else if (availableYears.includes(parseInt(currentVal, 10))) {
+    selectEl.value = currentVal;
+  } else if (availableYears.includes(START_FISCAL_YEAR)) {
+    selectEl.value = String(START_FISCAL_YEAR);
+    if (tab === 'asset') assetFiscalYear = String(START_FISCAL_YEAR);
+    else materialFiscalYear = String(START_FISCAL_YEAR);
+  } else {
+    selectEl.value = 'all';
+    if (tab === 'asset') assetFiscalYear = 'all';
+    else materialFiscalYear = 'all';
+  }
+}
+
+function onAssetFilterChange() {
+  const fySelect = document.getElementById('asset-fiscal-year-select');
+  const mSelect = document.getElementById('asset-month-select');
+  if (fySelect) assetFiscalYear = fySelect.value;
+  if (mSelect) assetMonth = mSelect.value;
+  renderAssetTable();
+  updateAssetSelectionUI();
+}
+
+function onMaterialFilterChange() {
+  const fySelect = document.getElementById('material-fiscal-year-select');
+  const mSelect = document.getElementById('material-month-select');
+  if (fySelect) materialFiscalYear = fySelect.value;
+  if (mSelect) materialMonth = mSelect.value;
+  renderMaterialTable();
+  updateMaterialSelectionUI();
+}
 
 function escapeHtml(str) {
   if (!str) return '';
@@ -166,22 +287,6 @@ function clearAssetSearch() {
   updateAssetSelectionUI();
 }
 
-function getFilteredAssets() {
-  if (!assetSearchQuery || !assetSearchQuery.trim()) return assetList;
-  const q = assetSearchQuery.trim().toLowerCase();
-  return assetList.filter(item => {
-    return (item.asset_name && item.asset_name.toLowerCase().includes(q)) ||
-           (item.asset_code && item.asset_code.toLowerCase().includes(q)) ||
-           (item.category && item.category.toLowerCase().includes(q)) ||
-           (item.spec && item.spec.toLowerCase().includes(q)) ||
-           (item.location && item.location.toLowerCase().includes(q)) ||
-           (item.responsible_person && item.responsible_person.toLowerCase().includes(q)) ||
-           (item.doc_no && item.doc_no.toLowerCase().includes(q)) ||
-           (item.vendor && item.vendor.toLowerCase().includes(q)) ||
-           (item.status && item.status.toLowerCase().includes(q));
-  });
-}
-
 function onMaterialSearch(val) {
   materialSearchQuery = val || '';
   renderMaterialTable();
@@ -196,15 +301,75 @@ function clearMaterialSearch() {
   updateMaterialSelectionUI();
 }
 
+function getFilteredAssets() {
+  return assetList.filter(item => {
+    // 1. กรองปีงบประมาณ
+    if (assetFiscalYear !== 'all') {
+      const { fiscalYear } = getFiscalYearAndMonth(item.received_date);
+      if (String(fiscalYear) !== String(assetFiscalYear)) {
+        return false;
+      }
+    }
+
+    // 2. กรองเดือน
+    if (assetMonth !== 'all') {
+      const { month } = getFiscalYearAndMonth(item.received_date);
+      if (String(month) !== String(assetMonth)) {
+        return false;
+      }
+    }
+
+    // 3. กรองคำค้นหา
+    if (assetSearchQuery && assetSearchQuery.trim()) {
+      const q = assetSearchQuery.trim().toLowerCase();
+      const match =
+        (item.asset_name && item.asset_name.toLowerCase().includes(q)) ||
+        (item.asset_code && item.asset_code.toLowerCase().includes(q)) ||
+        (item.category && item.category.toLowerCase().includes(q)) ||
+        (item.spec && item.spec.toLowerCase().includes(q)) ||
+        (item.location && item.location.toLowerCase().includes(q)) ||
+        (item.responsible_person && item.responsible_person.toLowerCase().includes(q)) ||
+        (item.doc_no && item.doc_no.toLowerCase().includes(q)) ||
+        (item.vendor && item.vendor.toLowerCase().includes(q)) ||
+        (item.status && item.status.toLowerCase().includes(q));
+      if (!match) return false;
+    }
+
+    return true;
+  });
+}
+
 function getFilteredMaterials() {
-  if (!materialSearchQuery || !materialSearchQuery.trim()) return materialList;
-  const q = materialSearchQuery.trim().toLowerCase();
   return materialList.filter(item => {
-    return (item.party && item.party.toLowerCase().includes(q)) ||
-           (item.doc_no && item.doc_no.toLowerCase().includes(q)) ||
-           (item.budget_type && item.budget_type.toLowerCase().includes(q)) ||
-           (item.remark && item.remark.toLowerCase().includes(q)) ||
-           (item.trans_date && item.trans_date.toLowerCase().includes(q));
+    // 1. กรองปีงบประมาณ
+    if (materialFiscalYear !== 'all') {
+      const { fiscalYear } = getFiscalYearAndMonth(item.trans_date);
+      if (String(fiscalYear) !== String(materialFiscalYear)) {
+        return false;
+      }
+    }
+
+    // 2. กรองเดือน
+    if (materialMonth !== 'all') {
+      const { month } = getFiscalYearAndMonth(item.trans_date);
+      if (String(month) !== String(materialMonth)) {
+        return false;
+      }
+    }
+
+    // 3. กรองคำค้นหา
+    if (materialSearchQuery && materialSearchQuery.trim()) {
+      const q = materialSearchQuery.trim().toLowerCase();
+      const match =
+        (item.party && item.party.toLowerCase().includes(q)) ||
+        (item.doc_no && item.doc_no.toLowerCase().includes(q)) ||
+        (item.budget_type && item.budget_type.toLowerCase().includes(q)) ||
+        (item.remark && item.remark.toLowerCase().includes(q)) ||
+        (item.trans_date && item.trans_date.toLowerCase().includes(q));
+      if (!match) return false;
+    }
+
+    return true;
   });
 }
 
@@ -225,6 +390,7 @@ async function loadAssets() {
       selectedAssetIds = new Set([...selectedAssetIds].filter(id => validIds.has(id)));
     }
 
+    populateFiscalYearOptions('asset');
     renderAssetTable();
     updateAssetSelectionUI();
     renderAssetPrint();
@@ -233,7 +399,7 @@ async function loadAssets() {
   }
 }
 
-// เรนเดอร์ตารางบนหน้าจอเว็บ (กรองตามคำค้นหาอัตโนมัติ)
+// เรนเดอร์ตารางบนหน้าจอเว็บ (กรองตามปีงบประมาณ, เดือน, และคำค้นหาอัตโนมัติ)
 function renderAssetTable() {
   const screenTbody = document.getElementById('screen-asset-table-body');
   if (!screenTbody) return;
@@ -249,8 +415,9 @@ function renderAssetTable() {
   }
 
   if (countSpan) {
-    if (assetSearchQuery.trim()) {
-      countSpan.innerHTML = `พบ <span class="font-bold text-amber-800">${list.length}</span> รายการ (จากทั้งหมด ${assetList.length} รายการ)`;
+    const isFiltered = assetFiscalYear !== 'all' || assetMonth !== 'all' || assetSearchQuery.trim();
+    if (isFiltered) {
+      countSpan.innerHTML = `แสดง <span class="font-bold text-amber-800">${list.length}</span> รายการ (จากทั้งหมด ${assetList.length} รายการ)`;
     } else {
       countSpan.innerHTML = `ทั้งหมด <span class="font-bold text-slate-700">${assetList.length}</span> รายการ`;
     }
@@ -258,9 +425,20 @@ function renderAssetTable() {
 
   if (list.length === 0) {
     const tr = document.createElement('tr');
+    let msg = '🔍 ไม่พบรายการครุภัณฑ์ในเงื่อนไขที่เลือก';
+    if (assetFiscalYear !== 'all') {
+      msg += ` (ปีงบ ${String(assetFiscalYear).slice(-2)})`;
+    }
+    if (assetMonth !== 'all') {
+      const monthNames = {'10':'ต.ค.','11':'พ.ย.','12':'ธ.ค.','1':'ม.ค.','2':'ก.พ.','3':'มี.ค.','4':'เม.ย.','5':'พ.ค.','6':'มิ.ย.','7':'ก.ค.','8':'ส.ค.','9':'ก.ย.'};
+      msg += ` ประจำเดือน ${monthNames[assetMonth] || assetMonth}`;
+    }
+    if (assetSearchQuery.trim()) {
+      msg += ` คำค้น "${escapeHtml(assetSearchQuery)}"`;
+    }
     tr.innerHTML = `
       <td colspan="15" class="p-8 text-center text-slate-400 text-xs sm:text-sm">
-        🔍 ไม่พบรายการครุภัณฑ์ที่ตรงกับคำค้นหา "${escapeHtml(assetSearchQuery)}"
+        ${msg}
       </td>
     `;
     screenTbody.appendChild(tr);
@@ -868,6 +1046,7 @@ async function loadMaterials() {
       selectedMaterialIds = new Set([...selectedMaterialIds].filter(id => validIds.has(id)));
     }
 
+    populateFiscalYearOptions('material');
     renderMaterialTable();
     updateMaterialSelectionUI();
     renderMaterialPrint();
@@ -876,6 +1055,7 @@ async function loadMaterials() {
   }
 }
 
+// เรนเดอร์ตารางบนหน้าจอเว็บ (กรองตามปีงบประมาณ, เดือน, และคำค้นหาอัตโนมัติ)
 function renderMaterialTable() {
   const screenTbody = document.getElementById('screen-material-table-body');
   if (!screenTbody) return;
@@ -891,8 +1071,9 @@ function renderMaterialTable() {
   }
 
   if (countSpan) {
-    if (materialSearchQuery.trim()) {
-      countSpan.innerHTML = `พบ <span class="font-bold text-amber-800">${list.length}</span> รายการ (จากทั้งหมด ${materialList.length} รายการ)`;
+    const isFiltered = materialFiscalYear !== 'all' || materialMonth !== 'all' || materialSearchQuery.trim();
+    if (isFiltered) {
+      countSpan.innerHTML = `แสดง <span class="font-bold text-amber-800">${list.length}</span> รายการ (จากทั้งหมด ${materialList.length} รายการ)`;
     } else {
       countSpan.innerHTML = `ทั้งหมด <span class="font-bold text-slate-700">${materialList.length}</span> รายการ`;
     }
@@ -900,9 +1081,20 @@ function renderMaterialTable() {
 
   if (list.length === 0) {
     const tr = document.createElement('tr');
+    let msg = '🔍 ไม่พบรายการวัสดุในเงื่อนไขที่เลือก';
+    if (materialFiscalYear !== 'all') {
+      msg += ` (ปีงบ ${String(materialFiscalYear).slice(-2)})`;
+    }
+    if (materialMonth !== 'all') {
+      const monthNames = {'10':'ต.ค.','11':'พ.ย.','12':'ธ.ค.','1':'ม.ค.','2':'ก.พ.','3':'มี.ค.','4':'เม.ย.','5':'พ.ค.','6':'มิ.ย.','7':'ก.ค.','8':'ส.ค.','9':'ก.ย.'};
+      msg += ` ประจำเดือน ${monthNames[materialMonth] || materialMonth}`;
+    }
+    if (materialSearchQuery.trim()) {
+      msg += ` คำค้น "${escapeHtml(materialSearchQuery)}"`;
+    }
     tr.innerHTML = `
       <td colspan="13" class="p-8 text-center text-slate-400 text-xs sm:text-sm">
-        🔍 ไม่พบรายการวัสดุที่ตรงกับคำค้นหา "${escapeHtml(materialSearchQuery)}"
+        ${msg}
       </td>
     `;
     screenTbody.appendChild(tr);

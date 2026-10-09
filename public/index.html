@@ -178,18 +178,52 @@
           </div>
         </div>
 
-        <!-- แถบค้นหาครุภัณฑ์ -->
-        <div class="mb-3 flex flex-wrap items-center justify-between gap-3 no-print">
-          <div class="relative flex-1 min-w-[260px] max-w-md">
+        <!-- แถบกรองปีงบประมาณ / เดือน / ค้นหาครุภัณฑ์ -->
+        <div class="mb-4 bg-white p-3.5 sm:p-4 rounded-2xl shadow-xs border border-amber-200/80 no-print space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+              <div class="flex items-center gap-1.5 text-xs font-bold text-red-950">
+                <span class="p-1 bg-amber-100 text-amber-900 rounded-lg text-sm leading-none">📅</span>
+                <span>ปีงบประมาณ:</span>
+              </div>
+              <select id="asset-fiscal-year-select" onchange="onAssetFilterChange()" class="text-xs font-bold border border-amber-300 rounded-xl px-3 py-1.5 bg-amber-50/50 text-red-950 shadow-2xs focus:ring-2 focus:ring-amber-500 cursor-pointer">
+                <!-- Dynamically populated -->
+              </select>
+
+              <div class="flex items-center gap-1.5 text-xs font-bold text-red-950 sm:ml-2">
+                <span>เดือน:</span>
+              </div>
+              <select id="asset-month-select" onchange="onAssetFilterChange()" class="text-xs font-semibold border border-amber-300 rounded-xl px-3 py-1.5 bg-amber-50/50 text-red-950 shadow-2xs focus:ring-2 focus:ring-amber-500 cursor-pointer">
+                <option value="all">ทุกเดือน (ทั้งปีงบ)</option>
+                <option value="10">ตุลาคม (ต.ค.)</option>
+                <option value="11">พฤศจิกายน (พ.ย.)</option>
+                <option value="12">ธันวาคม (ธ.ค.)</option>
+                <option value="1">มกราคม (ม.ค.)</option>
+                <option value="2">กุมภาพันธ์ (ก.พ.)</option>
+                <option value="3">มีนาคม (มี.ค.)</option>
+                <option value="4">เมษายน (เม.ย.)</option>
+                <option value="5">พฤษภาคม (พ.ค.)</option>
+                <option value="6">มิถุนายน (มิ.ย.)</option>
+                <option value="7">กรกฎาคม (ก.ค.)</option>
+                <option value="8">สิงหาคม (ส.ค.)</option>
+                <option value="9">กันยายน (ก.ย.)</option>
+              </select>
+            </div>
+
+            <!-- สรุปจำนวนรายการที่พบ -->
+            <div class="text-xs text-slate-500 font-medium" id="asset-search-result-count"></div>
+          </div>
+
+          <!-- แถบค้นหาข้อความ Real-time -->
+          <div class="relative w-full">
             <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-amber-600/70">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
               </svg>
             </span>
-            <input type="text" id="asset-search-input" oninput="onAssetSearch(this.value)" placeholder="ค้นหาครุภัณฑ์ (ชื่อ, รหัส, สถานที่, ผู้รับผิดชอบ...)" class="w-full pl-10 pr-9 py-2 bg-white border border-amber-200/90 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 shadow-2xs placeholder-slate-400 text-slate-800 transition">
+            <input type="text" id="asset-search-input" oninput="onAssetSearch(this.value)" placeholder="ค้นหาครุภัณฑ์ (ชื่อ, รหัส, สถานที่, ผู้รับผิดชอบ...)" class="w-full pl-10 pr-9 py-2 bg-slate-50/60 hover:bg-white focus:bg-white border border-slate-200 focus:border-amber-400 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 shadow-2xs placeholder-slate-400 text-slate-800 transition">
             <button type="button" id="asset-search-clear-btn" onclick="clearAssetSearch()" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 text-sm cursor-pointer" title="ล้างการค้นหา">&times;</button>
           </div>
-          <div class="text-xs text-slate-500 font-medium" id="asset-search-result-count"></div>
         </div>
 
         <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-amber-100 overflow-x-auto">
@@ -249,18 +283,52 @@
           </div>
         </div>
 
-        <!-- แถบค้นหาวัสดุ -->
-        <div class="mb-3 flex flex-wrap items-center justify-between gap-3 no-print">
-          <div class="relative flex-1 min-w-[260px] max-w-md">
+        <!-- แถบกรองปีงบประมาณ / เดือน / ค้นหาวัสดุ -->
+        <div class="mb-4 bg-white p-3.5 sm:p-4 rounded-2xl shadow-xs border border-amber-200/80 no-print space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+              <div class="flex items-center gap-1.5 text-xs font-bold text-red-950">
+                <span class="p-1 bg-amber-100 text-amber-900 rounded-lg text-sm leading-none">📅</span>
+                <span>ปีงบประมาณ:</span>
+              </div>
+              <select id="material-fiscal-year-select" onchange="onMaterialFilterChange()" class="text-xs font-bold border border-amber-300 rounded-xl px-3 py-1.5 bg-amber-50/50 text-red-950 shadow-2xs focus:ring-2 focus:ring-amber-500 cursor-pointer">
+                <!-- Dynamically populated -->
+              </select>
+
+              <div class="flex items-center gap-1.5 text-xs font-bold text-red-950 sm:ml-2">
+                <span>เดือน:</span>
+              </div>
+              <select id="material-month-select" onchange="onMaterialFilterChange()" class="text-xs font-semibold border border-amber-300 rounded-xl px-3 py-1.5 bg-amber-50/50 text-red-950 shadow-2xs focus:ring-2 focus:ring-amber-500 cursor-pointer">
+                <option value="all">ทุกเดือน (ทั้งปีงบ)</option>
+                <option value="10">ตุลาคม (ต.ค.)</option>
+                <option value="11">พฤศจิกายน (พ.ย.)</option>
+                <option value="12">ธันวาคม (ธ.ค.)</option>
+                <option value="1">มกราคม (ม.ค.)</option>
+                <option value="2">กุมภาพันธ์ (ก.พ.)</option>
+                <option value="3">มีนาคม (มี.ค.)</option>
+                <option value="4">เมษายน (เม.ย.)</option>
+                <option value="5">พฤษภาคม (พ.ค.)</option>
+                <option value="6">มิถุนายน (มิ.ย.)</option>
+                <option value="7">กรกฎาคม (ก.ค.)</option>
+                <option value="8">สิงหาคม (ส.ค.)</option>
+                <option value="9">กันยายน (ก.ย.)</option>
+              </select>
+            </div>
+
+            <!-- สรุปจำนวนรายการที่พบ -->
+            <div class="text-xs text-slate-500 font-medium" id="material-search-result-count"></div>
+          </div>
+
+          <!-- แถบค้นหาข้อความ Real-time -->
+          <div class="relative w-full">
             <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-amber-600/70">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
               </svg>
             </span>
-            <input type="text" id="material-search-input" oninput="onMaterialSearch(this.value)" placeholder="ค้นหาวัสดุ (รับจาก/จ่ายให้, เลขที่เอกสาร, ประเภทเงิน, หมายเหตุ...)" class="w-full pl-10 pr-9 py-2 bg-white border border-amber-200/90 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 shadow-2xs placeholder-slate-400 text-slate-800 transition">
+            <input type="text" id="material-search-input" oninput="onMaterialSearch(this.value)" placeholder="ค้นหาวัสดุ (รับจาก/จ่ายให้, เลขที่เอกสาร, ประเภทเงิน, หมายเหตุ...)" class="w-full pl-10 pr-9 py-2 bg-slate-50/60 hover:bg-white focus:bg-white border border-slate-200 focus:border-amber-400 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 shadow-2xs placeholder-slate-400 text-slate-800 transition">
             <button type="button" id="material-search-clear-btn" onclick="clearMaterialSearch()" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 text-sm cursor-pointer" title="ล้างการค้นหา">&times;</button>
           </div>
-          <div class="text-xs text-slate-500 font-medium" id="material-search-result-count"></div>
         </div>
 
         <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-amber-100 overflow-x-auto">
@@ -655,6 +723,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=3.2"></script>
+  <script src="app.js?v=4.0"></script>
 </body>
 </html>
