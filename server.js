@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const db = require('./db');
+const aiAssistant = require('./ai_assistant');
 
 const app = express();
 
@@ -271,6 +272,69 @@ app.post('/api/restore', requireAuth, async (req, res) => {
     res.json({ message: 'กู้คืนข้อมูลสำเร็จเรียบร้อยแล้ว' });
   } catch (err) {
     res.status(500).json({ error: 'เกิดข้อผิดพลาดในการกู้คืน: ' + err.message });
+  }
+});
+
+// ==================== AI ASSISTANT API ====================
+
+// ตรวจสอบสถานะการตั้งค่า AI
+app.get('/api/ai/status', requireAuth, (req, res) => {
+  const apiKey = aiAssistant.getGeminiApiKey();
+  res.json({
+    hasKey: Boolean(apiKey),
+    keyMasked: apiKey ? (apiKey.slice(0, 4) + '••••••••' + apiKey.slice(-4)) : '',
+    source: apiKey ? 'gemini' : 'builtin_expert'
+  });
+});
+
+// บันทึก / อัปเดต Gemini API Key
+app.post('/api/ai/config', requireAuth, (req, res) => {
+  try {
+    const { apiKey } = req.body;
+    const result = aiAssistant.setGeminiApiKey(apiKey);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// สนทนากับผู้ช่วยพัสดุ AI
+app.post('/api/ai/chat', requireAuth, async (req, res) => {
+  try {
+    const { message, history } = req.body;
+    if (!message || !message.trim()) {
+      return res.status(400).json({ error: 'กรุณากรอกข้อความคำถาม' });
+    }
+
+    // สร้างข้อมูลสรุปพัสดุและวัสดุของโรงเรียนบ้านดงกลางแบบ Real-time
+    let assetSummary = '';
+    try {
+      const assets = await db.getAssets();
+      const totalCount = assets.length;
+      let totalCost = 0;
+      let damagedCount = 0;
+      const catCount = {};
+
+      assets.forEach(a => {
+        totalCost += parseFloat(a.cost) || 0;
+        if (a.status === 'ชำรุด/เสื่อมสภาพ (ขอจำหน่าย)' || a.status === 'จำหน่ายแล้ว' || a.status === 'สูญหาย') {
+          damagedCount++;
+        }
+        const c = a.category || 'ครุภัณฑ์อื่นๆ';
+        catCount[c] = (catCount[c] || 0) + 1;
+      });
+
+      const catStr = Object.entries(catCount).map(([k, v]) => `${k} ${v} รายการ`).join(', ');
+      assetSummary = `โรงเรียนมีครุภัณฑ์ในระบบรวม ${totalCount} รายการ (มูลค่าทุนรวม ${totalCost.toLocaleString('th-TH')} บาท), รายการที่ชำรุด/ขอจำหน่าย ${damagedCount} รายการ, จำแนกตามหมวดหมู่: ${catStr || 'ไม่มี'}`;
+    } catch (e) {
+      assetSummary = 'ไม่สามารถดึงข้อมูลสรุปครุภัณฑ์ได้';
+    }
+
+    const liveContext = { assetSummary };
+    const result = await aiAssistant.handleChat(message, history, liveContext);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

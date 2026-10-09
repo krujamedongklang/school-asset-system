@@ -2904,3 +2904,385 @@ function generateDisposalReportPrintHtml(fiscalYear, reportDate, docNo, officer,
     </div>
   `;
 }
+
+// ==============================================================
+// 5. ผู้ช่วยพัสดุและนิติกร AI (สพฐ.) - FRONTEND LOGIC
+// ==============================================================
+
+let aiChatHistory = [];
+let isAiLoading = false;
+
+function toggleAiAssistant() {
+  const panel = document.getElementById('ai-assistant-panel');
+  if (!panel) return;
+  const isHidden = panel.classList.contains('hidden');
+  if (isHidden) {
+    panel.classList.remove('hidden');
+    loadAiStatus();
+    const input = document.getElementById('ai-chat-input');
+    if (input) setTimeout(() => input.focus(), 150);
+    scrollAiChatToBottom();
+  } else {
+    panel.classList.add('hidden');
+  }
+}
+
+async function loadAiStatus() {
+  const statusText = document.getElementById('ai-status-text');
+  const modeBadge = document.getElementById('ai-mode-badge');
+  const keyBtn = document.getElementById('ai-key-status-btn');
+  const hintEl = document.getElementById('ai-current-key-hint');
+
+  try {
+    const res = await authFetch('/api/ai/status');
+    if (!res.ok) return;
+    const data = await res.json();
+
+    if (data.hasKey) {
+      if (modeBadge) {
+        modeBadge.className = 'text-[10px] bg-purple-500/20 text-purple-300 border border-purple-400/40 px-1.5 py-0.5 rounded-full font-bold';
+        modeBadge.innerText = '⚡ Google Gemini AI';
+      }
+      if (statusText) statusText.innerText = 'เชื่อมต่อ Google Gemini AI เรียบร้อยแล้ว (ฉลาดรอบด้าน)';
+      if (keyBtn) keyBtn.innerText = 'แก้ไข API Key';
+      if (hintEl) hintEl.innerText = `สถานะปัจจุบัน: มี API Key แล้ว (${data.keyMasked})`;
+    } else {
+      if (modeBadge) {
+        modeBadge.className = 'text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-1.5 py-0.5 rounded-full font-medium';
+        modeBadge.innerText = 'สพฐ. (ออฟไลน์)';
+      }
+      if (statusText) statusText.innerText = 'ใช้งานฐานความรู้พัสดุ สพฐ. (ใส่ Gemini Key เพื่อปลดล็อก AI เต็มรูปแบบ)';
+      if (keyBtn) keyBtn.innerText = 'ใส่ API Key เพื่ออัปเกรด';
+      if (hintEl) hintEl.innerText = 'สถานะปัจจุบัน: ยังไม่ได้ใส่ API Key (ใช้งานฐานความรู้ภายใน สพฐ.)';
+    }
+  } catch (e) {
+    console.error('Failed to load AI status:', e);
+  }
+}
+
+function openAiSettingsModal() {
+  loadAiStatus();
+  openModal('aiSettingsModal');
+}
+
+function toggleApiKeyVisibility() {
+  const inp = document.getElementById('ai-api-key-input');
+  if (!inp) return;
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+async function saveAiApiKey() {
+  const inp = document.getElementById('ai-api-key-input');
+  if (!inp) return;
+  const key = inp.value.trim();
+  if (!key) {
+    alert('กรุณากรอก Google Gemini API Key');
+    return;
+  }
+
+  try {
+    const res = await authFetch('/api/ai/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiKey: key })
+    });
+    if (res.ok) {
+      alert('บันทึก Google Gemini API Key สำเร็จ! ระบบพร้อมให้บริการระดับสูงสุดแล้วครับ');
+      inp.value = '';
+      closeModal('aiSettingsModal');
+      loadAiStatus();
+    } else {
+      const err = await res.json();
+      alert('เกิดข้อผิดพลาด: ' + (err.error || 'ไม่สามารถบันทึกได้'));
+    }
+  } catch (e) {
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+  }
+}
+
+async function removeAiApiKey() {
+  if (!confirm('ต้องการลบ API Key และกลับไปใช้ฐานความรู้ สพฐ. ออฟไลน์ใช่หรือไม่?')) return;
+  try {
+    const res = await authFetch('/api/ai/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiKey: '' })
+    });
+    if (res.ok) {
+      alert('ลบ API Key เรียบร้อยแล้ว ระบบจะใช้ฐานความรู้ออฟไลน์');
+      closeModal('aiSettingsModal');
+      loadAiStatus();
+    }
+  } catch (e) {
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+  }
+}
+
+function handleAiInputKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    handleAiChatSubmit(e);
+  }
+}
+
+function handleAiChatSubmit(e) {
+  if (e) e.preventDefault();
+  const input = document.getElementById('ai-chat-input');
+  if (!input) return;
+  const msg = input.value.trim();
+  if (!msg || isAiLoading) return;
+  input.value = '';
+  sendAiMessage(msg);
+}
+
+function sendQuickPrompt(promptText) {
+  const panel = document.getElementById('ai-assistant-panel');
+  if (panel && panel.classList.contains('hidden')) {
+    panel.classList.remove('hidden');
+  }
+  sendAiMessage(promptText);
+}
+
+function scrollAiChatToBottom() {
+  const container = document.getElementById('ai-chat-messages');
+  if (container) {
+    setTimeout(() => {
+      container.scrollTop = container.scrollHeight;
+    }, 50);
+  }
+}
+
+function formatAiMarkdown(text) {
+  if (!text) return '';
+  let escaped = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  // Code block ```
+  escaped = escaped.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, function(match, lang, code) {
+    const codeId = 'code_' + Math.random().toString(36).substring(2, 9);
+    return `
+      <div class="my-2 bg-slate-900 text-slate-100 rounded-xl overflow-hidden border border-slate-700 shadow-sm">
+        <div class="bg-slate-800 px-3 py-1.5 flex justify-between items-center text-[10px] text-slate-300 border-b border-slate-700">
+          <span class="font-mono">${lang || 'เอกสารราชการ'}</span>
+          <button onclick="copyRawCode('${codeId}')" class="hover:text-amber-300 font-bold flex items-center gap-1 transition cursor-pointer">
+            <span>📋</span> <span>คัดลอกเอกสาร</span>
+          </button>
+        </div>
+        <pre id="${codeId}" class="p-3 text-xs font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed select-all">${code.trim()}</pre>
+      </div>
+    `;
+  });
+
+  // Inline code `code`
+  escaped = escaped.replace(/`([^`]+)`/g, '<code class="bg-amber-100/70 text-amber-950 px-1.5 py-0.5 rounded text-[11px] font-mono">$1</code>');
+
+  // Headings
+  escaped = escaped.replace(/^### (.*$)/gim, '<h3 class="font-bold text-sm text-slate-900 mt-2 mb-1 flex items-center gap-1">$1</h3>');
+  escaped = escaped.replace(/^## (.*$)/gim, '<h2 class="font-bold text-base text-slate-950 mt-2.5 mb-1 flex items-center gap-1 border-b border-slate-200 pb-0.5">$1</h2>');
+
+  // Bold
+  escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-slate-900">$1</strong>');
+
+  // Bullet items
+  escaped = escaped.replace(/^\s*[-*]\s+(.*$)/gim, '<li class="ml-4 list-disc text-slate-700 leading-relaxed">$1</li>');
+
+  // Numbered list items
+  escaped = escaped.replace(/^\s*(\d+)\.\s+(.*$)/gim, '<li class="ml-4 list-decimal text-slate-700 leading-relaxed">$2</li>');
+
+  // Blockquotes
+  escaped = escaped.replace(/^\> (.*$)/gim, '<blockquote class="border-l-3 border-amber-500 pl-2.5 my-1 text-slate-600 italic bg-amber-50/40 py-0.5 rounded-r">$1</blockquote>');
+
+  // Newlines
+  escaped = escaped.replace(/\n\n/g, '<div class="h-2"></div>');
+  escaped = escaped.replace(/\n/g, '<br>');
+
+  return escaped;
+}
+
+function copyRawCode(elementId) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  const text = el.innerText || el.textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    alert('📋 คัดลอกเนื้อหาเอกสารราชการเรียบร้อยแล้ว คุณครูสามารถนำไปวางใน Word หรือโปรแกรมอื่นได้ทันทีครับ!');
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    alert('📋 คัดลอกเรียบร้อยแล้วครับ!');
+  });
+}
+
+function copyMessageContent(msgId) {
+  const el = document.getElementById(msgId);
+  if (!el) return;
+  const text = el.innerText || el.textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    alert('📋 คัดลอกคำแนะนำเรียบร้อยแล้วครับ!');
+  });
+}
+
+async function sendAiMessage(messageText) {
+  if (!messageText || isAiLoading) return;
+  const container = document.getElementById('ai-chat-messages');
+  if (!container) return;
+
+  isAiLoading = true;
+  const sendBtn = document.getElementById('ai-chat-send-btn');
+  if (sendBtn) sendBtn.disabled = true;
+
+  // 1. เพิ่ม User Message ใน UI
+  const userHtml = `
+    <div class="flex justify-end items-start gap-2">
+      <div class="bg-gradient-to-r from-amber-600 to-yellow-600 text-white rounded-2xl rounded-tr-xs px-3.5 py-2.5 max-w-[85%] shadow-xs leading-relaxed text-xs sm:text-sm font-medium">
+        ${messageText.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')}
+      </div>
+      <div class="w-7 h-7 rounded-full bg-amber-200 text-amber-900 flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
+        ครู
+      </div>
+    </div>
+  `;
+  container.insertAdjacentHTML('beforeend', userHtml);
+  scrollAiChatToBottom();
+
+  // 2. เพิ่ม Loading Indicator
+  const loadId = 'msg_load_' + Date.now();
+  const loadHtml = `
+    <div id="${loadId}" class="flex justify-start items-start gap-2">
+      <div class="w-8 h-8 rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-400 text-white flex items-center justify-center text-base shrink-0 shadow-xs border border-white">
+        🤖
+      </div>
+      <div class="bg-white border border-amber-200 text-slate-600 rounded-2xl rounded-tl-xs px-4 py-3 max-w-[85%] shadow-xs flex items-center gap-2 text-xs">
+        <span class="inline-block w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+        <span class="text-amber-900 font-medium">กำลังค้นหาระเบียบและร่างคำตอบตามหลัก สพฐ....</span>
+      </div>
+    </div>
+  `;
+  container.insertAdjacentHTML('beforeend', loadHtml);
+  scrollAiChatToBottom();
+
+  try {
+    const res = await authFetch('/api/ai/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: messageText,
+        history: aiChatHistory
+      })
+    });
+
+    const loadEl = document.getElementById(loadId);
+    if (loadEl) loadEl.remove();
+
+    if (res.ok) {
+      const data = await res.json();
+      const reply = data.reply || 'ขออภัยครับ ไม่สามารถสร้างคำตอบได้';
+      const sourceBadge = data.source === 'gemini' 
+        ? '<span class="text-[9px] bg-purple-100 text-purple-800 border border-purple-200 px-1 rounded font-bold">⚡ Gemini AI</span>'
+        : '<span class="text-[9px] bg-emerald-100 text-emerald-800 border border-emerald-200 px-1 rounded font-semibold">📘 ฐานความรู้ สพฐ.</span>';
+
+      aiChatHistory.push({ role: 'user', text: messageText });
+      aiChatHistory.push({ role: 'assistant', text: reply });
+
+      const replyMsgId = 'msg_ai_' + Date.now();
+      const formattedHtml = formatAiMarkdown(reply);
+
+      const aiResponseHtml = `
+        <div class="flex justify-start items-start gap-2">
+          <div class="w-8 h-8 rounded-2xl bg-gradient-to-tr from-slate-900 via-blue-950 to-slate-900 text-amber-300 flex items-center justify-center text-base shrink-0 shadow-xs border border-amber-400/40">
+            🤖
+          </div>
+          <div class="bg-white border border-slate-200/90 text-slate-800 rounded-2xl rounded-tl-xs p-3.5 max-w-[90%] shadow-2xs leading-relaxed space-y-2">
+            <div class="flex justify-between items-center pb-1 border-b border-slate-100">
+              <div class="flex items-center gap-1.5 text-[11px] font-bold text-slate-700">
+                <span>ที่ปรึกษาพัสดุและนิติกร สพฐ.</span>
+                ${sourceBadge}
+              </div>
+              <button onclick="copyMessageContent('${replyMsgId}')" class="text-[10px] text-slate-400 hover:text-amber-700 flex items-center gap-0.5 transition font-semibold cursor-pointer">
+                <span>📋 คัดลอก</span>
+              </button>
+            </div>
+            <div id="${replyMsgId}" class="text-xs sm:text-sm text-slate-800 leading-relaxed">
+              ${formattedHtml}
+            </div>
+          </div>
+        </div>
+      `;
+      container.insertAdjacentHTML('beforeend', aiResponseHtml);
+    } else {
+      const err = await res.json();
+      const errorHtml = `
+        <div class="flex justify-start items-start gap-2">
+          <div class="w-8 h-8 rounded-2xl bg-rose-600 text-white flex items-center justify-center text-sm shrink-0 shadow-xs">
+            ⚠️
+          </div>
+          <div class="bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl rounded-tl-xs p-3 text-xs leading-relaxed">
+            ${err.error || 'เกิดข้อผิดพลาดในการประมวลผลคำถาม'}
+          </div>
+        </div>
+      `;
+      container.insertAdjacentHTML('beforeend', errorHtml);
+    }
+  } catch (e) {
+    const loadEl = document.getElementById(loadId);
+    if (loadEl) loadEl.remove();
+    const errorHtml = `
+      <div class="flex justify-start items-start gap-2">
+        <div class="w-8 h-8 rounded-2xl bg-rose-600 text-white flex items-center justify-center text-sm shrink-0 shadow-xs">
+          ⚠️
+        </div>
+        <div class="bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl rounded-tl-xs p-3 text-xs leading-relaxed">
+          ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่อีกครั้ง
+        </div>
+      </div>
+    `;
+    container.insertAdjacentHTML('beforeend', errorHtml);
+  } finally {
+    isAiLoading = false;
+    if (sendBtn) sendBtn.disabled = false;
+    scrollAiChatToBottom();
+  }
+}
+
+function clearAiChat() {
+  if (!confirm('ต้องการล้างประวัติการสนทนาในหน้าต่างนี้ใช่หรือไม่?')) return;
+  aiChatHistory = [];
+  const container = document.getElementById('ai-chat-messages');
+  if (!container) return;
+  container.innerHTML = `
+    <div class="bg-white border border-amber-200 rounded-2xl p-3.5 shadow-2xs space-y-2">
+      <div class="flex items-center gap-2 text-amber-900 font-bold text-xs sm:text-sm">
+        <span>🏛️</span>
+        <span>สวัสดีครับคุณครู! ผมคือที่ปรึกษางานพัสดุและนิติกรชำนาญการพิเศษ สังกัด สพฐ.</span>
+      </div>
+      <p class="text-slate-600 text-xs leading-relaxed">
+        ประจำโรงเรียนบ้านดงกลางครับ มีข้อสงสัยเรื่องระเบียบการจัดซื้อจัดจ้าง, ตรวจสอบประเภทสิ่งของ, การตรวจนับประจำปี, หรือต้องการให้ช่วยร่างหนังสือราชการ สามารถพิมพ์ถามได้เลยครับ
+      </p>
+      <div class="pt-1.5 border-t border-slate-100">
+        <div class="text-[11px] font-semibold text-slate-700 mb-1.5">⚡ คำถามที่พบบ่อย (คลิกถามได้ทันที):</div>
+        <div class="flex flex-wrap gap-1.5">
+          <button onclick="sendQuickPrompt('หมึกพิมพ์ แฟ้ม และเก้าอี้ เป็นวัสดุหรือครุภัณฑ์ตาม ว 845?')" class="text-[11px] bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300/80 px-2.5 py-1 rounded-full transition text-left">
+            📌 วัสดุ vs ครุภัณฑ์ (ว ๘๔๕)
+          </button>
+          <button onclick="sendQuickPrompt('วิธีจัดซื้อวงเงินไม่เกิน 5 แสนบาท ใช้วิธีเฉพาะเจาะจงตาม ว 119 มีขั้นตอนและเอกสารอะไรบ้าง?')" class="text-[11px] bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 px-2.5 py-1 rounded-full transition text-left">
+            💰 วิธีเฉพาะเจาะจง (ว ๑๑๙)
+          </button>
+          <button onclick="sendQuickPrompt('การตรวจสอบพัสดุประจำปีตามระเบียบฯ ข้อ 213 ต้องแต่งตั้งใคร และมีขั้นตอนการตรวจนับอย่างไร?')" class="text-[11px] bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 px-2.5 py-1 rounded-full transition text-left">
+            🔍 ตรวจนับประจำปี (ข้อ ๒๑๓)
+          </button>
+          <button onclick="sendQuickPrompt('ขั้นตอนการขอจำหน่ายครุภัณฑ์ชำรุด เสื่อมสภาพ ตามข้อ 215 และการขายทอดตลาดมีกี่ขั้นตอน?')" class="text-[11px] bg-rose-50 hover:bg-rose-100 text-rose-900 border border-rose-200 px-2.5 py-1 rounded-full transition text-left">
+            🗑️ ขอจำหน่ายพัสดุ (ข้อ ๒๑๕)
+          </button>
+          <button onclick="sendQuickPrompt('ช่วยร่างบันทึกข้อความขออนุมัติซื้อพัสดุ เรียน ผอ.โรงเรียนบ้านดงกลาง ให้หน่อย')" class="text-[11px] bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 px-2.5 py-1 rounded-full transition text-left">
+            ✍️ ร่างบันทึกข้อความขอซื้อ
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
