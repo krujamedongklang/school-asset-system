@@ -6,7 +6,14 @@ const app = express();
 const db = new sqlite3.Database('./school_assets.db');
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  etag: false,
+  setHeaders: (res, path) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+  }
+}));
 
 // สร้างตารางในฐานข้อมูล SQLite
 db.serialize(() => {
