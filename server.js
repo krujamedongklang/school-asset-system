@@ -1,6 +1,7 @@
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const db = new sqlite3.Database('./school_assets.db');
@@ -81,7 +82,99 @@ db.serialize(() => {
     `UPDATE assets SET vendor_address = '' WHERE vendor_address IS NOT NULL AND TRIM(REPLACE(REPLACE(vendor_address, '.', ''), ' ', '')) = ''`
   ];
   cleanDotSqls.forEach(sql => db.run(sql, () => {}));
+
+  // ตรวจสอบความถูกต้องและกู้คืนข้อมูลอัตโนมัติหากพบว่าข้อมูลเสียหาย
+  selfHealDatabase();
 });
+
+// ฟังก์ชันกู้คืนข้อมูลจาก Object (ใช้ทั้งในการกู้คืนและการซ่อมแซมอัตโนมัติ)
+function restoreDataFromObject(data, callback) {
+  const assets = data.assets || [];
+  const materials = data.materials || [];
+
+  db.serialize(() => {
+    db.run('DELETE FROM assets');
+    db.run('DELETE FROM materials');
+
+    const assetStmt = db.prepare(`INSERT INTO assets (
+      id, asset_code, received_date, asset_name, spec, doc_no, cost, useful_life,
+      location, status, vendor, responsible_person, department, remark,
+      category, model, qty, vendor_address, vendor_phone, budget_source, acquisition_method
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+
+    assets.forEach(d => {
+      assetStmt.run([
+        d.id || null, d.asset_code, d.received_date, d.asset_name, d.spec, d.doc_no, Number(d.cost) || 0, Number(d.useful_life) || 5,
+        d.location, d.status || 'ใช้งานได้ดี', d.vendor, d.responsible_person, d.department, d.remark,
+        d.category, d.model, Number(d.qty) || 1, d.vendor_address, d.vendor_phone, d.budget_source, d.acquisition_method
+      ]);
+    });
+    assetStmt.finalize();
+
+    const matStmt = db.prepare(`INSERT INTO materials (id, trans_date, material_code, material_name, size_spec, unit, party, doc_no, budget_type, opening_stock, qty_in, qty_out, unit_price, remark)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    materials.forEach(d => {
+      matStmt.run([
+        d.id || null, d.trans_date, d.material_code, d.material_name, d.size_spec, d.unit, d.party, d.doc_no, d.budget_type,
+        Number(d.opening_stock) || 0, Number(d.qty_in) || 0, Number(d.qty_out) || 0, Number(d.unit_price) || 0, d.remark
+      ]);
+    });
+    matStmt.finalize(err => {
+      if (callback) callback(err);
+    });
+  });
+}
+
+// ฟังก์ชันสำรองข้อมูลอัตโนมัติลง data_backup.json และ seed_data.json
+function autoBackupDatabase() {
+  db.all('SELECT * FROM assets ORDER BY id ASC', [], (err, assets) => {
+    if (err) return;
+    db.all('SELECT * FROM materials ORDER BY id ASC', [], (err2, materials) => {
+      if (err2) return;
+      try {
+        const backupData = {
+          export_date: new Date().toISOString(),
+          assets: assets || [],
+          materials: materials || []
+        };
+        const backupPath = path.join(__dirname, 'data_backup.json');
+        const seedPath = path.join(__dirname, 'seed_data.json');
+        fs.writeFileSync(backupPath, JSON.stringify(backupData, null, 2), 'utf8');
+        fs.writeFileSync(seedPath, JSON.stringify({ assets: assets || [], materials: materials || [] }, null, 2), 'utf8');
+      } catch (e) {
+        console.error('Auto backup failed:', e);
+      }
+    });
+  });
+}
+
+// ฟังก์ชันตรวจสอบและซ่อมแซมข้อมูลอัตโนมัติเมื่อเริ่มต้นเซิร์ฟเวอร์
+function selfHealDatabase() {
+  db.all('SELECT * FROM assets', [], (err, rows) => {
+    if (err) return;
+    // ตรวจสอบว่าข้อมูลมีเครื่องหมาย ? (UTF-8 corrupt) หรือตารางว่างหรือไม่
+    const isCorrupted = rows.length === 0 || rows.some(r => 
+      (r.asset_name && r.asset_name.includes('?')) || 
+      (r.spec && r.spec.includes('?')) ||
+      (r.vendor && r.vendor.includes('?'))
+    );
+    if (isCorrupted) {
+      console.log('พบข้อมูลไม่สมบูรณ์หรือมีเครื่องหมาย ? กำลังซ่อมแซมและคืนค่าจาก seed_data.json...');
+      const seedPath = path.join(__dirname, 'seed_data.json');
+      if (fs.existsSync(seedPath)) {
+        try {
+          const seed = JSON.parse(fs.readFileSync(seedPath, 'utf8'));
+          restoreDataFromObject(seed, (restoreErr) => {
+            if (restoreErr) console.error('Self-heal failed:', restoreErr);
+            else console.log('คืนค่าข้อมูลภาษาไทยสมบูรณ์จาก seed_data.json เรียบร้อยแล้ว');
+          });
+        } catch (e) {
+          console.error('Self-heal parse error:', e);
+        }
+      }
+    }
+  });
+}
 
 // Helper: คำนวณค่าเสื่อมราคาและมูลค่าทางบัญชี
 function calculateDepreciation(item) {
@@ -149,6 +242,7 @@ app.post('/api/assets', (req, res) => {
   
   db.run(sql, params, function(err) {
     if (err) return res.status(400).json({ error: err.message });
+    autoBackupDatabase();
     res.json({ message: 'บันทึกข้อมูลครุภัณฑ์เรียบร้อยแล้ว', id: this.lastID });
   });
 });
@@ -171,6 +265,7 @@ app.put('/api/assets/:id', (req, res) => {
   
   db.run(sql, params, function(err) {
     if (err) return res.status(400).json({ error: err.message });
+    autoBackupDatabase();
     res.json({ message: 'แก้ไขข้อมูลครุภัณฑ์เรียบร้อยแล้ว', changes: this.changes });
   });
 });
@@ -179,6 +274,7 @@ app.put('/api/assets/:id', (req, res) => {
 app.delete('/api/assets/:id', (req, res) => {
   db.run('DELETE FROM assets WHERE id = ?', [req.params.id], function(err) {
     if (err) return res.status(500).json({ error: err.message });
+    autoBackupDatabase();
     res.json({ message: 'ลบรายการสำเร็จ', deleted: this.changes });
   });
 });
@@ -216,6 +312,7 @@ app.post('/api/materials', (req, res) => {
   
   db.run(sql, params, function(err) {
     if (err) return res.status(400).json({ error: err.message });
+    autoBackupDatabase();
     res.json({ message: 'บันทึกรายการวัสดุเรียบร้อยแล้ว', id: this.lastID });
   });
 });
@@ -231,6 +328,7 @@ app.put('/api/materials/:id', (req, res) => {
   ];
   db.run(sql, params, function(err) {
     if (err) return res.status(400).json({ error: err.message });
+    autoBackupDatabase();
     res.json({ message: 'แก้ไขข้อมูลวัสดุเรียบร้อยแล้ว', changes: this.changes });
   });
 });
@@ -239,15 +337,16 @@ app.put('/api/materials/:id', (req, res) => {
 app.delete('/api/materials/:id', (req, res) => {
   db.run('DELETE FROM materials WHERE id = ?', [req.params.id], function(err) {
     if (err) return res.status(500).json({ error: err.message });
+    autoBackupDatabase();
     res.json({ message: 'ลบรายการสำเร็จ', deleted: this.changes });
   });
 });
 
 // ส่งออกข้อมูลสำรอง (Backup All Data)
 app.get('/api/backup', (req, res) => {
-  db.all('SELECT * FROM assets', [], (err, assets) => {
+  db.all('SELECT * FROM assets ORDER BY id ASC', [], (err, assets) => {
     if (err) return res.status(500).json({ error: err.message });
-    db.all('SELECT * FROM materials', [], (err2, materials) => {
+    db.all('SELECT * FROM materials ORDER BY id ASC', [], (err2, materials) => {
       if (err2) return res.status(500).json({ error: err2.message });
       res.json({
         export_date: new Date().toISOString(),
@@ -265,32 +364,9 @@ app.post('/api/restore', (req, res) => {
     return res.status(400).json({ error: 'รูปแบบข้อมูลไม่ถูกต้อง' });
   }
 
-  db.serialize(() => {
-    db.run('DELETE FROM assets');
-    db.run('DELETE FROM materials');
-
-    const assetStmt = db.prepare(`INSERT INTO assets (
-      asset_code, received_date, asset_name, spec, doc_no, cost, useful_life,
-      location, status, vendor, responsible_person, department, remark,
-      category, model, qty, vendor_address, vendor_phone, budget_source, acquisition_method
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-    
-    assets.forEach(d => {
-      assetStmt.run([
-        d.asset_code, d.received_date, d.asset_name, d.spec, d.doc_no, d.cost, d.useful_life,
-        d.location, d.status, d.vendor, d.responsible_person, d.department, d.remark,
-        d.category, d.model, d.qty || 1, d.vendor_address, d.vendor_phone, d.budget_source, d.acquisition_method
-      ]);
-    });
-    assetStmt.finalize();
-
-    const matStmt = db.prepare(`INSERT INTO materials (trans_date, material_code, material_name, size_spec, unit, party, doc_no, budget_type, opening_stock, qty_in, qty_out, unit_price, remark)
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-    materials.forEach(d => {
-      matStmt.run([d.trans_date, d.material_code, d.material_name, d.size_spec, d.unit, d.party, d.doc_no, d.budget_type, d.opening_stock, d.qty_in, d.qty_out, d.unit_price, d.remark]);
-    });
-    matStmt.finalize();
-
+  restoreDataFromObject({ assets, materials }, (err) => {
+    if (err) return res.status(500).json({ error: 'เกิดข้อผิดพลาดในการกู้คืนข้อมูล' });
+    autoBackupDatabase();
     res.json({ message: 'กู้คืนข้อมูลสำเร็จเรียบร้อยแล้ว' });
   });
 });

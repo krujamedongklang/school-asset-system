@@ -1,14 +1,14 @@
 // ค่าเริ่มต้นของส่วนราชการและหน่วยงาน (สำหรับแบบฟอร์มพิมพ์)
-const DEFAULT_ORG = 'สำนักงานส่งเสริมการศึกษานอกระบบและการศึกษาตามอัธยาศัย';
-const DEFAULT_DEPT = 'สำนักงานส่งเสริมการศึกษานอกระบบและการศึกษาตามอัธยาศัยจังหวัดนครราชสีมา';
+const DEFAULT_ORG = 'สำนักงานเขตพื้นที่การศึกษาประถมศึกษาตราด';
+const DEFAULT_DEPT = 'โรงเรียนบ้านดงกลาง';
 
-// ฟังก์ชันล้างข้อความ: ถ้าเป็นค่าว่าง หรือผู้ใช้พิมพ์จุด/ขีด/จุดไข่ปลาซ้ำๆ มา ให้แปลงเป็นค่าว่าง '' เพื่อให้เส้นประด้านล่างว่างเปล่า
+// ฟังก์ชันล้างข้อความ: ถ้าเป็นค่าว่าง หรือผู้ใช้พิมพ์จุด/ขีด/จุดไข่ปลาซ้ำๆ หรือเครื่องหมาย ? ให้แปลงเป็นค่าว่าง '' เพื่อให้เส้นประด้านล่างว่างเปล่า
 function cleanFieldText(val) {
   if (val === undefined || val === null) return '';
   const str = String(val).trim();
   if (!str) return '';
-  // ถ้ามีแต่จุด . หรือขีด _ หรือขีด - (ซ้ำๆ 2 ตัวขึ้นไป) หรือจุดไข่ปลา … ให้ถือว่าว่างเปล่า
-  if (/^[\.\s_…]+$/.test(str) || /^-{2,}$/.test(str)) return '';
+  // ถ้ามีแต่จุด . หรือขีด _ หรือขีด - (ซ้ำๆ 2 ตัวขึ้นไป) หรือจุดไข่ปลา … หรือเครื่องหมาย ? ซ้ำๆ ให้ถือว่าว่างเปล่า
+  if (/^[\.\s_…\?]+$/.test(str) || /^-{2,}$/.test(str)) return '';
   return str;
 }
 
@@ -72,8 +72,18 @@ function switchTab(tab) {
 
 // ==================== ส่วนราชการ & หน่วยงาน (สำหรับพิมพ์) ====================
 function initOrgSettings() {
-  const org = cleanFieldText(localStorage.getItem('gov_org')) || DEFAULT_ORG;
-  const dept = cleanFieldText(localStorage.getItem('gov_dept')) || DEFAULT_DEPT;
+  let org = cleanFieldText(localStorage.getItem('gov_org'));
+  let dept = cleanFieldText(localStorage.getItem('gov_dept'));
+
+  // ถ้ารายการมีเครื่องหมาย ? (UTF-8 เสียหาย) หรือเป็นหน่วยงานเก่า หรือยังว่าง ให้ปรับเป็นโรงเรียนบ้านดงกลาง / สพป.ตราด ทันที
+  if (!org || org.includes('?') || org.includes('กศน.')) {
+    org = DEFAULT_ORG;
+    localStorage.setItem('gov_org', org);
+  }
+  if (!dept || dept.includes('?') || dept.includes('นครราชสีมา')) {
+    dept = DEFAULT_DEPT;
+    localStorage.setItem('gov_dept', dept);
+  }
 
   const orgMat = document.getElementById('org-name-material');
   const deptMat = document.getElementById('dept-name-material');
@@ -101,7 +111,17 @@ function saveOrgSettings(e) {
 
 // ==================== หัวบัตรวัสดุ (สำหรับพิมพ์) ====================
 function initMaterialMeta() {
-  const meta = JSON.parse(localStorage.getItem('material_card_meta') || '{}');
+  let meta = {};
+  try {
+    meta = JSON.parse(localStorage.getItem('material_card_meta') || '{}');
+  } catch(e) {
+    meta = {};
+  }
+
+  // ล้างค่าที่อาจมีเครื่องหมาย ? เสียหาย
+  Object.keys(meta).forEach(k => {
+    if (typeof meta[k] === 'string' && meta[k].includes('?')) meta[k] = '';
+  });
   
   const setField = (id, val) => {
     const el = document.getElementById(id);
@@ -118,13 +138,18 @@ function initMaterialMeta() {
   setField('disp-location', meta.location);
   setField('disp-unit', meta.unit);
 
-  document.getElementById('inp-meta-category').value = cleanFieldText(meta.category);
-  document.getElementById('inp-meta-code').value = cleanFieldText(meta.code);
-  document.getElementById('inp-meta-name').value = cleanFieldText(meta.name);
-  document.getElementById('inp-meta-minmax').value = cleanFieldText(meta.minmax);
-  document.getElementById('inp-meta-spec').value = cleanFieldText(meta.spec);
-  document.getElementById('inp-meta-location').value = cleanFieldText(meta.location);
-  document.getElementById('inp-meta-unit').value = cleanFieldText(meta.unit);
+  const setInput = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = cleanFieldText(val);
+  };
+
+  setInput('inp-meta-category', meta.category);
+  setInput('inp-meta-code', meta.code);
+  setInput('inp-meta-name', meta.name);
+  setInput('inp-meta-minmax', meta.minmax);
+  setInput('inp-meta-spec', meta.spec);
+  setInput('inp-meta-location', meta.location);
+  setInput('inp-meta-unit', meta.unit);
 }
 
 function saveMaterialMeta(e) {
@@ -396,24 +421,43 @@ function getFilteredMaterials() {
 async function loadAssets() {
   try {
     const res = await fetch('/api/assets');
-    assetList = await res.json();
-
-    // เริ่มต้น: ติ๊กเลือกทุกรายการไว้เป็นค่าเริ่มต้น (ถ้ายังไม่ได้เลือก)
-    if (selectedAssetIds.size === 0) {
-      assetList.forEach(a => selectedAssetIds.add(a.id));
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        assetList = data;
+        localStorage.setItem('cached_assets', JSON.stringify(assetList));
+      } else {
+        const cached = localStorage.getItem('cached_assets');
+        if (cached) {
+          try { assetList = JSON.parse(cached); } catch(e) { assetList = data; }
+        } else {
+          assetList = data;
+        }
+      }
     } else {
-      // ลบ ID ที่ไม่มีอยู่ออก
-      const validIds = new Set(assetList.map(a => a.id));
-      selectedAssetIds = new Set([...selectedAssetIds].filter(id => validIds.has(id)));
+      throw new Error('Server status ' + res.status);
     }
-
-    populateFiscalYearOptions('asset');
-    renderAssetTable();
-    updateAssetSelectionUI();
-    renderAssetPrint();
   } catch (err) {
-    console.error('Error loading assets:', err);
+    console.warn('Could not fetch assets from server, using local cache:', err);
+    const cached = localStorage.getItem('cached_assets');
+    if (cached) {
+      try { assetList = JSON.parse(cached); } catch(e) {}
+    }
   }
+
+  // เริ่มต้น: ติ๊กเลือกทุกรายการไว้เป็นค่าเริ่มต้น (ถ้ายังไม่ได้เลือก)
+  if (selectedAssetIds.size === 0) {
+    assetList.forEach(a => selectedAssetIds.add(a.id));
+  } else {
+    // ลบ ID ที่ไม่มีอยู่ออก
+    const validIds = new Set(assetList.map(a => a.id));
+    selectedAssetIds = new Set([...selectedAssetIds].filter(id => validIds.has(id)));
+  }
+
+  populateFiscalYearOptions('asset');
+  renderAssetTable();
+  updateAssetSelectionUI();
+  renderAssetPrint();
 }
 
 // เรนเดอร์ตารางบนหน้าจอเว็บ (กรองตามปีงบประมาณ, เดือน, และคำค้นหาอัตโนมัติ)
@@ -1072,22 +1116,41 @@ async function deleteAsset(id) {
 async function loadMaterials() {
   try {
     const res = await fetch('/api/materials');
-    materialList = await res.json();
-
-    if (selectedMaterialIds.size === 0) {
-      materialList.forEach(m => selectedMaterialIds.add(m.id));
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        materialList = data;
+        localStorage.setItem('cached_materials', JSON.stringify(materialList));
+      } else {
+        const cached = localStorage.getItem('cached_materials');
+        if (cached) {
+          try { materialList = JSON.parse(cached); } catch(e) { materialList = data; }
+        } else {
+          materialList = data;
+        }
+      }
     } else {
-      const validIds = new Set(materialList.map(m => m.id));
-      selectedMaterialIds = new Set([...selectedMaterialIds].filter(id => validIds.has(id)));
+      throw new Error('Server status ' + res.status);
     }
-
-    populateFiscalYearOptions('material');
-    renderMaterialTable();
-    updateMaterialSelectionUI();
-    renderMaterialPrint();
   } catch (err) {
-    console.error('Error loading materials:', err);
+    console.warn('Could not fetch materials from server, using local cache:', err);
+    const cached = localStorage.getItem('cached_materials');
+    if (cached) {
+      try { materialList = JSON.parse(cached); } catch(e) {}
+    }
   }
+
+  if (selectedMaterialIds.size === 0) {
+    materialList.forEach(m => selectedMaterialIds.add(m.id));
+  } else {
+    const validIds = new Set(materialList.map(m => m.id));
+    selectedMaterialIds = new Set([...selectedMaterialIds].filter(id => validIds.has(id)));
+  }
+
+  populateFiscalYearOptions('material');
+  renderMaterialTable();
+  updateMaterialSelectionUI();
+  renderMaterialPrint();
 }
 
 // เรนเดอร์ตารางบนหน้าจอเว็บ (กรองตามปีงบประมาณ, เดือน, และคำค้นหาอัตโนมัติ)
