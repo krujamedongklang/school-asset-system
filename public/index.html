@@ -33,19 +33,26 @@
 
     /* Print view only (A4 Landscape official form) */
     @media print {
-      .no-print, .screen-only {
-        display: none !important;
-      }
-      .print-only {
-        display: block !important;
-      }
-      body {
+      html, body {
+        height: auto !important;
+        min-height: auto !important;
         background: white !important;
         padding: 0 !important;
         margin: 0 !important;
         color: #000 !important;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
+      }
+      .no-print, .screen-only {
+        display: none !important;
+        height: 0 !important;
+        max-height: 0 !important;
+        overflow: hidden !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      .print-only {
+        display: block !important;
       }
       .print-container {
         width: 100% !important;
@@ -56,7 +63,7 @@
       }
       @page {
         size: A4 landscape;
-        margin: 6mm 8mm;
+        margin: 5mm 8mm;
       }
       .form-table {
         width: 100% !important;
@@ -76,10 +83,10 @@
         text-align: center;
       }
       .form-table tr {
-        height: 25px !important;
+        height: 23px !important;
       }
       .empty-row td {
-        height: 25px !important;
+        height: 23px !important;
       }
       .page-break {
         page-break-after: always !important;
@@ -89,15 +96,20 @@
         width: 100% !important;
         box-sizing: border-box !important;
       }
+      .print-asset-card:last-child,
+      #print-material-section {
+        page-break-after: avoid !important;
+        break-after: avoid !important;
+      }
     }
   </style>
 </head>
-<body class="bg-[#FAF8F5] min-h-screen text-slate-800 antialiased">
+<body class="bg-[#FAF8F5] text-slate-800 antialiased">
 
   <!-- ============================================================== -->
   <!-- 1. SCREEN VIEW (หน้าจอหลักในเว็บ โทนแดง-เหลือง หรูหราทันสมัย) -->
   <!-- ============================================================== -->
-  <div class="screen-only">
+  <div class="screen-only min-h-screen">
 
     <!-- Navigation Bar (แดง-เหลือง สีประจำโรงเรียนดงกลาง) -->
     <nav class="bg-gradient-to-r from-red-950 via-red-900 to-rose-950 text-white p-3 sm:p-4 shadow-xl border-b-2 border-amber-400 no-print">
@@ -747,6 +759,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=4.4"></script>
+  <script src="app.js?v=4.5"></script>
 </body>
 </html>
