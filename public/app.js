@@ -5,8 +5,13 @@ const DEFAULT_DEPT = 'สำนักงานส่งเสริมการ�
 let currentTab = 'asset';
 let assetList = [];
 let materialList = [];
-let selectedAssetPrintId = 'all'; // 'all' หรือ ID ของครุภัณฑ์ที่ต้องการพิมพ์
-let selectedAssetIndex = 0;
+
+// ชุดเก็บ ID รายการที่ถูกติ๊กเลือกสำหรับพิมพ์
+let selectedAssetIds = new Set();
+let selectedMaterialIds = new Set();
+
+// รูปแบบการพิมพ์ครุภัณฑ์ ('single-pages' = แยกแผ่นละ 1 รายการ, 'combined-table' = รวมในตารางเดียว)
+let assetPrintMode = 'single-pages';
 
 document.addEventListener('DOMContentLoaded', () => {
   initOrgSettings();
@@ -60,14 +65,9 @@ function initOrgSettings() {
   const org = localStorage.getItem('gov_org') || DEFAULT_ORG;
   const dept = localStorage.getItem('gov_dept') || DEFAULT_DEPT;
 
-  const orgAsset = document.getElementById('org-name-asset');
   const orgMat = document.getElementById('org-name-material');
-  const deptAsset = document.getElementById('dept-name-asset');
   const deptMat = document.getElementById('dept-name-material');
-
-  if (orgAsset) orgAsset.innerText = org;
   if (orgMat) orgMat.innerText = org;
-  if (deptAsset) deptAsset.innerText = dept;
   if (deptMat) deptMat.innerText = dept;
 
   const inpOrg = document.getElementById('inp-org-name');
@@ -85,6 +85,7 @@ function saveOrgSettings(e) {
   localStorage.setItem('gov_dept', dept);
 
   initOrgSettings();
+  renderAssetPrint();
   closeModal('orgModal');
 }
 
@@ -137,229 +138,527 @@ function formatThaiDate(dateStr) {
   return dateStr;
 }
 
-// ==================== อัปเดตข้อมูลหัวบัตรสำหรับพิมพ์ ====================
-function updateAssetHeaderCard(item) {
-  if (!item) {
-    document.getElementById('card-asset-category').innerText = 'ครุภัณฑ์คอมพิวเตอร์';
-    document.getElementById('card-asset-code').innerText = '6730-007-0001-1-3/55';
-    document.getElementById('card-asset-spec').innerText = 'เครื่องฉาย Projector';
-    document.getElementById('card-asset-model').innerText = 'Acer';
-    document.getElementById('card-asset-location').innerText = 'ย่าโม 1, ย่าโม 2';
-    document.getElementById('card-asset-vendor').innerText = 'บริษัท เอเซอร์ คอมพิวเตอร์ จำกัด';
-    document.getElementById('card-asset-address').innerText = '...................................................................................................';
-    document.getElementById('card-asset-phone').innerText = '...................................................';
-    
-    setCheckbox('chk-budget-1', true);
-    setCheckbox('chk-budget-2', false);
-    setCheckbox('chk-budget-3', false);
-    setCheckbox('chk-budget-4', false);
-
-    setCheckbox('chk-method-1', false);
-    setCheckbox('chk-method-2', false);
-    setCheckbox('chk-method-3', true);
-    setCheckbox('chk-method-4', false);
-    return;
-  }
-
-  document.getElementById('card-asset-category').innerText = item.category || 'ครุภัณฑ์คอมพิวเตอร์';
-  document.getElementById('card-asset-code').innerText = item.asset_code || '';
-  document.getElementById('card-asset-spec').innerText = item.spec || item.asset_name || '';
-  document.getElementById('card-asset-model').innerText = item.model || '';
-  document.getElementById('card-asset-location').innerText = item.location || '';
-  document.getElementById('card-asset-vendor').innerText = item.vendor || '';
-  document.getElementById('card-asset-address').innerText = item.vendor_address || '...................................................................................................';
-  document.getElementById('card-asset-phone').innerText = item.vendor_phone || '...................................................';
-
-  const b = item.budget_source || 'เงินงบประมาณ';
-  setCheckbox('chk-budget-1', b === 'เงินงบประมาณ');
-  setCheckbox('chk-budget-2', b === 'เงินนอกงบประมาณ');
-  setCheckbox('chk-budget-3', b === 'เงินบริจาค/เงินช่วยเหลือ');
-  setCheckbox('chk-budget-4', b === 'อื่นๆ');
-
-  const m = item.acquisition_method || 'เฉพาะเจาะจง';
-  setCheckbox('chk-method-1', m === 'ประกาศเชิญชวน');
-  setCheckbox('chk-method-2', m === 'คัดเลือก');
-  setCheckbox('chk-method-3', m === 'เฉพาะเจาะจง');
-  setCheckbox('chk-method-4', m === 'รับบริจาค');
-}
-
-function setCheckbox(id, isChecked) {
-  const el = document.getElementById(id);
-  if (el) {
-    el.innerText = isChecked ? '☑' : '☐';
-  }
-}
-
-// ==================== การจัดการพิมพ์แบบเลือกได้ ====================
-function updateAssetPrintDropdown() {
-  const select = document.getElementById('asset-print-select');
-  if (!select) return;
-
-  const currentVal = selectedAssetPrintId;
-  select.innerHTML = '<option value="all">📋 พิมพ์รวมทุกรายการ</option>';
-
-  assetList.forEach((item) => {
-    const opt = document.createElement('option');
-    opt.value = String(item.id);
-    opt.textContent = `🏷️ [${item.asset_code || '-'}] ${item.asset_name}`;
-    select.appendChild(opt);
-  });
-
-  if (currentVal && (currentVal === 'all' || assetList.some(a => String(a.id) === String(currentVal)))) {
-    select.value = currentVal;
-  } else {
-    select.value = 'all';
-    selectedAssetPrintId = 'all';
-  }
-}
-
-function onAssetPrintSelectChange(val) {
-  selectedAssetPrintId = val;
-  renderAssetPrint();
-}
-
-function printSingleAsset(id) {
-  selectedAssetPrintId = String(id);
-  const select = document.getElementById('asset-print-select');
-  if (select) select.value = selectedAssetPrintId;
-  renderAssetPrint();
-  window.print();
-}
-
-function triggerPrintAsset() {
-  renderAssetPrint();
-  window.print();
-}
-
-function renderAssetPrint() {
-  const printTbody = document.getElementById('print-asset-table-body');
-  if (!printTbody) return;
-  printTbody.innerHTML = '';
-  const TARGET_ROWS = 15;
-
-  let printItems = [];
-
-  if (selectedAssetPrintId === 'all') {
-    // พิมพ์รวมทุกรายการ
-    printItems = assetList;
-    if (assetList.length > 0) {
-      updateAssetHeaderCard(assetList[selectedAssetIndex] || assetList[0]);
-    } else {
-      updateAssetHeaderCard(null);
-    }
-  } else {
-    // พิมพ์เฉพาะรายการที่เลือก (บัตรเดี่ยวตามแบบฟอร์มราชการ)
-    const found = assetList.find(a => String(a.id) === String(selectedAssetPrintId));
-    if (found) {
-      printItems = [found];
-      updateAssetHeaderCard(found);
-    } else {
-      printItems = assetList;
-      updateAssetHeaderCard(assetList[0] || null);
-    }
-  }
-
-  printItems.forEach((item) => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="text-center font-normal whitespace-nowrap">${formatThaiDate(item.received_date)}</td>
-      <td class="text-center font-normal">${item.doc_no || ''}</td>
-      <td class="text-left font-medium">${item.asset_name || ''}</td>
-      <td class="text-center">${item.qty || 1}</td>
-      <td class="text-right whitespace-nowrap">${item.cost ? Number(item.cost).toLocaleString('th-TH', {minimumFractionDigits: 2}) : '-'}</td>
-      <td class="text-right whitespace-nowrap">${item.total_cost ? Number(item.total_cost).toLocaleString('th-TH', {minimumFractionDigits: 2}) : '-'}</td>
-      <td class="text-center">${item.useful_life ? item.useful_life + ' ปี' : ''}</td>
-      <td class="text-center">${item.depr_rate || '20%'}</td>
-      <td class="text-right whitespace-nowrap text-slate-600">${item.acc_depr ? Number(item.acc_depr).toLocaleString('th-TH', {minimumFractionDigits: 2}) : '0.00'}</td>
-      <td class="text-right font-bold text-black whitespace-nowrap">${item.net_book_value ? Number(item.net_book_value).toLocaleString('th-TH', {minimumFractionDigits: 2}) : '-'}</td>
-      <td class="text-left">${item.remark || item.location || ''}</td>
-    `;
-    printTbody.appendChild(tr);
-  });
-
-  // เติมแถวว่างให้ครบ 15 แถวสำหรับการพิมพ์
-  const emptyRowsCount = Math.max(0, TARGET_ROWS - printItems.length);
-  for (let i = 0; i < emptyRowsCount; i++) {
-    const tr = document.createElement('tr');
-    tr.className = 'empty-row';
-    tr.innerHTML = `
-      <td class="text-center">&nbsp;</td>
-      <td>&nbsp;</td>
-      <td>&nbsp;</td>
-      <td>&nbsp;</td>
-      <td>&nbsp;</td>
-      <td>&nbsp;</td>
-      <td>&nbsp;</td>
-      <td>&nbsp;</td>
-      <td>&nbsp;</td>
-      <td>&nbsp;</td>
-      <td>&nbsp;</td>
-    `;
-    printTbody.appendChild(tr);
-  }
-}
-
-// ==================== ทะเบียนคุมทรัพย์สิน (ครุภัณฑ์) ====================
+// ==============================================================
+// ทะเบียนคุมทรัพย์สิน (ครุภัณฑ์)
+// ==============================================================
 async function loadAssets() {
   try {
     const res = await fetch('/api/assets');
     assetList = await res.json();
 
-    // 1. เรนเดอร์บนหน้าจอหลัก (Screen View - แบบเดิมที่คุณชอบ 100%)
-    const screenTbody = document.getElementById('screen-asset-table-body');
-    screenTbody.innerHTML = '';
+    // เริ่มต้น: ติ๊กเลือกทุกรายการไว้เป็นค่าเริ่มต้น (ถ้ายังไม่ได้เลือก)
+    if (selectedAssetIds.size === 0) {
+      assetList.forEach(a => selectedAssetIds.add(a.id));
+    } else {
+      // ลบ ID ที่ไม่มีอยู่ออก
+      const validIds = new Set(assetList.map(a => a.id));
+      selectedAssetIds = new Set([...selectedAssetIds].filter(id => validIds.has(id)));
+    }
 
-    assetList.forEach((item, index) => {
-      const tr = document.createElement('tr');
-      tr.className = 'hover:bg-slate-50 border-b cursor-pointer';
-      tr.onclick = (e) => {
-        // เมื่อคลิกแถวในหน้าจอ จะอัปเดตหัวบัตรพิมพ์ตามรายการนี้
-        if (!e.target.closest('button')) {
-          selectedAssetIndex = index;
-          if (selectedAssetPrintId === 'all') {
-            updateAssetHeaderCard(item);
-          }
-        }
-      };
-
-      tr.innerHTML = `
-        <td class="p-2 border text-center">${index + 1}</td>
-        <td class="p-2 border">${item.received_date || ''}</td>
-        <td class="p-2 border font-semibold">${item.asset_code || ''}</td>
-        <td class="p-2 border">${item.asset_name || ''}</td>
-        <td class="p-2 border">${item.spec || ''}</td>
-        <td class="p-2 border">${item.doc_no || ''}</td>
-        <td class="p-2 border text-right">${Number(item.cost).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-        <td class="p-2 border text-center">${item.useful_life}</td>
-        <td class="p-2 border text-right text-slate-500">${Number(item.depr_per_year).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-        <td class="p-2 border text-right font-bold text-indigo-700">${Number(item.net_book_value).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-        <td class="p-2 border">${item.location || ''}</td>
-        <td class="p-2 border text-center">
-          <span class="px-2 py-0.5 rounded text-xs ${item.status === 'ใช้งานได้ดี' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
-            ${item.status}
-          </span>
-        </td>
-        <td class="p-2 border">${item.responsible_person || ''}</td>
-        <td class="p-2 border text-center whitespace-nowrap space-x-1">
-          <button onclick="printSingleAsset(${item.id})" class="text-blue-600 hover:text-blue-800 p-1 font-semibold rounded hover:bg-blue-50" title="พิมพ์บัตรรายการนี้">🖨️</button>
-          <button onclick="editAsset(${item.id})" class="text-amber-600 hover:text-amber-800 p-1 font-semibold rounded hover:bg-amber-50" title="แก้ไขรายการนี้">✏️</button>
-          <button onclick="deleteAsset(${item.id})" class="text-red-500 hover:text-red-700 p-1 font-semibold rounded hover:bg-red-50" title="ลบรายการ">🗑️</button>
-        </td>
-      `;
-      screenTbody.appendChild(tr);
-    });
-
-    // 2. อัปเดต Dropdown เลือกพิมพ์
-    updateAssetPrintDropdown();
-
-    // 3. เรนเดอร์ส่วนพิมพ์
+    renderAssetTable();
+    updateAssetSelectionUI();
     renderAssetPrint();
-
   } catch (err) {
     console.error('Error loading assets:', err);
   }
 }
 
+// เรนเดอร์ตารางบนหน้าจอเว็บ (แบบเดิม 100% เพิ่มเติมคือช่องติ๊กเลือกด้านหน้า)
+function renderAssetTable() {
+  const screenTbody = document.getElementById('screen-asset-table-body');
+  if (!screenTbody) return;
+  screenTbody.innerHTML = '';
+
+  assetList.forEach((item, index) => {
+    const isSelected = selectedAssetIds.has(item.id);
+    const tr = document.createElement('tr');
+    tr.className = `hover:bg-indigo-50/50 border-b cursor-pointer transition ${isSelected ? 'bg-indigo-50/40' : ''}`;
+    
+    // คลิกแถวเพื่อเปิด/ปิดการติ๊กเลือก
+    tr.onclick = (e) => {
+      if (!e.target.closest('button, input')) {
+        toggleAssetItemSelection(item.id);
+      }
+    };
+
+    tr.innerHTML = `
+      <td class="p-2 border text-center" onclick="event.stopPropagation()">
+        <input type="checkbox" class="w-4 h-4 text-indigo-600 rounded cursor-pointer" 
+          ${isSelected ? 'checked' : ''} 
+          onchange="toggleAssetItemSelection(${item.id}, this.checked)">
+      </td>
+      <td class="p-2 border text-center font-medium">${index + 1}</td>
+      <td class="p-2 border">${item.received_date || ''}</td>
+      <td class="p-2 border font-semibold text-indigo-950">${item.asset_code || ''}</td>
+      <td class="p-2 border font-medium">${item.asset_name || ''}</td>
+      <td class="p-2 border text-slate-600">${item.spec || ''}</td>
+      <td class="p-2 border">${item.doc_no || ''}</td>
+      <td class="p-2 border text-right">${Number(item.cost).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+      <td class="p-2 border text-center">${item.useful_life}</td>
+      <td class="p-2 border text-right text-slate-500">${Number(item.depr_per_year).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+      <td class="p-2 border text-right font-bold text-indigo-700">${Number(item.net_book_value).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+      <td class="p-2 border">${item.location || ''}</td>
+      <td class="p-2 border text-center">
+        <span class="px-2 py-0.5 rounded text-xs font-semibold ${item.status === 'ใช้งานได้ดี' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+          ${item.status}
+        </span>
+      </td>
+      <td class="p-2 border">${item.responsible_person || ''}</td>
+      <td class="p-2 border text-center whitespace-nowrap space-x-1" onclick="event.stopPropagation()">
+        <button onclick="printSingleAsset(${item.id})" class="text-blue-600 hover:text-blue-800 p-1 font-semibold rounded hover:bg-blue-100 transition" title="พิมพ์บัตรรายการนี้เฉพาะใบเดียว">🖨️</button>
+        <button onclick="editAsset(${item.id})" class="text-amber-600 hover:text-amber-800 p-1 font-semibold rounded hover:bg-amber-100 transition" title="แก้ไขรายการนี้">✏️</button>
+        <button onclick="deleteAsset(${item.id})" class="text-red-500 hover:text-red-700 p-1 font-semibold rounded hover:bg-red-100 transition" title="ลบรายการ">🗑️</button>
+      </td>
+    `;
+    screenTbody.appendChild(tr);
+  });
+}
+
+// ติ๊กเลือก/ไม่เลือก แต่ละแถว
+function toggleAssetItemSelection(id, explicitChecked = null) {
+  if (explicitChecked !== null) {
+    if (explicitChecked) selectedAssetIds.add(id);
+    else selectedAssetIds.delete(id);
+  } else {
+    if (selectedAssetIds.has(id)) selectedAssetIds.delete(id);
+    else selectedAssetIds.add(id);
+  }
+  renderAssetTable();
+  updateAssetSelectionUI();
+  renderAssetPrint();
+}
+
+// ติ๊กเลือกทั้งหมด หรือ ยกเลิกทั้งหมด
+function toggleSelectAllAssets(isChecked) {
+  if (isChecked) {
+    assetList.forEach(a => selectedAssetIds.add(a.id));
+  } else {
+    selectedAssetIds.clear();
+  }
+  renderAssetTable();
+  updateAssetSelectionUI();
+  renderAssetPrint();
+}
+
+function selectAllAssets(select) {
+  if (select) {
+    assetList.forEach(a => selectedAssetIds.add(a.id));
+  } else {
+    selectedAssetIds.clear();
+  }
+  renderAssetTable();
+  updateAssetSelectionUI();
+  renderAssetPrint();
+}
+
+// อัปเดตข้อความ Badge และปุ่มพิมพ์
+function updateAssetSelectionUI() {
+  const count = selectedAssetIds.size;
+  const badge = document.getElementById('asset-selected-badge');
+  const countSpan = document.getElementById('asset-selected-count');
+  const btnPrintText = document.getElementById('btn-print-text');
+  const selectAllChk = document.getElementById('select-all-asset-chk');
+
+  if (countSpan) countSpan.innerText = count;
+
+  if (badge) {
+    if (count > 0) badge.classList.remove('hidden');
+    else badge.classList.add('hidden');
+  }
+
+  if (btnPrintText) {
+    btnPrintText.innerText = count > 0 ? `พิมพ์รายการที่เลือก (${count} รายการ)` : 'พิมพ์รายการที่เลือก';
+  }
+
+  if (selectAllChk) {
+    if (assetList.length > 0 && count === assetList.length) {
+      selectAllChk.checked = true;
+      selectAllChk.indeterminate = false;
+    } else if (count > 0 && count < assetList.length) {
+      selectAllChk.checked = false;
+      selectAllChk.indeterminate = true;
+    } else {
+      selectAllChk.checked = false;
+      selectAllChk.indeterminate = false;
+    }
+  }
+}
+
+function onAssetPrintModeChange() {
+  const modeSelect = document.getElementById('asset-print-mode');
+  if (modeSelect) assetPrintMode = modeSelect.value;
+  renderAssetPrint();
+}
+
+// กดพิมพ์รายการที่ติ๊กเลือก (เช่น ติ๊กข้อ 1 กับ 5)
+function printSelectedAssets() {
+  if (selectedAssetIds.size === 0) {
+    alert('กรุณาติ๊กเครื่องหมายถูก ☑️ หน้าแถวของรายการที่ต้องการพิมพ์อย่างน้อย 1 รายการครับ');
+    return;
+  }
+  renderAssetPrint();
+  window.print();
+}
+
+// กดพิมพ์เฉพาะรายการนั้นใบเดียวทันที (จากปุ่ม 🖨️ ในแถว)
+function printSingleAsset(id) {
+  const item = assetList.find(a => a.id === id);
+  if (!item) return;
+  const printAssetSection = document.getElementById('print-asset-section');
+  if (printAssetSection) {
+    printAssetSection.innerHTML = generateAssetCardHtml(item, false);
+  }
+  window.print();
+}
+
+// ==================== สร้าง HTML สำหรับบัตรพิมพ์ทะเบียนคุมทรัพย์สิน ====================
+function renderAssetPrint() {
+  const printAssetSection = document.getElementById('print-asset-section');
+  if (!printAssetSection) return;
+
+  const selectedItems = assetList.filter(a => selectedAssetIds.has(a.id));
+
+  // ถ้าไม่ได้เลือกรายการใด ให้แสดงแผ่นว่างหรือรายการแรกเป็นตัวอย่าง
+  if (selectedItems.length === 0) {
+    printAssetSection.innerHTML = generateAssetCardHtml(assetList[0] || null, false);
+    return;
+  }
+
+  if (assetPrintMode === 'single-pages') {
+    // 📄 รูปแบบมาตรฐานราชการ: แยกพิมพ์ 1 แผ่นต่อ 1 ทะเบียนคุมครุภัณฑ์ (แต่ละแผ่นมีข้อมูลหัวบัตร + ตาราง 11 คอลัมน์ 15 บรรทัด)
+    printAssetSection.innerHTML = selectedItems.map((item, idx) => {
+      const isPageBreak = idx < selectedItems.length - 1;
+      return generateAssetCardHtml(item, isPageBreak);
+    }).join('');
+  } else {
+    // 📑 รูปแบบรวมในตารางเดียว: รายการที่เลือกทั้งหมดรวมอยู่ในตาราง 11 คอลัมน์แผ่นเดียวกัน
+    printAssetSection.innerHTML = generateCombinedAssetCardHtml(selectedItems);
+  }
+}
+
+// สร้าง HTML สำหรับ 1 บัตรทะเบียนคุมทรัพย์สิน (แบบฟอร์มตรงตามภาพถ่าย 100%)
+function generateAssetCardHtml(item, isPageBreak = false) {
+  const org = localStorage.getItem('gov_org') || DEFAULT_ORG;
+  const dept = localStorage.getItem('gov_dept') || DEFAULT_DEPT;
+  const b = item ? (item.budget_source || 'เงินงบประมาณ') : 'เงินงบประมาณ';
+  const m = item ? (item.acquisition_method || 'เฉพาะเจาะจง') : 'เฉพาะเจาะจง';
+
+  return `
+    <div class="print-asset-card ${isPageBreak ? 'page-break' : ''}">
+      <!-- Title -->
+      <div class="text-center my-1">
+        <h2 class="text-[17px] font-bold text-black tracking-wide">
+          ทะเบียนคุมทรัพย์สิน
+        </h2>
+      </div>
+
+      <!-- ส่วนราชการ / หน่วยงาน ชิดขวา -->
+      <div class="flex justify-end mb-2 text-[11px] text-black">
+        <div class="text-left w-auto space-y-0.5">
+          <div class="flex">
+            <span class="whitespace-nowrap font-medium">ส่วนราชการ&nbsp;&nbsp;</span>
+            <span class="font-normal flex-grow border-b border-dotted border-black min-w-[280px]">${org}</span>
+          </div>
+          <div class="flex">
+            <span class="whitespace-nowrap font-medium">หน่วยงาน&nbsp;&nbsp;&nbsp;&nbsp;</span>
+            <span class="font-normal flex-grow border-b border-dotted border-black min-w-[280px]">${dept}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ข้อมูลหัวตาราง (5 บรรทัดตรงตามภาพ) -->
+      <div class="text-[11px] text-black space-y-1.5 mb-2 leading-relaxed">
+        <!-- แถวที่ 1: ประเภท | รหัส | ลักษณะ/สมบัติ | รุ่นแบบ -->
+        <div class="grid grid-cols-12 gap-x-3 items-end">
+          <div class="col-span-3 flex items-end">
+            <span class="whitespace-nowrap font-medium">ประเภท&nbsp;</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${item?.category || 'ครุภัณฑ์คอมพิวเตอร์'}</span>
+          </div>
+          <div class="col-span-3 flex items-end">
+            <span class="whitespace-nowrap font-medium">รหัส&nbsp;</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${item?.asset_code || ''}</span>
+          </div>
+          <div class="col-span-3 flex items-end">
+            <span class="whitespace-nowrap font-medium">ลักษณะ/สมบัติ&nbsp;</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${item?.spec || item?.asset_name || ''}</span>
+          </div>
+          <div class="col-span-3 flex items-end">
+            <span class="whitespace-nowrap font-medium">รุ่นแบบ&nbsp;</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${item?.model || ''}</span>
+          </div>
+        </div>
+
+        <!-- แถวที่ 2: สถานที่ตั้ง/หน่วยที่รับผิดชอบ | ชื่อผู้ขาย/ผู้รับจ้าง/ผู้บริจาค -->
+        <div class="grid grid-cols-12 gap-x-4 items-end">
+          <div class="col-span-6 flex items-end">
+            <span class="whitespace-nowrap font-medium">สถานที่ตั้ง/หน่วยที่รับผิดชอบ&nbsp;</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${item?.location || ''}</span>
+          </div>
+          <div class="col-span-6 flex items-end">
+            <span class="whitespace-nowrap font-medium">ชื่อผู้ขาย/ผู้รับจ้าง/ผู้บริจาค&nbsp;</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${item?.vendor || ''}</span>
+          </div>
+        </div>
+
+        <!-- แถวที่ 3: ที่อยู่ | โทรศัพท์ -->
+        <div class="grid grid-cols-12 gap-x-4 items-end">
+          <div class="col-span-8 flex items-end">
+            <span class="whitespace-nowrap font-medium">ที่อยู่&nbsp;</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${item?.vendor_address || '...................................................................................................'}</span>
+          </div>
+          <div class="col-span-4 flex items-end">
+            <span class="whitespace-nowrap font-medium">โทรศัพท์&nbsp;</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${item?.vendor_phone || '...................................................'}</span>
+          </div>
+        </div>
+
+        <!-- แถวที่ 4: ประเภทเงิน (Checkboxes) -->
+        <div class="flex flex-wrap items-center gap-x-6">
+          <span class="font-medium">ประเภทเงิน</span>
+          <label class="flex items-center gap-1.5">
+            <span class="text-sm font-bold leading-none">${b === 'เงินงบประมาณ' ? '☑' : '☐'}</span>
+            <span>เงินงบประมาณ</span>
+          </label>
+          <label class="flex items-center gap-1.5">
+            <span class="text-sm font-bold leading-none">${b === 'เงินนอกงบประมาณ' ? '☑' : '☐'}</span>
+            <span>เงินนอกงบประมาณ</span>
+          </label>
+          <label class="flex items-center gap-1.5">
+            <span class="text-sm font-bold leading-none">${b === 'เงินบริจาค/เงินช่วยเหลือ' ? '☑' : '☐'}</span>
+            <span>เงินบริจาค/เงินช่วยเหลือ</span>
+          </label>
+          <label class="flex items-center gap-1.5">
+            <span class="text-sm font-bold leading-none">${b === 'อื่นๆ' ? '☑' : '☐'}</span>
+            <span>อื่นๆ</span>
+          </label>
+        </div>
+
+        <!-- แถวที่ 5: วิธีการได้มา (Checkboxes) -->
+        <div class="flex flex-wrap items-center gap-x-6">
+          <span class="font-medium">วิธีการได้มา</span>
+          <label class="flex items-center gap-1.5">
+            <span class="text-sm font-bold leading-none">${m === 'ประกาศเชิญชวน' ? '☑' : '☐'}</span>
+            <span>ประกาศเชิญชวน</span>
+          </label>
+          <label class="flex items-center gap-1.5">
+            <span class="text-sm font-bold leading-none">${m === 'คัดเลือก' ? '☑' : '☐'}</span>
+            <span>คัดเลือก</span>
+          </label>
+          <label class="flex items-center gap-1.5">
+            <span class="text-sm font-bold leading-none">${m === 'เฉพาะเจาะจง' ? '☑' : '☐'}</span>
+            <span>เฉพาะเจาะจง</span>
+          </label>
+          <label class="flex items-center gap-1.5">
+            <span class="text-sm font-bold leading-none">${m === 'รับบริจาค' ? '☑' : '☐'}</span>
+            <span>รับบริจาค</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- ตาราง 11 คอลัมน์ตรงตามภาพเป๊ะๆ -->
+      <table class="form-table w-full text-[11px]">
+        <thead>
+          <tr class="bg-white text-center font-bold">
+            <th class="w-16">วัน เดือน ปี</th>
+            <th class="w-20">ที่เอกสาร</th>
+            <th class="min-w-[140px]">รายการ</th>
+            <th class="w-16">จำนวนหน่วย</th>
+            <th class="w-24 leading-tight">ราคาต่อ หน่วย/<br>ชุด/กลุ่ม</th>
+            <th class="w-24">มูลค่ารวม</th>
+            <th class="w-16">อายุใช้งาน</th>
+            <th class="w-16 leading-tight">อัตราค่า<br>เสื่อมราคา</th>
+            <th class="w-24 leading-tight">ค่าเสื่อม<br>ราคา</th>
+            <th class="w-24 leading-tight">มูลค่า<br>สุทธิ</th>
+            <th class="w-28">หมายเหตุ</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${generateAssetTableRowsHtml(item ? [item] : [])}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+// สร้าง HTML สำหรับรวมรายการในตารางเดียว
+function generateCombinedAssetCardHtml(items) {
+  const org = localStorage.getItem('gov_org') || DEFAULT_ORG;
+  const dept = localStorage.getItem('gov_dept') || DEFAULT_DEPT;
+  const firstItem = items[0] || null;
+  const b = firstItem ? (firstItem.budget_source || 'เงินงบประมาณ') : 'เงินงบประมาณ';
+  const m = firstItem ? (firstItem.acquisition_method || 'เฉพาะเจาะจง') : 'เฉพาะเจาะจง';
+
+  return `
+    <div class="print-asset-card">
+      <div class="text-center my-1">
+        <h2 class="text-[17px] font-bold text-black tracking-wide">
+          ทะเบียนคุมทรัพย์สิน (พิมพ์รวม ${items.length} รายการ)
+        </h2>
+      </div>
+
+      <div class="flex justify-end mb-2 text-[11px] text-black">
+        <div class="text-left w-auto space-y-0.5">
+          <div class="flex">
+            <span class="whitespace-nowrap font-medium">ส่วนราชการ&nbsp;&nbsp;</span>
+            <span class="font-normal flex-grow border-b border-dotted border-black min-w-[280px]">${org}</span>
+          </div>
+          <div class="flex">
+            <span class="whitespace-nowrap font-medium">หน่วยงาน&nbsp;&nbsp;&nbsp;&nbsp;</span>
+            <span class="font-normal flex-grow border-b border-dotted border-black min-w-[280px]">${dept}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-[11px] text-black space-y-1.5 mb-2 leading-relaxed">
+        <div class="grid grid-cols-12 gap-x-3 items-end">
+          <div class="col-span-3 flex items-end">
+            <span class="whitespace-nowrap font-medium">ประเภท&nbsp;</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${items.length === 1 ? (firstItem?.category || '-') : 'รวมหลายประเภท'}</span>
+          </div>
+          <div class="col-span-3 flex items-end">
+            <span class="whitespace-nowrap font-medium">รหัส&nbsp;</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${items.length === 1 ? firstItem.asset_code : 'ตามรายการในตาราง'}</span>
+          </div>
+          <div class="col-span-3 flex items-end">
+            <span class="whitespace-nowrap font-medium">ลักษณะ/สมบัติ&nbsp;</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${items.length === 1 ? (firstItem.spec || firstItem.asset_name) : '-'}</span>
+          </div>
+          <div class="col-span-3 flex items-end">
+            <span class="whitespace-nowrap font-medium">รุ่นแบบ&nbsp;</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${items.length === 1 ? firstItem.model : '-'}</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-12 gap-x-4 items-end">
+          <div class="col-span-6 flex items-end">
+            <span class="whitespace-nowrap font-medium">สถานที่ตั้ง/หน่วยที่รับผิดชอบ&nbsp;</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${items.length === 1 ? (firstItem?.location || '-') : 'ตามรายการในตาราง'}</span>
+          </div>
+          <div class="col-span-6 flex items-end">
+            <span class="whitespace-nowrap font-medium">ชื่อผู้ขาย/ผู้รับจ้าง/ผู้บริจาค&nbsp;</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${items.length === 1 ? (firstItem?.vendor || '-') : '-'}</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-12 gap-x-4 items-end">
+          <div class="col-span-8 flex items-end">
+            <span class="whitespace-nowrap font-medium">ที่อยู่&nbsp;</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${items.length === 1 ? (firstItem?.vendor_address || '...................................') : '...................................................................................................'}</span>
+          </div>
+          <div class="col-span-4 flex items-end">
+            <span class="whitespace-nowrap font-medium">โทรศัพท์&nbsp;</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${items.length === 1 ? (firstItem?.vendor_phone || '...................................') : '...................................................'}</span>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-x-6">
+          <span class="font-medium">ประเภทเงิน</span>
+          <label class="flex items-center gap-1.5">
+            <span class="text-sm font-bold leading-none">${b === 'เงินงบประมาณ' ? '☑' : '☐'}</span>
+            <span>เงินงบประมาณ</span>
+          </label>
+          <label class="flex items-center gap-1.5">
+            <span class="text-sm font-bold leading-none">${b === 'เงินนอกงบประมาณ' ? '☑' : '☐'}</span>
+            <span>เงินนอกงบประมาณ</span>
+          </label>
+          <label class="flex items-center gap-1.5">
+            <span class="text-sm font-bold leading-none">${b === 'เงินบริจาค/เงินช่วยเหลือ' ? '☑' : '☐'}</span>
+            <span>เงินบริจาค/เงินช่วยเหลือ</span>
+          </label>
+          <label class="flex items-center gap-1.5">
+            <span class="text-sm font-bold leading-none">${b === 'อื่นๆ' ? '☑' : '☐'}</span>
+            <span>อื่นๆ</span>
+          </label>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-x-6">
+          <span class="font-medium">วิธีการได้มา</span>
+          <label class="flex items-center gap-1.5">
+            <span class="text-sm font-bold leading-none">${m === 'ประกาศเชิญชวน' ? '☑' : '☐'}</span>
+            <span>ประกาศเชิญชวน</span>
+          </label>
+          <label class="flex items-center gap-1.5">
+            <span class="text-sm font-bold leading-none">${m === 'คัดเลือก' ? '☑' : '☐'}</span>
+            <span>คัดเลือก</span>
+          </label>
+          <label class="flex items-center gap-1.5">
+            <span class="text-sm font-bold leading-none">${m === 'เฉพาะเจาะจง' ? '☑' : '☐'}</span>
+            <span>เฉพาะเจาะจง</span>
+          </label>
+          <label class="flex items-center gap-1.5">
+            <span class="text-sm font-bold leading-none">${m === 'รับบริจาค' ? '☑' : '☐'}</span>
+            <span>รับบริจาค</span>
+          </label>
+        </div>
+      </div>
+
+      <table class="form-table w-full text-[11px]">
+        <thead>
+          <tr class="bg-white text-center font-bold">
+            <th class="w-16">วัน เดือน ปี</th>
+            <th class="w-20">ที่เอกสาร</th>
+            <th class="min-w-[140px]">รายการ</th>
+            <th class="w-16">จำนวนหน่วย</th>
+            <th class="w-24 leading-tight">ราคาต่อ หน่วย/<br>ชุด/กลุ่ม</th>
+            <th class="w-24">มูลค่ารวม</th>
+            <th class="w-16">อายุใช้งาน</th>
+            <th class="w-16 leading-tight">อัตราค่า<br>เสื่อมราคา</th>
+            <th class="w-24 leading-tight">ค่าเสื่อม<br>ราคา</th>
+            <th class="w-24 leading-tight">มูลค่า<br>สุทธิ</th>
+            <th class="w-28">หมายเหตุ</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${generateAssetTableRowsHtml(items)}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function generateAssetTableRowsHtml(items) {
+  let html = '';
+  const TARGET_ROWS = 15;
+  items.forEach((item) => {
+    html += `
+      <tr>
+        <td class="text-center font-normal whitespace-nowrap">${formatThaiDate(item.received_date)}</td>
+        <td class="text-center font-normal">${item.doc_no || ''}</td>
+        <td class="text-left font-medium">${item.asset_name || ''}</td>
+        <td class="text-center">${item.qty || 1}</td>
+        <td class="text-right whitespace-nowrap">${item.cost ? Number(item.cost).toLocaleString('th-TH', {minimumFractionDigits: 2}) : '-'}</td>
+        <td class="text-right whitespace-nowrap">${item.total_cost ? Number(item.total_cost).toLocaleString('th-TH', {minimumFractionDigits: 2}) : '-'}</td>
+        <td class="text-center">${item.useful_life ? item.useful_life + ' ปี' : ''}</td>
+        <td class="text-center">${item.depr_rate || '20%'}</td>
+        <td class="text-right whitespace-nowrap text-slate-600">${item.acc_depr ? Number(item.acc_depr).toLocaleString('th-TH', {minimumFractionDigits: 2}) : '0.00'}</td>
+        <td class="text-right font-bold text-black whitespace-nowrap">${item.net_book_value ? Number(item.net_book_value).toLocaleString('th-TH', {minimumFractionDigits: 2}) : '-'}</td>
+        <td class="text-left">${item.remark || item.location || ''}</td>
+      </tr>
+    `;
+  });
+
+  const emptyRowsCount = Math.max(0, TARGET_ROWS - items.length);
+  for (let i = 0; i < emptyRowsCount; i++) {
+    html += `
+      <tr class="empty-row">
+        <td class="text-center">&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+      </tr>
+    `;
+  }
+  return html;
+}
+
+// ==================== ฟังก์ชัน Modal และ CRUD ครุภัณฑ์ ====================
 function openAddAssetModal() {
   document.getElementById('edit_asset_id').value = '';
   document.getElementById('modal-asset-title').innerText = '➕ ลงทะเบียนครุภัณฑ์ใหม่';
@@ -448,93 +747,203 @@ async function saveAsset(e) {
 async function deleteAsset(id) {
   if (!confirm('ยืนยันที่จะลบรายการครุภัณฑ์นี้หรือไม่?')) return;
   await fetch(`/api/assets/${id}`, { method: 'DELETE' });
+  selectedAssetIds.delete(id);
   loadAssets();
 }
 
-// ==================== บัญชีคุมวัสดุ ====================
+// ==============================================================
+// บัญชีคุมวัสดุ
+// ==============================================================
 async function loadMaterials() {
   try {
     const res = await fetch('/api/materials');
     materialList = await res.json();
 
-    // 1. หน้าจอหลัก (Screen View)
-    const screenTbody = document.getElementById('screen-material-table-body');
-    screenTbody.innerHTML = '';
-
-    materialList.forEach((item) => {
-      const tr = document.createElement('tr');
-      tr.className = 'hover:bg-slate-50 border-b';
-      tr.innerHTML = `
-        <td class="p-2 border">${item.trans_date || ''}</td>
-        <td class="p-2 border font-semibold">${item.party || ''}</td>
-        <td class="p-2 border">${item.doc_no || ''}</td>
-        <td class="p-2 border">${item.budget_type || ''}</td>
-        <td class="p-2 border text-center">${item.opening_stock || 0}</td>
-        <td class="p-2 border text-center text-green-600 font-semibold">${item.qty_in || 0}</td>
-        <td class="p-2 border text-center text-red-600 font-semibold">${item.qty_out || 0}</td>
-        <td class="p-2 border text-center font-bold bg-slate-100">${item.balance}</td>
-        <td class="p-2 border text-right">${Number(item.unit_price).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-        <td class="p-2 border text-right font-bold text-emerald-700">${Number(item.total_amount).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-        <td class="p-2 border text-slate-500">${item.remark || ''}</td>
-        <td class="p-2 border text-center whitespace-nowrap space-x-1">
-          <button onclick="editMaterial(${item.id})" class="text-amber-600 hover:text-amber-800 p-1 font-semibold rounded hover:bg-amber-50" title="แก้ไขรายการนี้">✏️</button>
-          <button onclick="deleteMaterial(${item.id})" class="text-red-500 hover:text-red-700 p-1 font-semibold rounded hover:bg-red-50" title="ลบรายการ">🗑️</button>
-        </td>
-      `;
-      screenTbody.appendChild(tr);
-    });
-
-    // 2. สำหรับพิมพ์
-    const printTbody = document.getElementById('print-material-table-body');
-    printTbody.innerHTML = '';
-    const TARGET_ROWS = 15;
-
-    materialList.forEach((item, index) => {
-      const openStock = (index === 0 && item.opening_stock > 0) ? item.opening_stock : (item.opening_stock || '');
-      const qtyIn = item.qty_in > 0 ? item.qty_in : '';
-      const qtyOut = item.qty_out > 0 ? item.qty_out : '';
-
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td class="text-center whitespace-nowrap">${formatThaiDate(item.trans_date)}</td>
-        <td class="text-left font-medium">${item.party || ''}</td>
-        <td class="text-center">${item.doc_no || ''}</td>
-        <td class="text-left">${item.budget_type || ''}</td>
-        <td class="text-center">${openStock}</td>
-        <td class="text-center text-green-700 font-semibold">${qtyIn}</td>
-        <td class="text-center text-red-700 font-semibold">${qtyOut}</td>
-        <td class="text-center font-bold bg-slate-50">${item.balance}</td>
-        <td class="text-right whitespace-nowrap">${item.unit_price ? Number(item.unit_price).toLocaleString('th-TH', {minimumFractionDigits: 2}) : ''}</td>
-        <td class="text-right font-bold text-emerald-800 whitespace-nowrap">${item.total_amount ? Number(item.total_amount).toLocaleString('th-TH', {minimumFractionDigits: 2}) : ''}</td>
-        <td class="text-left">${item.remark || ''}</td>
-      `;
-      printTbody.appendChild(tr);
-    });
-
-    const emptyRowsCount = Math.max(0, TARGET_ROWS - materialList.length);
-    for (let i = 0; i < emptyRowsCount; i++) {
-      const tr = document.createElement('tr');
-      tr.className = 'empty-row';
-      tr.innerHTML = `
-        <td class="text-center">&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-      `;
-      printTbody.appendChild(tr);
+    if (selectedMaterialIds.size === 0) {
+      materialList.forEach(m => selectedMaterialIds.add(m.id));
+    } else {
+      const validIds = new Set(materialList.map(m => m.id));
+      selectedMaterialIds = new Set([...selectedMaterialIds].filter(id => validIds.has(id)));
     }
+
+    renderMaterialTable();
+    updateMaterialSelectionUI();
+    renderMaterialPrint();
   } catch (err) {
     console.error('Error loading materials:', err);
   }
 }
 
+function renderMaterialTable() {
+  const screenTbody = document.getElementById('screen-material-table-body');
+  if (!screenTbody) return;
+  screenTbody.innerHTML = '';
+
+  materialList.forEach((item) => {
+    const isSelected = selectedMaterialIds.has(item.id);
+    const tr = document.createElement('tr');
+    tr.className = `hover:bg-emerald-50/50 border-b cursor-pointer transition ${isSelected ? 'bg-emerald-50/30' : ''}`;
+    
+    tr.onclick = (e) => {
+      if (!e.target.closest('button, input')) {
+        toggleMaterialItemSelection(item.id);
+      }
+    };
+
+    tr.innerHTML = `
+      <td class="p-2 border text-center" onclick="event.stopPropagation()">
+        <input type="checkbox" class="w-4 h-4 text-emerald-600 rounded cursor-pointer" 
+          ${isSelected ? 'checked' : ''} 
+          onchange="toggleMaterialItemSelection(${item.id}, this.checked)">
+      </td>
+      <td class="p-2 border">${item.trans_date || ''}</td>
+      <td class="p-2 border font-semibold">${item.party || ''}</td>
+      <td class="p-2 border">${item.doc_no || ''}</td>
+      <td class="p-2 border">${item.budget_type || ''}</td>
+      <td class="p-2 border text-center">${item.opening_stock || 0}</td>
+      <td class="p-2 border text-center text-green-600 font-semibold">${item.qty_in || 0}</td>
+      <td class="p-2 border text-center text-red-600 font-semibold">${item.qty_out || 0}</td>
+      <td class="p-2 border text-center font-bold bg-slate-100">${item.balance}</td>
+      <td class="p-2 border text-right">${Number(item.unit_price).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+      <td class="p-2 border text-right font-bold text-emerald-700">${Number(item.total_amount).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+      <td class="p-2 border text-slate-500">${item.remark || ''}</td>
+      <td class="p-2 border text-center whitespace-nowrap space-x-1" onclick="event.stopPropagation()">
+        <button onclick="editMaterial(${item.id})" class="text-amber-600 hover:text-amber-800 p-1 font-semibold rounded hover:bg-amber-100 transition" title="แก้ไขรายการนี้">✏️</button>
+        <button onclick="deleteMaterial(${item.id})" class="text-red-500 hover:text-red-700 p-1 font-semibold rounded hover:bg-red-100 transition" title="ลบรายการ">🗑️</button>
+      </td>
+    `;
+    screenTbody.appendChild(tr);
+  });
+}
+
+function toggleMaterialItemSelection(id, explicitChecked = null) {
+  if (explicitChecked !== null) {
+    if (explicitChecked) selectedMaterialIds.add(id);
+    else selectedMaterialIds.delete(id);
+  } else {
+    if (selectedMaterialIds.has(id)) selectedMaterialIds.delete(id);
+    else selectedMaterialIds.add(id);
+  }
+  renderMaterialTable();
+  updateMaterialSelectionUI();
+  renderMaterialPrint();
+}
+
+function toggleSelectAllMaterials(isChecked) {
+  if (isChecked) {
+    materialList.forEach(m => selectedMaterialIds.add(m.id));
+  } else {
+    selectedMaterialIds.clear();
+  }
+  renderMaterialTable();
+  updateMaterialSelectionUI();
+  renderMaterialPrint();
+}
+
+function selectAllMaterials(select) {
+  if (select) {
+    materialList.forEach(m => selectedMaterialIds.add(m.id));
+  } else {
+    selectedMaterialIds.clear();
+  }
+  renderMaterialTable();
+  updateMaterialSelectionUI();
+  renderMaterialPrint();
+}
+
+function updateMaterialSelectionUI() {
+  const count = selectedMaterialIds.size;
+  const badge = document.getElementById('material-selected-badge');
+  const countSpan = document.getElementById('material-selected-count');
+  const btnPrintText = document.getElementById('btn-print-material-text');
+  const selectAllChk = document.getElementById('select-all-material-chk');
+
+  if (countSpan) countSpan.innerText = count;
+
+  if (badge) {
+    if (count > 0) badge.classList.remove('hidden');
+    else badge.classList.add('hidden');
+  }
+
+  if (btnPrintText) {
+    btnPrintText.innerText = count > 0 ? `พิมพ์บัญชีคุมวัสดุ (${count} รายการ)` : 'พิมพ์บัญชีคุมวัสดุ (PDF)';
+  }
+
+  if (selectAllChk) {
+    if (materialList.length > 0 && count === materialList.length) {
+      selectAllChk.checked = true;
+      selectAllChk.indeterminate = false;
+    } else if (count > 0 && count < materialList.length) {
+      selectAllChk.checked = false;
+      selectAllChk.indeterminate = true;
+    } else {
+      selectAllChk.checked = false;
+      selectAllChk.indeterminate = false;
+    }
+  }
+}
+
+function printSelectedMaterials() {
+  if (selectedMaterialIds.size === 0) {
+    alert('กรุณาติ๊กเลือกรายการในตารางเพื่อพิมพ์ หรือกด "เลือกทั้งหมด" ครับ');
+    return;
+  }
+  renderMaterialPrint();
+  window.print();
+}
+
+function renderMaterialPrint() {
+  const printTbody = document.getElementById('print-material-table-body');
+  if (!printTbody) return;
+  printTbody.innerHTML = '';
+  const TARGET_ROWS = 15;
+
+  const printData = materialList.filter(m => selectedMaterialIds.has(m.id));
+
+  printData.forEach((item, index) => {
+    const openStock = (index === 0 && item.opening_stock > 0) ? item.opening_stock : (item.opening_stock || '');
+    const qtyIn = item.qty_in > 0 ? item.qty_in : '';
+    const qtyOut = item.qty_out > 0 ? item.qty_out : '';
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="text-center whitespace-nowrap">${formatThaiDate(item.trans_date)}</td>
+      <td class="text-left font-medium">${item.party || ''}</td>
+      <td class="text-center">${item.doc_no || ''}</td>
+      <td class="text-left">${item.budget_type || ''}</td>
+      <td class="text-center">${openStock}</td>
+      <td class="text-center text-green-700 font-semibold">${qtyIn}</td>
+      <td class="text-center text-red-700 font-semibold">${qtyOut}</td>
+      <td class="text-center font-bold bg-slate-50">${item.balance}</td>
+      <td class="text-right whitespace-nowrap">${item.unit_price ? Number(item.unit_price).toLocaleString('th-TH', {minimumFractionDigits: 2}) : ''}</td>
+      <td class="text-right font-bold text-emerald-800 whitespace-nowrap">${item.total_amount ? Number(item.total_amount).toLocaleString('th-TH', {minimumFractionDigits: 2}) : ''}</td>
+      <td class="text-left">${item.remark || ''}</td>
+    `;
+    printTbody.appendChild(tr);
+  });
+
+  const emptyRowsCount = Math.max(0, TARGET_ROWS - printData.length);
+  for (let i = 0; i < emptyRowsCount; i++) {
+    const tr = document.createElement('tr');
+    tr.className = 'empty-row';
+    tr.innerHTML = `
+      <td class="text-center">&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+    `;
+    printTbody.appendChild(tr);
+  }
+}
+
+// ==================== ฟังก์ชัน Modal และ CRUD วัสดุ ====================
 function openAddMaterialModal() {
   document.getElementById('edit_material_id').value = '';
   document.getElementById('modal-material-title').innerText = '➕ บันทึกรายการบัญชีคุมวัสดุ';
@@ -606,6 +1015,7 @@ async function saveMaterial(e) {
 async function deleteMaterial(id) {
   if (!confirm('ยืนยันที่จะลบรายการวัสดุนี้หรือไม่?')) return;
   await fetch(`/api/materials/${id}`, { method: 'DELETE' });
+  selectedMaterialIds.delete(id);
   loadMaterials();
 }
 

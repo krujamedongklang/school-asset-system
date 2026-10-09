@@ -68,6 +68,14 @@
       .empty-row td {
         height: 25px !important;
       }
+      .page-break {
+        page-break-after: always !important;
+        break-after: page !important;
+      }
+      .print-asset-card {
+        width: 100% !important;
+        box-sizing: border-box !important;
+      }
     }
   </style>
 </head>
@@ -111,20 +119,35 @@
         <div class="flex flex-wrap justify-between items-center gap-3 mb-4 no-print">
           <div>
             <h2 class="text-2xl font-bold text-slate-700">ทะเบียนคุมทรัพย์สิน (ครุภัณฑ์)</h2>
-            <p class="text-xs text-slate-500 mt-0.5">กด ✏️ เพื่อแก้ไขข้อมูล หรือ 🖨️ ในตารางเพื่อพิมพ์บัตรเฉพาะรายการนั้น</p>
+            <div class="flex flex-wrap items-center gap-2 mt-1">
+              <span class="text-xs text-slate-500">ติ๊กช่องสี่เหลี่ยม ☑️ หน้าแถวเพื่อเลือกรายการที่ต้องการพิมพ์ (เช่น รายการที่ 1 กับ 5)</span>
+              <span id="asset-selected-badge" class="hidden text-xs bg-indigo-100 text-indigo-800 font-bold px-2.5 py-0.5 rounded-full border border-indigo-200">
+                เลือกแล้ว <span id="asset-selected-count">0</span> รายการ
+              </span>
+            </div>
           </div>
           <div class="flex flex-wrap items-center gap-2">
-            <div class="flex items-center gap-1.5 bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 shadow-sm text-xs">
-              <span class="font-semibold text-slate-700 whitespace-nowrap">🖨️ เลือกพิมพ์:</span>
-              <select id="asset-print-select" onchange="onAssetPrintSelectChange(this.value)" class="bg-transparent border-0 font-semibold text-indigo-900 focus:ring-0 cursor-pointer max-w-[220px]">
-                <option value="all">พิมพ์รวมทุกรายการ</option>
-              </select>
+            <!-- ปุ่มลัดเลือกทั้งหมด / ยกเลิก -->
+            <div class="flex items-center gap-1 bg-slate-200/80 rounded-lg p-1 text-xs">
+              <button type="button" onclick="selectAllAssets(true)" class="px-2.5 py-1 bg-white hover:bg-slate-50 rounded text-indigo-900 font-semibold shadow-sm transition">
+                ☑️ เลือกทั้งหมด
+              </button>
+              <button type="button" onclick="selectAllAssets(false)" class="px-2.5 py-1 bg-white hover:bg-slate-50 rounded text-slate-600 font-semibold shadow-sm transition">
+                ⬜ ยกเลิกเลือก
+              </button>
             </div>
+
+            <!-- ตัวเลือกรูปแบบการพิมพ์ -->
+            <select id="asset-print-mode" onchange="onAssetPrintModeChange()" class="text-xs border border-slate-300 rounded-lg px-2.5 py-2 bg-white font-semibold text-slate-700 shadow-sm cursor-pointer">
+              <option value="single-pages">📄 แยกพิมพ์แผ่นละ 1 รายการ (มาตรฐาน)</option>
+              <option value="combined-table">📑 รวมพิมพ์ในตารางเดียว</option>
+            </select>
+
             <button onclick="openAddAssetModal()" class="bg-emerald-600 text-white px-3.5 py-2 rounded-lg font-semibold hover:bg-emerald-700 shadow transition flex items-center gap-1 text-xs sm:text-sm">
               <span>+</span> เพิ่มครุภัณฑ์ใหม่
             </button>
-            <button onclick="triggerPrintAsset()" class="bg-blue-600 text-white px-3.5 py-2 rounded-lg font-semibold hover:bg-blue-700 shadow transition flex items-center gap-1 text-xs sm:text-sm">
-              <span>🖨️</span> พิมพ์เอกสารหมายเลข ๓ (PDF)
+            <button onclick="printSelectedAssets()" id="btn-print-assets" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 shadow transition flex items-center gap-1.5 text-xs sm:text-sm">
+              <span>🖨️</span> <span id="btn-print-text">พิมพ์รายการที่เลือก</span>
             </button>
           </div>
         </div>
@@ -133,7 +156,10 @@
           <table class="w-full text-left border-collapse text-xs">
             <thead>
               <tr class="bg-slate-200 text-slate-700 border-b border-slate-300">
-                <th class="p-2 border">ลำดับ</th>
+                <th class="p-2 border text-center w-10">
+                  <input type="checkbox" id="select-all-asset-chk" onchange="toggleSelectAllAssets(this.checked)" class="w-4 h-4 text-indigo-600 rounded cursor-pointer" title="เลือก/ยกเลิก ทั้งหมด">
+                </th>
+                <th class="p-2 border text-center">ลำดับ</th>
                 <th class="p-2 border">วัน เดือน ปี</th>
                 <th class="p-2 border">รหัสทรัพย์สิน</th>
                 <th class="p-2 border">ชื่อทรัพย์สิน/ยี่ห้อ/รุ่น/รายละเอียด</th>
@@ -161,17 +187,32 @@
         <div class="flex flex-wrap justify-between items-center gap-3 mb-4 no-print">
           <div>
             <h2 class="text-2xl font-bold text-slate-700">บัญชีคุมวัสดุ</h2>
-            <p class="text-xs text-slate-500 mt-0.5">กด ✏️ เพื่อแก้ไขรายการ หรือ 🗑️ เพื่อลบ</p>
+            <div class="flex flex-wrap items-center gap-2 mt-1">
+              <span class="text-xs text-slate-500">ติ๊กช่องสี่เหลี่ยม ☑️ หน้าแถวเพื่อเลือกพิมพ์เฉพาะรายการที่ต้องการ (หรือพิมพ์ทั้งหมด)</span>
+              <span id="material-selected-badge" class="hidden text-xs bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full border border-emerald-200">
+                เลือกแล้ว <span id="material-selected-count">0</span> รายการ
+              </span>
+            </div>
           </div>
           <div class="flex flex-wrap items-center gap-2">
+            <!-- ปุ่มลัดเลือกทั้งหมด / ยกเลิก -->
+            <div class="flex items-center gap-1 bg-slate-200/80 rounded-lg p-1 text-xs">
+              <button type="button" onclick="selectAllMaterials(true)" class="px-2.5 py-1 bg-white hover:bg-slate-50 rounded text-emerald-900 font-semibold shadow-sm transition">
+                ☑️ เลือกทั้งหมด
+              </button>
+              <button type="button" onclick="selectAllMaterials(false)" class="px-2.5 py-1 bg-white hover:bg-slate-50 rounded text-slate-600 font-semibold shadow-sm transition">
+                ⬜ ยกเลิกเลือก
+              </button>
+            </div>
+
             <button onclick="openModal('materialMetaModal')" class="bg-amber-600 text-white px-3 py-2 rounded-lg font-semibold hover:bg-amber-700 shadow text-xs transition">
               📝 ข้อมูลหัวบัตรวัสดุ
             </button>
             <button onclick="openAddMaterialModal()" class="bg-emerald-600 text-white px-3.5 py-2 rounded-lg font-semibold hover:bg-emerald-700 shadow transition text-xs sm:text-sm">
               + บันทึกรับ-จ่ายวัสดุ
             </button>
-            <button onclick="window.print()" class="bg-blue-600 text-white px-3.5 py-2 rounded-lg font-semibold hover:bg-blue-700 shadow transition flex items-center gap-1 text-xs sm:text-sm">
-              <span>🖨️</span> พิมพ์บัญชีคุมวัสดุ (PDF)
+            <button onclick="printSelectedMaterials()" id="btn-print-materials" class="bg-blue-600 text-white px-3.5 py-2 rounded-lg font-semibold hover:bg-blue-700 shadow transition flex items-center gap-1 text-xs sm:text-sm">
+              <span>🖨️</span> <span id="btn-print-material-text">พิมพ์บัญชีคุมวัสดุ (PDF)</span>
             </button>
           </div>
         </div>
@@ -180,6 +221,9 @@
           <table class="w-full text-left border-collapse text-xs">
             <thead>
               <tr class="bg-slate-200 text-slate-700 border-b border-slate-300">
+                <th class="p-2 border text-center w-10">
+                  <input type="checkbox" id="select-all-material-chk" onchange="toggleSelectAllMaterials(this.checked)" class="w-4 h-4 text-emerald-600 rounded cursor-pointer" title="เลือก/ยกเลิก ทั้งหมด">
+                </th>
                 <th class="p-2 border">วัน เดือน ปี</th>
                 <th class="p-2 border">รับจาก / จ่ายให้</th>
                 <th class="p-2 border">เลขที่เอกสาร</th>
@@ -209,139 +253,9 @@
   <!-- ============================================================== -->
   <div class="print-only print-container">
 
-    <!-- === PRINT FORM 1: ทะเบียนคุมทรัพย์สิน (แบบฟอร์มใหม่ตรงตามภาพที่คุณส่งมา) === -->
+    <!-- === PRINT FORM 1: ทะเบียนคุมทรัพย์สิน (เรนเดอร์อัตโนมัติตามรายการที่ติ๊กเลือก) === -->
     <div id="print-asset-section" class="block">
-      <!-- Title -->
-      <div class="text-center my-1">
-        <h2 class="text-[17px] font-bold text-black tracking-wide">
-          ทะเบียนคุมทรัพย์สิน
-        </h2>
-      </div>
-
-      <!-- ส่วนราชการ / หน่วยงาน ชิดขวา -->
-      <div class="flex justify-end mb-2 text-[11px] text-black">
-        <div class="text-left w-auto space-y-0.5">
-          <div class="flex">
-            <span class="whitespace-nowrap font-medium">ส่วนราชการ&nbsp;&nbsp;</span>
-            <span id="org-name-asset" class="font-normal flex-grow border-b border-dotted border-black min-w-[280px]">สำนักงานส่งเสริมการศึกษานอกระบบและการศึกษาตามอัธยาศัย</span>
-          </div>
-          <div class="flex">
-            <span class="whitespace-nowrap font-medium">หน่วยงาน&nbsp;&nbsp;&nbsp;&nbsp;</span>
-            <span id="dept-name-asset" class="font-normal flex-grow border-b border-dotted border-black min-w-[280px]">สำนักงานส่งเสริมการศึกษานอกระบบและการศึกษาตามอัธยาศัยจังหวัดนครราชสีมา</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- ข้อมูลหัวตาราง (5 บรรทัดตรงตามภาพ) -->
-      <div class="text-[11px] text-black space-y-1.5 mb-2 leading-relaxed">
-        <!-- แถวที่ 1: ประเภท | รหัส | ลักษณะ/สมบัติ | รุ่นแบบ -->
-        <div class="grid grid-cols-12 gap-x-3 items-end">
-          <div class="col-span-3 flex items-end">
-            <span class="whitespace-nowrap font-medium">ประเภท&nbsp;</span>
-            <span id="card-asset-category" class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">ครุภัณฑ์คอมพิวเตอร์</span>
-          </div>
-          <div class="col-span-3 flex items-end">
-            <span class="whitespace-nowrap font-medium">รหัส&nbsp;</span>
-            <span id="card-asset-code" class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">6730-007-0001-1-3/55</span>
-          </div>
-          <div class="col-span-3 flex items-end">
-            <span class="whitespace-nowrap font-medium">ลักษณะ/สมบัติ&nbsp;</span>
-            <span id="card-asset-spec" class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">เครื่องฉาย Projector</span>
-          </div>
-          <div class="col-span-3 flex items-end">
-            <span class="whitespace-nowrap font-medium">รุ่นแบบ&nbsp;</span>
-            <span id="card-asset-model" class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">Acer</span>
-          </div>
-        </div>
-
-        <!-- แถวที่ 2: สถานที่ตั้ง/หน่วยที่รับผิดชอบ | ชื่อผู้ขาย/ผู้รับจ้าง/ผู้บริจาค -->
-        <div class="grid grid-cols-12 gap-x-4 items-end">
-          <div class="col-span-6 flex items-end">
-            <span class="whitespace-nowrap font-medium">สถานที่ตั้ง/หน่วยที่รับผิดชอบ&nbsp;</span>
-            <span id="card-asset-location" class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">ย่าโม 1, ย่าโม 2</span>
-          </div>
-          <div class="col-span-6 flex items-end">
-            <span class="whitespace-nowrap font-medium">ชื่อผู้ขาย/ผู้รับจ้าง/ผู้บริจาค&nbsp;</span>
-            <span id="card-asset-vendor" class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">บริษัท เอเซอร์ คอมพิวเตอร์ จำกัด</span>
-          </div>
-        </div>
-
-        <!-- แถวที่ 3: ที่อยู่ | โทรศัพท์ -->
-        <div class="grid grid-cols-12 gap-x-4 items-end">
-          <div class="col-span-8 flex items-end">
-            <span class="whitespace-nowrap font-medium">ที่อยู่&nbsp;</span>
-            <span id="card-asset-address" class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">...................................................................................................................................</span>
-          </div>
-          <div class="col-span-4 flex items-end">
-            <span class="whitespace-nowrap font-medium">โทรศัพท์&nbsp;</span>
-            <span id="card-asset-phone" class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">................................................................</span>
-          </div>
-        </div>
-
-        <!-- แถวที่ 4: ประเภทเงิน (Checkboxes) -->
-        <div class="flex flex-wrap items-center gap-x-6">
-          <span class="font-medium">ประเภทเงิน</span>
-          <label class="flex items-center gap-1.5">
-            <span id="chk-budget-1" class="text-sm font-bold leading-none">☐</span>
-            <span>เงินงบประมาณ</span>
-          </label>
-          <label class="flex items-center gap-1.5">
-            <span id="chk-budget-2" class="text-sm font-bold leading-none">☐</span>
-            <span>เงินนอกงบประมาณ</span>
-          </label>
-          <label class="flex items-center gap-1.5">
-            <span id="chk-budget-3" class="text-sm font-bold leading-none">☐</span>
-            <span>เงินบริจาค/เงินช่วยเหลือ</span>
-          </label>
-          <label class="flex items-center gap-1.5">
-            <span id="chk-budget-4" class="text-sm font-bold leading-none">☐</span>
-            <span>อื่นๆ</span>
-          </label>
-        </div>
-
-        <!-- แถวที่ 5: วิธีการได้มา (Checkboxes) -->
-        <div class="flex flex-wrap items-center gap-x-6">
-          <span class="font-medium">วิธีการได้มา</span>
-          <label class="flex items-center gap-1.5">
-            <span id="chk-method-1" class="text-sm font-bold leading-none">☐</span>
-            <span>ประกาศเชิญชวน</span>
-          </label>
-          <label class="flex items-center gap-1.5">
-            <span id="chk-method-2" class="text-sm font-bold leading-none">☐</span>
-            <span>คัดเลือก</span>
-          </label>
-          <label class="flex items-center gap-1.5">
-            <span id="chk-method-3" class="text-sm font-bold leading-none">☐</span>
-            <span>เฉพาะเจาะจง</span>
-          </label>
-          <label class="flex items-center gap-1.5">
-            <span id="chk-method-4" class="text-sm font-bold leading-none">☐</span>
-            <span>รับบริจาค</span>
-          </label>
-        </div>
-      </div>
-
-      <!-- ตาราง 11 คอลัมน์ตรงตามภาพเป๊ะๆ -->
-      <table class="form-table w-full text-[11px]">
-        <thead>
-          <tr class="bg-white text-center font-bold">
-            <th class="w-16">วัน เดือน ปี</th>
-            <th class="w-20">ที่เอกสาร</th>
-            <th class="min-w-[140px]">รายการ</th>
-            <th class="w-16">จำนวนหน่วย</th>
-            <th class="w-24 leading-tight">ราคาต่อ หน่วย/<br>ชุด/กลุ่ม</th>
-            <th class="w-24">มูลค่ารวม</th>
-            <th class="w-16">อายุใช้งาน</th>
-            <th class="w-16 leading-tight">อัตราค่า<br>เสื่อมราคา</th>
-            <th class="w-24 leading-tight">ค่าเสื่อม<br>ราคา</th>
-            <th class="w-24 leading-tight">มูลค่า<br>สุทธิ</th>
-            <th class="w-28">หมายเหตุ</th>
-          </tr>
-        </thead>
-        <tbody id="print-asset-table-body">
-          <!-- Populated by JS + 15 blank rows -->
-        </tbody>
-      </table>
+      <!-- Populated dynamically by JS -->
     </div>
 
     <!-- === PRINT FORM 2: บัญชีคุมวัสดุ === -->
