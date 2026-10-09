@@ -23,11 +23,366 @@ let selectedMaterialIds = new Set();
 // รูปแบบการพิมพ์ครุภัณฑ์ ('single-pages' = แยกแผ่นละ 1 รายการ, 'combined-table' = รวมในตารางเดียว)
 let assetPrintMode = 'single-pages';
 
-document.addEventListener('DOMContentLoaded', () => {
+// ==================== ระบบสิทธิ์เข้าใช้งาน & AUTHENTICATION ====================
+function getAuthToken() {
+  return localStorage.getItem('school_auth_token') || sessionStorage.getItem('school_auth_token') || '';
+}
+
+function setAuthToken(token) {
+  if (token) {
+    localStorage.setItem('school_auth_token', token);
+  } else {
+    localStorage.removeItem('school_auth_token');
+    sessionStorage.removeItem('school_auth_token');
+  }
+}
+
+// Wrapper fetch พร้อมส่ง Authorization header อัตโนมัติ
+async function authFetch(url, options = {}) {
+  const token = getAuthToken();
+  const headers = Object.assign({}, options.headers || {});
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  const res = await fetch(url, { ...options, headers });
+  if (res.status === 401) {
+    // ถ้าเซสชันหมดอายุหรือไม่ได้รับอนุญาต
+    setAuthToken('');
+    showLoginOverlay();
+  }
+  return res;
+}
+
+function showLoginOverlay() {
+  const overlay = document.getElementById('login-overlay');
+  if (overlay) {
+    overlay.classList.remove('hidden');
+    overlay.classList.add('flex');
+    const passInput = document.getElementById('login-password');
+    if (passInput) {
+      passInput.value = '';
+      setTimeout(() => passInput.focus(), 150);
+    }
+  }
+}
+
+function hideLoginOverlay() {
+  const overlay = document.getElementById('login-overlay');
+  if (overlay) {
+    overlay.classList.add('hidden');
+    overlay.classList.remove('flex');
+  }
+}
+
+function togglePasswordVisibility(inputId, iconId) {
+  const input = document.getElementById(inputId);
+  const icon = document.getElementById(iconId);
+  if (!input) return;
+  if (input.type === 'password') {
+    input.type = 'text';
+    if (icon) icon.textContent = '🙈';
+  } else {
+    input.type = 'password';
+    if (icon) icon.textContent = '👁️';
+  }
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  const passInput = document.getElementById('login-password');
+  const errorDiv = document.getElementById('login-error-msg');
+  const btnSubmit = document.getElementById('btn-login-submit');
+
+  if (errorDiv) {
+    errorDiv.classList.add('hidden');
+    errorDiv.textContent = '';
+  }
+
+  const password = (passInput ? passInput.value : '').trim();
+  if (!password) {
+    if (errorDiv) {
+      errorDiv.textContent = 'กรุณากรอกรหัสผ่าน';
+      errorDiv.classList.remove('hidden');
+    }
+    return;
+  }
+
+  if (btnSubmit) {
+    btnSubmit.disabled = true;
+    btnSubmit.innerHTML = '<span>กำลังเข้าสู่ระบบ...</span>';
+  }
+
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    });
+    const data = await res.json();
+
+    if (res.ok && data.success && data.token) {
+      setAuthToken(data.token);
+      hideLoginOverlay();
+      await loadAssets();
+      await loadMaterials();
+      await loadDatabaseStatus();
+    } else {
+      if (errorDiv) {
+        errorDiv.textContent = data.error || 'รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง';
+        errorDiv.classList.remove('hidden');
+      }
+      if (passInput) {
+        passInput.focus();
+        passInput.select();
+      }
+    }
+  } catch (err) {
+    if (errorDiv) {
+      errorDiv.textContent = 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้: ' + err.message;
+      errorDiv.classList.remove('hidden');
+    }
+  } finally {
+    if (btnSubmit) {
+      btnSubmit.disabled = false;
+      btnSubmit.innerHTML = '<span>เข้าสู่ระบบ</span> <span>➔</span>';
+    }
+  }
+}
+
+async function logout() {
+  if (!confirm('ต้องการออกจากระบบใช่หรือไม่?')) return;
+  try {
+    await authFetch('/api/auth/logout', { method: 'POST' });
+  } catch (e) {}
+  setAuthToken('');
+  showLoginOverlay();
+}
+
+async function checkAuthAndInitialize() {
+  const token = getAuthToken();
+  if (!token) {
+    showLoginOverlay();
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/auth/verify', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (res.ok && data.authenticated) {
+      hideLoginOverlay();
+      await loadAssets();
+      await loadMaterials();
+      await loadDatabaseStatus();
+    } else {
+      setAuthToken('');
+      showLoginOverlay();
+    }
+  } catch (err) {
+    console.warn('Auth verify check failed:', err);
+    showLoginOverlay();
+  }
+}
+
+// ==================== เปลี่ยนรหัสผ่าน ====================
+async function handleChangePassword(e) {
+  e.preventDefault();
+  const curPass = document.getElementById('inp-current-pass').value;
+  const newPass = document.getElementById('inp-new-pass').value;
+  const confPass = document.getElementById('inp-confirm-pass').value;
+  const msgEl = document.getElementById('change-pass-msg');
+
+  msgEl.classList.remove('hidden');
+
+  if (newPass !== confPass) {
+    msgEl.textContent = 'รหัสผ่านใหม่และการยืนยันรหัสผ่านไม่ตรงกัน';
+    msgEl.className = 'text-xs p-2.5 rounded-xl text-center font-medium bg-rose-50 text-rose-800 border border-rose-200';
+    return;
+  }
+
+  if (newPass.length < 4) {
+    msgEl.textContent = 'รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 4 ตัวอักษร';
+    msgEl.className = 'text-xs p-2.5 rounded-xl text-center font-medium bg-rose-50 text-rose-800 border border-rose-200';
+    return;
+  }
+
+  try {
+    const res = await authFetch('/api/auth/change-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currentPassword: curPass, newPassword: newPass })
+    });
+    const data = await res.json();
+
+    if (res.ok && data.success) {
+      msgEl.textContent = '✅ ' + (data.message || 'เปลี่ยนรหัสผ่านเรียบร้อยแล้ว');
+      msgEl.className = 'text-xs p-2.5 rounded-xl text-center font-medium bg-emerald-50 text-emerald-800 border border-emerald-200';
+      document.getElementById('inp-current-pass').value = '';
+      document.getElementById('inp-new-pass').value = '';
+      document.getElementById('inp-confirm-pass').value = '';
+      setTimeout(() => {
+        closeModal('changePasswordModal');
+        msgEl.classList.add('hidden');
+      }, 1800);
+    } else {
+      msgEl.textContent = '❌ ' + (data.error || 'ไม่สามารถเปลี่ยนรหัสผ่านได้');
+      msgEl.className = 'text-xs p-2.5 rounded-xl text-center font-medium bg-rose-50 text-rose-800 border border-rose-200';
+    }
+  } catch (err) {
+    msgEl.textContent = '❌ เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + err.message;
+    msgEl.className = 'text-xs p-2.5 rounded-xl text-center font-medium bg-rose-50 text-rose-800 border border-rose-200';
+  }
+}
+
+// ==================== CLOUD DATABASE (SUPABASE) MANAGEMENT ====================
+let currentDbStatus = null;
+
+async function loadDatabaseStatus() {
+  try {
+    const res = await authFetch('/api/database/status');
+    if (res.ok) {
+      const data = await res.json();
+      currentDbStatus = data;
+      updateDbStatusUI(data);
+    }
+  } catch (err) {
+    console.warn('Could not fetch DB status:', err);
+  }
+}
+
+function updateDbStatusUI(status) {
+  const badge = document.getElementById('db-status-badge');
+  const dot = document.getElementById('db-status-dot');
+  const text = document.getElementById('db-status-text');
+
+  const modalBox = document.getElementById('modal-db-status-box');
+  const modalIcon = document.getElementById('modal-db-status-icon');
+  const modalTitle = document.getElementById('modal-db-status-title');
+  const modalDesc = document.getElementById('modal-db-status-desc');
+
+  const isSupabase = status && status.mode === 'supabase' && status.supabase_connected;
+
+  if (badge && dot && text) {
+    if (isSupabase) {
+      badge.className = 'px-2.5 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold transition flex items-center gap-1.5 border shadow-2xs whitespace-nowrap bg-emerald-950/90 text-emerald-300 border-emerald-400/50 hover:bg-emerald-900 cursor-pointer';
+      dot.className = 'w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]';
+      text.textContent = '☁️ Cloud (Supabase)';
+    } else {
+      badge.className = 'px-2.5 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold transition flex items-center gap-1.5 border shadow-2xs whitespace-nowrap bg-slate-900/80 text-amber-300 border-amber-400/30 hover:bg-slate-800 cursor-pointer';
+      dot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
+      text.textContent = '💾 SQLite (เครื่อง)';
+    }
+  }
+
+  if (modalBox && modalIcon && modalTitle && modalDesc) {
+    if (isSupabase) {
+      modalBox.className = 'p-3.5 rounded-xl mb-4 text-xs flex items-start gap-3 bg-emerald-50 border border-emerald-200 text-emerald-950';
+      modalIcon.textContent = '☁️';
+      modalTitle.textContent = 'เชื่อมต่อ Cloud Database (Supabase) เรียบร้อยแล้ว';
+      modalDesc.textContent = `ข้อมูลถูกจัดเก็บและซิงค์อย่างปลอดภัยบน Supabase (${status.supabase_url || 'Active'}) ข้อมูลไม่สูญหายแม้เซิร์ฟเวอร์รีสตาร์ท`;
+    } else {
+      modalBox.className = 'p-3.5 rounded-xl mb-4 text-xs flex items-start gap-3 bg-amber-50 border border-amber-200 text-amber-950';
+      modalIcon.textContent = '💾';
+      modalTitle.textContent = 'ใช้งานฐานข้อมูลสำรองภายในเครื่อง (SQLite)';
+      modalDesc.textContent = 'ยังไม่ได้เชื่อมต่อ Supabase หรือยังไม่ได้ระบุ Project URL และ Key ข้อมูลเก็บใน school_assets.db';
+    }
+  }
+}
+
+async function handleSaveSupabaseConfig(e) {
+  e.preventDefault();
+  const urlInput = document.getElementById('inp-supabase-url');
+  const keyInput = document.getElementById('inp-supabase-key');
+  const msgEl = document.getElementById('supabase-save-msg');
+
+  const url = (urlInput ? urlInput.value : '').trim();
+  const key = (keyInput ? keyInput.value : '').trim();
+
+  msgEl.className = 'text-xs p-2.5 rounded-xl text-center font-medium bg-slate-100 text-slate-700';
+  msgEl.textContent = 'กำลังทดสอบเชื่อมต่อ Supabase...';
+  msgEl.classList.remove('hidden');
+
+  try {
+    const res = await authFetch('/api/database/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, key })
+    });
+    const data = await res.json();
+
+    if (res.ok && data.success) {
+      msgEl.className = 'text-xs p-2.5 rounded-xl text-center font-medium bg-emerald-50 text-emerald-800 border border-emerald-200';
+      msgEl.textContent = '✅ ' + (data.message || 'เชื่อมต่อ Supabase สำเร็จ');
+      await loadDatabaseStatus();
+    } else {
+      msgEl.className = 'text-xs p-2.5 rounded-xl text-center font-medium bg-rose-50 text-rose-800 border border-rose-200';
+      msgEl.textContent = '❌ ' + (data.message || data.error || 'เชื่อมต่อไม่สำเร็จ กรุณาตรวจสอบ URL และ Key');
+      await loadDatabaseStatus();
+    }
+  } catch (err) {
+    msgEl.className = 'text-xs p-2.5 rounded-xl text-center font-medium bg-rose-50 text-rose-800 border border-rose-200';
+    msgEl.textContent = '❌ เกิดข้อผิดพลาด: ' + err.message;
+  }
+}
+
+async function handleSyncToSupabase() {
+  if (!confirm('ยืนยันที่จะคัดลอกข้อมูลทั้งหมดจากเครื่องขึ้นไปยัง Supabase ตอนนี้หรือไม่?\n(ข้อมูลเดิมใน Supabase จะถูกแทนที่ด้วยข้อมูลล่าสุด)')) {
+    return;
+  }
+
+  const btn = document.getElementById('btn-sync-supabase');
+  const msgEl = document.getElementById('supabase-save-msg');
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '⏳ กำลังซิงค์ข้อมูล...';
+  }
+
+  if (msgEl) {
+    msgEl.className = 'text-xs p-2.5 rounded-xl text-center font-medium bg-amber-50 text-amber-800 border border-amber-200';
+    msgEl.textContent = 'กำลังอัปโหลดข้อมูลขึ้น Supabase...';
+    msgEl.classList.remove('hidden');
+  }
+
+  try {
+    const res = await authFetch('/api/database/sync', { method: 'POST' });
+    const data = await res.json();
+
+    if (res.ok && data.success) {
+      if (msgEl) {
+        msgEl.className = 'text-xs p-2.5 rounded-xl text-center font-medium bg-emerald-50 text-emerald-800 border border-emerald-200';
+        msgEl.textContent = '🚀 ' + (data.message || 'ซิงค์ข้อมูลขึ้น Supabase เรียบร้อยแล้ว');
+      }
+      alert(data.message || 'ซิงค์ข้อมูลขึ้น Supabase เรียบร้อยแล้ว');
+      await loadAssets();
+      await loadMaterials();
+      await loadDatabaseStatus();
+    } else {
+      if (msgEl) {
+        msgEl.className = 'text-xs p-2.5 rounded-xl text-center font-medium bg-rose-50 text-rose-800 border border-rose-200';
+        msgEl.textContent = '❌ ' + (data.error || 'เกิดข้อผิดพลาดในการซิงค์');
+      }
+      alert('เกิดข้อผิดพลาด: ' + (data.error || 'ไม่สามารถซิงค์ข้อมูลได้'));
+    }
+  } catch (err) {
+    if (msgEl) {
+      msgEl.className = 'text-xs p-2.5 rounded-xl text-center font-medium bg-rose-50 text-rose-800 border border-rose-200';
+      msgEl.textContent = '❌ เกิดข้อผิดพลาด: ' + err.message;
+    }
+    alert('เกิดข้อผิดพลาด: ' + err.message);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '🚀 ซิงค์ข้อมูลขึ้น Supabase';
+    }
+  }
+}
+
+// ==================== DOM READY ====================
+document.addEventListener('DOMContentLoaded', async () => {
   initOrgSettings();
   initMaterialMeta();
-  loadAssets();
-  loadMaterials();
 
   // กำหนดวันปัจจุบันเป็นค่าเริ่มต้นในฟอร์ม
   const today = new Date().toISOString().split('T')[0];
@@ -35,6 +390,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const mDate = document.getElementById('m_date');
   if (aDate) aDate.value = today;
   if (mDate) mDate.value = today;
+
+  // ตรวจสอบการเข้าสู่ระบบ
+  await checkAuthAndInitialize();
 });
 
 // ==================== สลับแท็บ (Screen & Print Sync) ====================
@@ -420,7 +778,7 @@ function getFilteredMaterials() {
 // ==============================================================
 async function loadAssets() {
   try {
-    const res = await fetch('/api/assets');
+    const res = await authFetch('/api/assets');
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data)) {
@@ -1081,7 +1439,7 @@ async function saveAsset(e) {
   const url = editId ? `/api/assets/${editId}` : '/api/assets';
   const method = editId ? 'PUT' : 'POST';
 
-  const res = await fetch(url, {
+  const res = await authFetch(url, {
     method,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
@@ -1091,7 +1449,7 @@ async function saveAsset(e) {
     closeModal('assetModal');
     loadAssets();
   } else {
-    const err = await res.json();
+    const err = await res.json().catch(() => ({}));
     alert('เกิดข้อผิดพลาด: ' + (err.error || 'ไม่สามารถบันทึกได้'));
   }
 }
@@ -1119,7 +1477,7 @@ async function deleteAsset(id) {
 
   try {
     // 3. ส่งคำขอลบไปยังเซิร์ฟเวอร์
-    const res = await fetch(`/api/assets/${id}`, { method: 'DELETE' });
+    const res = await authFetch(`/api/assets/${id}`, { method: 'DELETE' });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       alert('เกิดข้อผิดพลาดจากเซิร์ฟเวอร์: ' + (err.error || res.statusText));
@@ -1128,7 +1486,7 @@ async function deleteAsset(id) {
     }
 
     // 4. ซิงค์ข้อมูลล่าสุดกับเซิร์ฟเวอร์
-    const refreshedRes = await fetch('/api/assets');
+    const refreshedRes = await authFetch('/api/assets');
     if (refreshedRes.ok) {
       const refreshedData = await refreshedRes.json();
       if (Array.isArray(refreshedData)) {
@@ -1152,7 +1510,7 @@ async function deleteAsset(id) {
 // ==============================================================
 async function loadMaterials() {
   try {
-    const res = await fetch('/api/materials');
+    const res = await authFetch('/api/materials');
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data)) {
@@ -1451,7 +1809,7 @@ async function saveMaterial(e) {
   const url = editId ? `/api/materials/${editId}` : '/api/materials';
   const method = editId ? 'PUT' : 'POST';
 
-  const res = await fetch(url, {
+  const res = await authFetch(url, {
     method,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
@@ -1461,7 +1819,7 @@ async function saveMaterial(e) {
     closeModal('materialModal');
     loadMaterials();
   } else {
-    const err = await res.json();
+    const err = await res.json().catch(() => ({}));
     alert('เกิดข้อผิดพลาด: ' + (err.error || 'ไม่สามารถบันทึกได้'));
   }
 }
@@ -1486,7 +1844,7 @@ async function deleteMaterial(id) {
   renderMaterialPrint();
 
   try {
-    const res = await fetch(`/api/materials/${id}`, { method: 'DELETE' });
+    const res = await authFetch(`/api/materials/${id}`, { method: 'DELETE' });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       alert('เกิดข้อผิดพลาดจากเซิร์ฟเวอร์: ' + (err.error || res.statusText));
@@ -1494,7 +1852,7 @@ async function deleteMaterial(id) {
       return;
     }
 
-    const refreshedRes = await fetch('/api/materials');
+    const refreshedRes = await authFetch('/api/materials');
     if (refreshedRes.ok) {
       const refreshedData = await refreshedRes.json();
       if (Array.isArray(refreshedData)) {
@@ -1516,7 +1874,7 @@ async function deleteMaterial(id) {
 // ==================== สำรอง & กู้คืนข้อมูล ====================
 async function exportBackup() {
   try {
-    const res = await fetch('/api/backup');
+    const res = await authFetch('/api/backup');
     const data = await res.json();
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -1554,7 +1912,7 @@ async function importBackup() {
         return;
       }
 
-      const res = await fetch('/api/restore', {
+      const res = await authFetch('/api/restore', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)

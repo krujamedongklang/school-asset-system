@@ -1,10 +1,8 @@
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
-const fs = require('fs');
+const db = require('./db');
 
 const app = express();
-const db = new sqlite3.Database('./school_assets.db');
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public'), {
@@ -15,166 +13,6 @@ app.use(express.static(path.join(__dirname, 'public'), {
     res.set('Expires', '0');
   }
 }));
-
-// สร้างตารางในฐานข้อมูล SQLite
-db.serialize(() => {
-  // 1. ตารางครุภัณฑ์ (ทะเบียนคุมทรัพย์สิน)
-  db.run(`CREATE TABLE IF NOT EXISTS assets (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    asset_code TEXT,
-    received_date TEXT,
-    asset_name TEXT,
-    spec TEXT,
-    doc_no TEXT,
-    cost REAL,
-    useful_life INTEGER,
-    location TEXT,
-    status TEXT,
-    vendor TEXT,
-    responsible_person TEXT,
-    department TEXT,
-    remark TEXT,
-    category TEXT,
-    model TEXT,
-    qty INTEGER DEFAULT 1,
-    vendor_address TEXT,
-    vendor_phone TEXT,
-    budget_source TEXT,
-    acquisition_method TEXT
-  )`);
-
-  // Migration: เพิ่มคอลัมน์ใหม่หากยังไม่มี
-  const columnsToAdd = [
-    'ALTER TABLE assets ADD COLUMN category TEXT',
-    'ALTER TABLE assets ADD COLUMN model TEXT',
-    'ALTER TABLE assets ADD COLUMN qty INTEGER DEFAULT 1',
-    'ALTER TABLE assets ADD COLUMN vendor_address TEXT',
-    'ALTER TABLE assets ADD COLUMN vendor_phone TEXT',
-    'ALTER TABLE assets ADD COLUMN budget_source TEXT',
-    'ALTER TABLE assets ADD COLUMN acquisition_method TEXT'
-  ];
-  columnsToAdd.forEach(sql => {
-    db.run(sql, () => {});
-  });
-
-  // 2. ตารางบัญชีคุมวัสดุ
-  db.run(`CREATE TABLE IF NOT EXISTS materials (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    trans_date TEXT,
-    material_code TEXT,
-    material_name TEXT,
-    size_spec TEXT,
-    unit TEXT,
-    party TEXT,
-    doc_no TEXT,
-    budget_type TEXT,
-    opening_stock INTEGER,
-    qty_in INTEGER,
-    qty_out INTEGER,
-    unit_price REAL,
-    remark TEXT
-  )`);
-
-  // ล้างข้อมูลจุดไข่ปลาที่ไม่มีข้อความจริง (เช่น มีแต่จุดล้วนๆ) ให้เป็นค่าว่าง
-  const cleanDotSqls = [
-    `UPDATE assets SET model = '' WHERE model IS NOT NULL AND TRIM(REPLACE(REPLACE(model, '.', ''), ' ', '')) = ''`,
-    `UPDATE assets SET vendor_phone = '' WHERE vendor_phone IS NOT NULL AND TRIM(REPLACE(REPLACE(vendor_phone, '.', ''), ' ', '')) = ''`,
-    `UPDATE assets SET vendor_address = '' WHERE vendor_address IS NOT NULL AND TRIM(REPLACE(REPLACE(vendor_address, '.', ''), ' ', '')) = ''`
-  ];
-  cleanDotSqls.forEach(sql => db.run(sql, () => {}));
-
-  // ตรวจสอบความถูกต้องและกู้คืนข้อมูลอัตโนมัติหากพบว่าข้อมูลเสียหาย
-  selfHealDatabase();
-});
-
-// ฟังก์ชันกู้คืนข้อมูลจาก Object (ใช้ทั้งในการกู้คืนและการซ่อมแซมอัตโนมัติ)
-function restoreDataFromObject(data, callback) {
-  const assets = data.assets || [];
-  const materials = data.materials || [];
-
-  db.serialize(() => {
-    db.run('DELETE FROM assets');
-    db.run('DELETE FROM materials');
-
-    const assetStmt = db.prepare(`INSERT INTO assets (
-      id, asset_code, received_date, asset_name, spec, doc_no, cost, useful_life,
-      location, status, vendor, responsible_person, department, remark,
-      category, model, qty, vendor_address, vendor_phone, budget_source, acquisition_method
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-
-    assets.forEach(d => {
-      assetStmt.run([
-        d.id || null, d.asset_code, d.received_date, d.asset_name, d.spec, d.doc_no, Number(d.cost) || 0, Number(d.useful_life) || 5,
-        d.location, d.status || 'ใช้งานได้ดี', d.vendor, d.responsible_person, d.department, d.remark,
-        d.category, d.model, Number(d.qty) || 1, d.vendor_address, d.vendor_phone, d.budget_source, d.acquisition_method
-      ]);
-    });
-    assetStmt.finalize();
-
-    const matStmt = db.prepare(`INSERT INTO materials (id, trans_date, material_code, material_name, size_spec, unit, party, doc_no, budget_type, opening_stock, qty_in, qty_out, unit_price, remark)
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-    materials.forEach(d => {
-      matStmt.run([
-        d.id || null, d.trans_date, d.material_code, d.material_name, d.size_spec, d.unit, d.party, d.doc_no, d.budget_type,
-        Number(d.opening_stock) || 0, Number(d.qty_in) || 0, Number(d.qty_out) || 0, Number(d.unit_price) || 0, d.remark
-      ]);
-    });
-    matStmt.finalize(err => {
-      if (callback) callback(err);
-    });
-  });
-}
-
-// ฟังก์ชันสำรองข้อมูลอัตโนมัติลง data_backup.json และ seed_data.json
-function autoBackupDatabase() {
-  db.all('SELECT * FROM assets ORDER BY id ASC', [], (err, assets) => {
-    if (err) return;
-    db.all('SELECT * FROM materials ORDER BY id ASC', [], (err2, materials) => {
-      if (err2) return;
-      try {
-        const backupData = {
-          export_date: new Date().toISOString(),
-          assets: assets || [],
-          materials: materials || []
-        };
-        const backupPath = path.join(__dirname, 'data_backup.json');
-        const seedPath = path.join(__dirname, 'seed_data.json');
-        fs.writeFileSync(backupPath, JSON.stringify(backupData, null, 2), 'utf8');
-        fs.writeFileSync(seedPath, JSON.stringify({ assets: assets || [], materials: materials || [] }, null, 2), 'utf8');
-      } catch (e) {
-        console.error('Auto backup failed:', e);
-      }
-    });
-  });
-}
-
-// ฟังก์ชันตรวจสอบและซ่อมแซมข้อมูลอัตโนมัติเมื่อเริ่มต้นเซิร์ฟเวอร์
-function selfHealDatabase() {
-  db.all('SELECT * FROM assets', [], (err, rows) => {
-    if (err) return;
-    // ตรวจสอบว่าข้อมูลมีเครื่องหมาย ? (UTF-8 corrupt) หรือไม่ (ไม่ซ่อมแซมกรณีตารางว่าง เพราะผู้ใช้อาจลบรายการทั้งหมด)
-    const isCorrupted = rows && rows.length > 0 && rows.some(r => 
-      (r.asset_name && r.asset_name.includes('?')) || 
-      (r.spec && r.spec.includes('?')) ||
-      (r.vendor && r.vendor.includes('?'))
-    );
-    if (isCorrupted) {
-      console.log('พบข้อมูลไม่สมบูรณ์หรือมีเครื่องหมาย ? กำลังซ่อมแซมและคืนค่าจาก seed_data.json...');
-      const seedPath = path.join(__dirname, 'seed_data.json');
-      if (fs.existsSync(seedPath)) {
-        try {
-          const seed = JSON.parse(fs.readFileSync(seedPath, 'utf8'));
-          restoreDataFromObject(seed, (restoreErr) => {
-            if (restoreErr) console.error('Self-heal failed:', restoreErr);
-            else console.log('คืนค่าข้อมูลภาษาไทยสมบูรณ์จาก seed_data.json เรียบร้อยแล้ว');
-          });
-        } catch (e) {
-          console.error('Self-heal parse error:', e);
-        }
-      }
-    }
-  });
-}
 
 // Helper: คำนวณค่าเสื่อมราคาและมูลค่าทางบัญชี
 function calculateDepreciation(item) {
@@ -214,76 +52,152 @@ function calculateDepreciation(item) {
   };
 }
 
-// === API ENDPOINTS ===
+// ==================== AUTHENTICATION API & MIDDLEWARE ====================
+
+// Middleware: ตรวจสอบการเข้าสู่ระบบ
+async function requireAuth(req, res, next) {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  const isValid = await db.verifySession(token);
+  if (!isValid) {
+    return res.status(401).json({ error: 'กรุณาเข้าสู่ระบบก่อนดำเนินการ' });
+  }
+  next();
+}
+
+// ล็อกอินเข้าสู่ระบบ
+app.post('/api/auth/login', async (req, res) => {
+  const { password } = req.body;
+  if (!password) {
+    return res.status(400).json({ error: 'กรุณากรอกรหัสผ่าน' });
+  }
+
+  const isValid = await db.checkPassword(password);
+  if (!isValid) {
+    return res.status(401).json({ error: 'รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง' });
+  }
+
+  const token = await db.createSession();
+  res.json({ success: true, message: 'เข้าสู่ระบบสำเร็จ', token });
+});
+
+// ตรวจสอบสถานะการล็อกอิน
+app.get('/api/auth/verify', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  const isValid = await db.verifySession(token);
+  res.json({ authenticated: isValid });
+});
+
+// เปลี่ยนรหัสผ่าน
+app.post('/api/auth/change-password', requireAuth, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: 'กรุณากรอกข้อมูลให้ครบถ้วน' });
+  }
+  if (newPassword.length < 4) {
+    return res.status(400).json({ error: 'รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 4 ตัวอักษร' });
+  }
+
+  const isValid = await db.checkPassword(currentPassword);
+  if (!isValid) {
+    return res.status(401).json({ error: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' });
+  }
+
+  await db.setPassword(newPassword);
+  res.json({ success: true, message: 'เปลี่ยนรหัสผ่านสำเร็จเรียบร้อยแล้ว' });
+});
+
+// ออกจากระบบ
+app.post('/api/auth/logout', (req, res) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  db.removeSession(token);
+  res.json({ success: true, message: 'ออกจากระบบเรียบร้อยแล้ว' });
+});
+
+// ==================== DATABASE / SUPABASE STATUS API ====================
+
+// ตรวจสอบสถานะการเชื่อมต่อฐานข้อมูล
+app.get('/api/database/status', requireAuth, async (req, res) => {
+  try {
+    const status = await db.getStatus();
+    res.json(status);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// บันทึกการตั้งค่า Supabase
+app.post('/api/database/config', requireAuth, async (req, res) => {
+  try {
+    const { url, key } = req.body;
+    const result = await db.setSupabaseConfig(url, key);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// โอนย้ายข้อมูลขึ้น Supabase
+app.post('/api/database/sync', requireAuth, async (req, res) => {
+  try {
+    const result = await db.syncToSupabase();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: 'เกิดข้อผิดพลาดในการซิงค์: ' + err.message });
+  }
+});
+
+// ==================== ASSETS API ====================
 
 // ดึงรายการครุภัณฑ์ทั้งหมด
-app.get('/api/assets', (req, res) => {
-  db.all('SELECT * FROM assets ORDER BY id ASC', [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
+app.get('/api/assets', requireAuth, async (req, res) => {
+  try {
+    const rows = await db.getAssets();
     const calculated = rows.map(calculateDepreciation);
     res.json(calculated);
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // บันทึกครุภัณฑ์ใหม่
-app.post('/api/assets', (req, res) => {
-  const d = req.body;
-  const sql = `INSERT INTO assets (
-    asset_code, received_date, asset_name, spec, doc_no, cost, useful_life,
-    location, status, vendor, responsible_person, department, remark,
-    category, model, qty, vendor_address, vendor_phone, budget_source, acquisition_method
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-  
-  const params = [
-    d.asset_code, d.received_date, d.asset_name, d.spec, d.doc_no, Number(d.cost) || 0, Number(d.useful_life) || 5,
-    d.location, d.status || 'ใช้งานได้ดี', d.vendor, d.responsible_person, d.department, d.remark,
-    d.category, d.model, Number(d.qty) || 1, d.vendor_address, d.vendor_phone, d.budget_source, d.acquisition_method
-  ];
-  
-  db.run(sql, params, function(err) {
-    if (err) return res.status(400).json({ error: err.message });
-    autoBackupDatabase();
-    res.json({ message: 'บันทึกข้อมูลครุภัณฑ์เรียบร้อยแล้ว', id: this.lastID });
-  });
+app.post('/api/assets', requireAuth, async (req, res) => {
+  try {
+    const id = await db.createAsset(req.body);
+    res.json({ message: 'บันทึกข้อมูลครุภัณฑ์เรียบร้อยแล้ว', id });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 // แก้ไขครุภัณฑ์
-app.put('/api/assets/:id', (req, res) => {
-  const d = req.body;
-  const sql = `UPDATE assets SET 
-    asset_code = ?, received_date = ?, asset_name = ?, spec = ?, doc_no = ?, cost = ?, useful_life = ?,
-    location = ?, status = ?, vendor = ?, responsible_person = ?, department = ?, remark = ?,
-    category = ?, model = ?, qty = ?, vendor_address = ?, vendor_phone = ?, budget_source = ?, acquisition_method = ?
-    WHERE id = ?`;
-  
-  const params = [
-    d.asset_code, d.received_date, d.asset_name, d.spec, d.doc_no, Number(d.cost) || 0, Number(d.useful_life) || 5,
-    d.location, d.status || 'ใช้งานได้ดี', d.vendor, d.responsible_person, d.department, d.remark,
-    d.category, d.model, Number(d.qty) || 1, d.vendor_address, d.vendor_phone, d.budget_source, d.acquisition_method,
-    req.params.id
-  ];
-  
-  db.run(sql, params, function(err) {
-    if (err) return res.status(400).json({ error: err.message });
-    autoBackupDatabase();
-    res.json({ message: 'แก้ไขข้อมูลครุภัณฑ์เรียบร้อยแล้ว', changes: this.changes });
-  });
+app.put('/api/assets/:id', requireAuth, async (req, res) => {
+  try {
+    await db.updateAsset(req.params.id, req.body);
+    res.json({ message: 'แก้ไขข้อมูลครุภัณฑ์เรียบร้อยแล้ว' });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 // ลบครุภัณฑ์
-app.delete('/api/assets/:id', (req, res) => {
-  db.run('DELETE FROM assets WHERE id = ?', [req.params.id], function(err) {
-    if (err) return res.status(500).json({ error: err.message });
-    autoBackupDatabase();
-    res.json({ message: 'ลบรายการสำเร็จ', deleted: this.changes });
-  });
+app.delete('/api/assets/:id', requireAuth, async (req, res) => {
+  try {
+    await db.deleteAsset(req.params.id);
+    res.json({ message: 'ลบรายการสำเร็จ' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
+// ==================== MATERIALS API ====================
+
 // ดึงรายการวัสดุทั้งหมด
-app.get('/api/materials', (req, res) => {
-  db.all('SELECT * FROM materials ORDER BY id ASC', [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    
+app.get('/api/materials', requireAuth, async (req, res) => {
+  try {
+    const rows = await db.getMaterials();
     let runningBalance = 0;
     const processed = rows.map((item, index) => {
       if (index === 0) {
@@ -298,77 +212,66 @@ app.get('/api/materials', (req, res) => {
         total_amount: totalAmount
       };
     });
-    
     res.json(processed);
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // บันทึกการรับ-จ่ายวัสดุ
-app.post('/api/materials', (req, res) => {
-  const d = req.body;
-  const sql = `INSERT INTO materials (trans_date, material_code, material_name, size_spec, unit, party, doc_no, budget_type, opening_stock, qty_in, qty_out, unit_price, remark)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-  const params = [d.trans_date, d.material_code, d.material_name, d.size_spec, d.unit, d.party, d.doc_no, d.budget_type, d.opening_stock || 0, d.qty_in || 0, d.qty_out || 0, d.unit_price || 0, d.remark];
-  
-  db.run(sql, params, function(err) {
-    if (err) return res.status(400).json({ error: err.message });
-    autoBackupDatabase();
-    res.json({ message: 'บันทึกรายการวัสดุเรียบร้อยแล้ว', id: this.lastID });
-  });
+app.post('/api/materials', requireAuth, async (req, res) => {
+  try {
+    const id = await db.createMaterial(req.body);
+    res.json({ message: 'บันทึกรายการวัสดุเรียบร้อยแล้ว', id });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 // แก้ไขรายการวัสดุ
-app.put('/api/materials/:id', (req, res) => {
-  const d = req.body;
-  const sql = `UPDATE materials SET trans_date = ?, material_code = ?, material_name = ?, size_spec = ?, unit = ?, party = ?, doc_no = ?, budget_type = ?, opening_stock = ?, qty_in = ?, qty_out = ?, unit_price = ?, remark = ? WHERE id = ?`;
-  const params = [
-    d.trans_date, d.material_code, d.material_name, d.size_spec, d.unit, d.party, d.doc_no, d.budget_type,
-    Number(d.opening_stock) || 0, Number(d.qty_in) || 0, Number(d.qty_out) || 0, Number(d.unit_price) || 0,
-    d.remark, req.params.id
-  ];
-  db.run(sql, params, function(err) {
-    if (err) return res.status(400).json({ error: err.message });
-    autoBackupDatabase();
-    res.json({ message: 'แก้ไขข้อมูลวัสดุเรียบร้อยแล้ว', changes: this.changes });
-  });
+app.put('/api/materials/:id', requireAuth, async (req, res) => {
+  try {
+    await db.updateMaterial(req.params.id, req.body);
+    res.json({ message: 'แก้ไขข้อมูลวัสดุเรียบร้อยแล้ว' });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 // ลบรายการวัสดุ
-app.delete('/api/materials/:id', (req, res) => {
-  db.run('DELETE FROM materials WHERE id = ?', [req.params.id], function(err) {
-    if (err) return res.status(500).json({ error: err.message });
-    autoBackupDatabase();
-    res.json({ message: 'ลบรายการสำเร็จ', deleted: this.changes });
-  });
+app.delete('/api/materials/:id', requireAuth, async (req, res) => {
+  try {
+    await db.deleteMaterial(req.params.id);
+    res.json({ message: 'ลบรายการสำเร็จ' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
+// ==================== BACKUP & RESTORE API ====================
+
 // ส่งออกข้อมูลสำรอง (Backup All Data)
-app.get('/api/backup', (req, res) => {
-  db.all('SELECT * FROM assets ORDER BY id ASC', [], (err, assets) => {
-    if (err) return res.status(500).json({ error: err.message });
-    db.all('SELECT * FROM materials ORDER BY id ASC', [], (err2, materials) => {
-      if (err2) return res.status(500).json({ error: err2.message });
-      res.json({
-        export_date: new Date().toISOString(),
-        assets,
-        materials
-      });
-    });
-  });
+app.get('/api/backup', requireAuth, async (req, res) => {
+  try {
+    const data = await db.backupAll();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // นำเข้าข้อมูลสำรอง (Restore Data)
-app.post('/api/restore', (req, res) => {
-  const { assets, materials } = req.body;
-  if (!Array.isArray(assets) || !Array.isArray(materials)) {
-    return res.status(400).json({ error: 'รูปแบบข้อมูลไม่ถูกต้อง' });
-  }
-
-  restoreDataFromObject({ assets, materials }, (err) => {
-    if (err) return res.status(500).json({ error: 'เกิดข้อผิดพลาดในการกู้คืนข้อมูล' });
-    autoBackupDatabase();
+app.post('/api/restore', requireAuth, async (req, res) => {
+  try {
+    const { assets, materials } = req.body;
+    if (!Array.isArray(assets) || !Array.isArray(materials)) {
+      return res.status(400).json({ error: 'รูปแบบข้อมูลไม่ถูกต้อง' });
+    }
+    await db.restoreAll({ assets, materials });
     res.json({ message: 'กู้คืนข้อมูลสำเร็จเรียบร้อยแล้ว' });
-  });
+  } catch (err) {
+    res.status(500).json({ error: 'เกิดข้อผิดพลาดในการกู้คืน: ' + err.message });
+  }
 });
 
 const PORT = process.env.PORT || 3000;

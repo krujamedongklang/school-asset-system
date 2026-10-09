@@ -2,3 +2,4 @@ node_modules/
 npm-debug.log*
 .DS_Store
 data_backup.json
+supabase_config.json
