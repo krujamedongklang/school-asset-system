@@ -2,6 +2,16 @@
 const DEFAULT_ORG = 'สำนักงานส่งเสริมการศึกษานอกระบบและการศึกษาตามอัธยาศัย';
 const DEFAULT_DEPT = 'สำนักงานส่งเสริมการศึกษานอกระบบและการศึกษาตามอัธยาศัยจังหวัดนครราชสีมา';
 
+// ฟังก์ชันล้างข้อความ: ถ้าเป็นค่าว่าง หรือผู้ใช้พิมพ์จุด/ขีด/จุดไข่ปลาซ้ำๆ มา ให้แปลงเป็นค่าว่าง '' เพื่อให้เส้นประด้านล่างว่างเปล่า
+function cleanFieldText(val) {
+  if (val === undefined || val === null) return '';
+  const str = String(val).trim();
+  if (!str) return '';
+  // ถ้ามีแต่จุด . หรือขีด _ หรือขีด - (ซ้ำๆ 2 ตัวขึ้นไป) หรือจุดไข่ปลา … ให้ถือว่าว่างเปล่า
+  if (/^[\.\s_…]+$/.test(str) || /^-{2,}$/.test(str)) return '';
+  return str;
+}
+
 let currentTab = 'asset';
 let assetList = [];
 let materialList = [];
@@ -62,13 +72,13 @@ function switchTab(tab) {
 
 // ==================== ส่วนราชการ & หน่วยงาน (สำหรับพิมพ์) ====================
 function initOrgSettings() {
-  const org = localStorage.getItem('gov_org') || DEFAULT_ORG;
-  const dept = localStorage.getItem('gov_dept') || DEFAULT_DEPT;
+  const org = cleanFieldText(localStorage.getItem('gov_org')) || DEFAULT_ORG;
+  const dept = cleanFieldText(localStorage.getItem('gov_dept')) || DEFAULT_DEPT;
 
   const orgMat = document.getElementById('org-name-material');
   const deptMat = document.getElementById('dept-name-material');
-  if (orgMat) orgMat.innerText = org;
-  if (deptMat) deptMat.innerText = dept;
+  if (orgMat) orgMat.innerHTML = org || '&nbsp;';
+  if (deptMat) deptMat.innerHTML = dept || '&nbsp;';
 
   const inpOrg = document.getElementById('inp-org-name');
   const inpDept = document.getElementById('inp-dept-name');
@@ -78,8 +88,8 @@ function initOrgSettings() {
 
 function saveOrgSettings(e) {
   e.preventDefault();
-  const org = document.getElementById('inp-org-name').value.trim() || DEFAULT_ORG;
-  const dept = document.getElementById('inp-dept-name').value.trim() || DEFAULT_DEPT;
+  const org = cleanFieldText(document.getElementById('inp-org-name').value) || DEFAULT_ORG;
+  const dept = cleanFieldText(document.getElementById('inp-dept-name').value) || DEFAULT_DEPT;
 
   localStorage.setItem('gov_org', org);
   localStorage.setItem('gov_dept', dept);
@@ -93,33 +103,40 @@ function saveOrgSettings(e) {
 function initMaterialMeta() {
   const meta = JSON.parse(localStorage.getItem('material_card_meta') || '{}');
   
-  document.getElementById('disp-category').innerText = meta.category || '............................................................................................';
-  document.getElementById('disp-code').innerText = meta.code || '........................................................................';
-  document.getElementById('disp-name').innerText = meta.name || '............................................................................................';
-  document.getElementById('disp-minmax').innerText = meta.minmax || '........................................................';
-  document.getElementById('disp-spec').innerText = meta.spec || '............................................................................................';
-  document.getElementById('disp-location').innerText = meta.location || '.......................................................................';
-  document.getElementById('disp-unit').innerText = meta.unit || '.............................................';
+  const setField = (id, val) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const clean = cleanFieldText(val);
+    el.innerHTML = clean || '&nbsp;';
+  };
 
-  document.getElementById('inp-meta-category').value = meta.category || '';
-  document.getElementById('inp-meta-code').value = meta.code || '';
-  document.getElementById('inp-meta-name').value = meta.name || '';
-  document.getElementById('inp-meta-minmax').value = meta.minmax || '';
-  document.getElementById('inp-meta-spec').value = meta.spec || '';
-  document.getElementById('inp-meta-location').value = meta.location || '';
-  document.getElementById('inp-meta-unit').value = meta.unit || '';
+  setField('disp-category', meta.category);
+  setField('disp-code', meta.code);
+  setField('disp-name', meta.name);
+  setField('disp-minmax', meta.minmax);
+  setField('disp-spec', meta.spec);
+  setField('disp-location', meta.location);
+  setField('disp-unit', meta.unit);
+
+  document.getElementById('inp-meta-category').value = cleanFieldText(meta.category);
+  document.getElementById('inp-meta-code').value = cleanFieldText(meta.code);
+  document.getElementById('inp-meta-name').value = cleanFieldText(meta.name);
+  document.getElementById('inp-meta-minmax').value = cleanFieldText(meta.minmax);
+  document.getElementById('inp-meta-spec').value = cleanFieldText(meta.spec);
+  document.getElementById('inp-meta-location').value = cleanFieldText(meta.location);
+  document.getElementById('inp-meta-unit').value = cleanFieldText(meta.unit);
 }
 
 function saveMaterialMeta(e) {
   e.preventDefault();
   const meta = {
-    category: document.getElementById('inp-meta-category').value.trim(),
-    code: document.getElementById('inp-meta-code').value.trim(),
-    name: document.getElementById('inp-meta-name').value.trim(),
-    minmax: document.getElementById('inp-meta-minmax').value.trim(),
-    spec: document.getElementById('inp-meta-spec').value.trim(),
-    location: document.getElementById('inp-meta-location').value.trim(),
-    unit: document.getElementById('inp-meta-unit').value.trim()
+    category: cleanFieldText(document.getElementById('inp-meta-category').value),
+    code: cleanFieldText(document.getElementById('inp-meta-code').value),
+    name: cleanFieldText(document.getElementById('inp-meta-name').value),
+    minmax: cleanFieldText(document.getElementById('inp-meta-minmax').value),
+    spec: cleanFieldText(document.getElementById('inp-meta-spec').value),
+    location: cleanFieldText(document.getElementById('inp-meta-location').value),
+    unit: cleanFieldText(document.getElementById('inp-meta-unit').value)
   };
   localStorage.setItem('material_card_meta', JSON.stringify(meta));
   initMaterialMeta();
@@ -618,10 +635,19 @@ function renderAssetPrint() {
 
 // สร้าง HTML สำหรับ 1 บัตรทะเบียนคุมทรัพย์สิน (แบบฟอร์มตรงตามภาพถ่าย 100%)
 function generateAssetCardHtml(item, isPageBreak = false) {
-  const org = localStorage.getItem('gov_org') || DEFAULT_ORG;
-  const dept = localStorage.getItem('gov_dept') || DEFAULT_DEPT;
+  const org = cleanFieldText(localStorage.getItem('gov_org')) || DEFAULT_ORG;
+  const dept = cleanFieldText(localStorage.getItem('gov_dept')) || DEFAULT_DEPT;
   const b = item ? (item.budget_source || 'เงินงบประมาณ') : 'เงินงบประมาณ';
   const m = item ? (item.acquisition_method || 'เฉพาะเจาะจง') : 'เฉพาะเจาะจง';
+
+  const category = cleanFieldText(item?.category) || 'ครุภัณฑ์คอมพิวเตอร์';
+  const assetCode = cleanFieldText(item?.asset_code);
+  const spec = cleanFieldText(item?.spec || item?.asset_name);
+  const model = cleanFieldText(item?.model);
+  const location = cleanFieldText(item?.location);
+  const vendor = cleanFieldText(item?.vendor);
+  const vendorAddress = cleanFieldText(item?.vendor_address);
+  const vendorPhone = cleanFieldText(item?.vendor_phone);
 
   return `
     <div class="print-asset-card ${isPageBreak ? 'page-break' : ''}">
@@ -637,11 +663,11 @@ function generateAssetCardHtml(item, isPageBreak = false) {
         <div class="text-left w-auto space-y-0.5">
           <div class="flex">
             <span class="whitespace-nowrap font-medium">ส่วนราชการ&nbsp;&nbsp;</span>
-            <span class="font-normal flex-grow border-b border-dotted border-black min-w-[280px]">${org}</span>
+            <span class="font-normal flex-grow border-b border-dotted border-black min-w-[280px]">${org || '&nbsp;'}</span>
           </div>
           <div class="flex">
             <span class="whitespace-nowrap font-medium">หน่วยงาน&nbsp;&nbsp;&nbsp;&nbsp;</span>
-            <span class="font-normal flex-grow border-b border-dotted border-black min-w-[280px]">${dept}</span>
+            <span class="font-normal flex-grow border-b border-dotted border-black min-w-[280px]">${dept || '&nbsp;'}</span>
           </div>
         </div>
       </div>
@@ -652,19 +678,19 @@ function generateAssetCardHtml(item, isPageBreak = false) {
         <div class="grid grid-cols-12 gap-x-3 items-end">
           <div class="col-span-3 flex items-end">
             <span class="whitespace-nowrap font-medium">ประเภท&nbsp;</span>
-            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${item?.category || 'ครุภัณฑ์คอมพิวเตอร์'}</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${category || '&nbsp;'}</span>
           </div>
           <div class="col-span-3 flex items-end">
             <span class="whitespace-nowrap font-medium">รหัส&nbsp;</span>
-            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${item?.asset_code || ''}</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${assetCode || '&nbsp;'}</span>
           </div>
           <div class="col-span-3 flex items-end">
             <span class="whitespace-nowrap font-medium">ลักษณะ/สมบัติ&nbsp;</span>
-            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${item?.spec || item?.asset_name || ''}</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${spec || '&nbsp;'}</span>
           </div>
           <div class="col-span-3 flex items-end">
             <span class="whitespace-nowrap font-medium">รุ่นแบบ&nbsp;</span>
-            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${item?.model || ''}</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${model || '&nbsp;'}</span>
           </div>
         </div>
 
@@ -672,11 +698,11 @@ function generateAssetCardHtml(item, isPageBreak = false) {
         <div class="grid grid-cols-12 gap-x-4 items-end">
           <div class="col-span-6 flex items-end">
             <span class="whitespace-nowrap font-medium">สถานที่ตั้ง/หน่วยที่รับผิดชอบ&nbsp;</span>
-            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${item?.location || ''}</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${location || '&nbsp;'}</span>
           </div>
           <div class="col-span-6 flex items-end">
             <span class="whitespace-nowrap font-medium">ชื่อผู้ขาย/ผู้รับจ้าง/ผู้บริจาค&nbsp;</span>
-            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${item?.vendor || ''}</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${vendor || '&nbsp;'}</span>
           </div>
         </div>
 
@@ -684,11 +710,11 @@ function generateAssetCardHtml(item, isPageBreak = false) {
         <div class="grid grid-cols-12 gap-x-4 items-end">
           <div class="col-span-8 flex items-end">
             <span class="whitespace-nowrap font-medium">ที่อยู่&nbsp;</span>
-            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${item?.vendor_address || '...................................................................................................'}</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${vendorAddress || '&nbsp;'}</span>
           </div>
           <div class="col-span-4 flex items-end">
             <span class="whitespace-nowrap font-medium">โทรศัพท์&nbsp;</span>
-            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${item?.vendor_phone || '...................................................'}</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${vendorPhone || '&nbsp;'}</span>
           </div>
         </div>
 
@@ -762,11 +788,20 @@ function generateAssetCardHtml(item, isPageBreak = false) {
 
 // สร้าง HTML สำหรับรวมรายการในตารางเดียว
 function generateCombinedAssetCardHtml(items) {
-  const org = localStorage.getItem('gov_org') || DEFAULT_ORG;
-  const dept = localStorage.getItem('gov_dept') || DEFAULT_DEPT;
+  const org = cleanFieldText(localStorage.getItem('gov_org')) || DEFAULT_ORG;
+  const dept = cleanFieldText(localStorage.getItem('gov_dept')) || DEFAULT_DEPT;
   const firstItem = items[0] || null;
   const b = firstItem ? (firstItem.budget_source || 'เงินงบประมาณ') : 'เงินงบประมาณ';
   const m = firstItem ? (firstItem.acquisition_method || 'เฉพาะเจาะจง') : 'เฉพาะเจาะจง';
+
+  const category = items.length === 1 ? (cleanFieldText(firstItem?.category) || '-') : 'รวมหลายประเภท';
+  const assetCode = items.length === 1 ? (cleanFieldText(firstItem?.asset_code) || '') : 'ตามรายการในตาราง';
+  const spec = items.length === 1 ? (cleanFieldText(firstItem?.spec || firstItem?.asset_name) || '') : '-';
+  const model = items.length === 1 ? (cleanFieldText(firstItem?.model) || '') : '-';
+  const location = items.length === 1 ? (cleanFieldText(firstItem?.location) || '') : 'ตามรายการในตาราง';
+  const vendor = items.length === 1 ? (cleanFieldText(firstItem?.vendor) || '') : '-';
+  const vendorAddress = items.length === 1 ? cleanFieldText(firstItem?.vendor_address) : '';
+  const vendorPhone = items.length === 1 ? cleanFieldText(firstItem?.vendor_phone) : '';
 
   return `
     <div class="print-asset-card">
@@ -780,11 +815,11 @@ function generateCombinedAssetCardHtml(items) {
         <div class="text-left w-auto space-y-0.5">
           <div class="flex">
             <span class="whitespace-nowrap font-medium">ส่วนราชการ&nbsp;&nbsp;</span>
-            <span class="font-normal flex-grow border-b border-dotted border-black min-w-[280px]">${org}</span>
+            <span class="font-normal flex-grow border-b border-dotted border-black min-w-[280px]">${org || '&nbsp;'}</span>
           </div>
           <div class="flex">
             <span class="whitespace-nowrap font-medium">หน่วยงาน&nbsp;&nbsp;&nbsp;&nbsp;</span>
-            <span class="font-normal flex-grow border-b border-dotted border-black min-w-[280px]">${dept}</span>
+            <span class="font-normal flex-grow border-b border-dotted border-black min-w-[280px]">${dept || '&nbsp;'}</span>
           </div>
         </div>
       </div>
@@ -793,41 +828,41 @@ function generateCombinedAssetCardHtml(items) {
         <div class="grid grid-cols-12 gap-x-3 items-end">
           <div class="col-span-3 flex items-end">
             <span class="whitespace-nowrap font-medium">ประเภท&nbsp;</span>
-            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${items.length === 1 ? (firstItem?.category || '-') : 'รวมหลายประเภท'}</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${category || '&nbsp;'}</span>
           </div>
           <div class="col-span-3 flex items-end">
             <span class="whitespace-nowrap font-medium">รหัส&nbsp;</span>
-            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${items.length === 1 ? firstItem.asset_code : 'ตามรายการในตาราง'}</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${assetCode || '&nbsp;'}</span>
           </div>
           <div class="col-span-3 flex items-end">
             <span class="whitespace-nowrap font-medium">ลักษณะ/สมบัติ&nbsp;</span>
-            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${items.length === 1 ? (firstItem.spec || firstItem.asset_name) : '-'}</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${spec || '&nbsp;'}</span>
           </div>
           <div class="col-span-3 flex items-end">
             <span class="whitespace-nowrap font-medium">รุ่นแบบ&nbsp;</span>
-            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${items.length === 1 ? firstItem.model : '-'}</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${model || '&nbsp;'}</span>
           </div>
         </div>
 
         <div class="grid grid-cols-12 gap-x-4 items-end">
           <div class="col-span-6 flex items-end">
             <span class="whitespace-nowrap font-medium">สถานที่ตั้ง/หน่วยที่รับผิดชอบ&nbsp;</span>
-            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${items.length === 1 ? (firstItem?.location || '-') : 'ตามรายการในตาราง'}</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${location || '&nbsp;'}</span>
           </div>
           <div class="col-span-6 flex items-end">
             <span class="whitespace-nowrap font-medium">ชื่อผู้ขาย/ผู้รับจ้าง/ผู้บริจาค&nbsp;</span>
-            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${items.length === 1 ? (firstItem?.vendor || '-') : '-'}</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${vendor || '&nbsp;'}</span>
           </div>
         </div>
 
         <div class="grid grid-cols-12 gap-x-4 items-end">
           <div class="col-span-8 flex items-end">
             <span class="whitespace-nowrap font-medium">ที่อยู่&nbsp;</span>
-            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${items.length === 1 ? (firstItem?.vendor_address || '...................................') : '...................................................................................................'}</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${vendorAddress || '&nbsp;'}</span>
           </div>
           <div class="col-span-4 flex items-end">
             <span class="whitespace-nowrap font-medium">โทรศัพท์&nbsp;</span>
-            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${items.length === 1 ? (firstItem?.vendor_phone || '...................................') : '...................................................'}</span>
+            <span class="border-b border-dotted border-black flex-grow min-h-[16px] px-1 font-normal">${vendorPhone || '&nbsp;'}</span>
           </div>
         </div>
 
@@ -985,25 +1020,25 @@ async function saveAsset(e) {
   e.preventDefault();
   const editId = document.getElementById('edit_asset_id').value;
   const body = {
-    asset_name: document.getElementById('a_name').value.trim(),
-    asset_code: document.getElementById('a_code').value.trim(),
-    category: document.getElementById('a_category').value.trim() || 'ครุภัณฑ์คอมพิวเตอร์',
-    spec: document.getElementById('a_spec').value.trim(),
-    model: document.getElementById('a_model').value.trim(),
+    asset_name: cleanFieldText(document.getElementById('a_name').value),
+    asset_code: cleanFieldText(document.getElementById('a_code').value),
+    category: cleanFieldText(document.getElementById('a_category').value) || 'ครุภัณฑ์คอมพิวเตอร์',
+    spec: cleanFieldText(document.getElementById('a_spec').value),
+    model: cleanFieldText(document.getElementById('a_model').value),
     received_date: document.getElementById('a_date').value,
-    doc_no: document.getElementById('a_doc').value.trim(),
+    doc_no: cleanFieldText(document.getElementById('a_doc').value),
     qty: parseInt(document.getElementById('a_qty').value) || 1,
     cost: parseFloat(document.getElementById('a_cost').value) || 0,
     useful_life: parseInt(document.getElementById('a_life').value) || 5,
-    location: document.getElementById('a_location').value.trim(),
+    location: cleanFieldText(document.getElementById('a_location').value),
     status: document.getElementById('a_status').value,
-    vendor: document.getElementById('a_vendor').value.trim(),
-    vendor_address: document.getElementById('a_vendor_address').value.trim(),
-    vendor_phone: document.getElementById('a_vendor_phone').value.trim(),
+    vendor: cleanFieldText(document.getElementById('a_vendor').value),
+    vendor_address: cleanFieldText(document.getElementById('a_vendor_address').value),
+    vendor_phone: cleanFieldText(document.getElementById('a_vendor_phone').value),
     budget_source: document.getElementById('a_budget_source').value,
     acquisition_method: document.getElementById('a_acquisition_method').value,
-    responsible_person: document.getElementById('a_person').value.trim(),
-    remark: document.getElementById('a_remark').value.trim()
+    responsible_person: cleanFieldText(document.getElementById('a_person').value),
+    remark: cleanFieldText(document.getElementById('a_remark').value)
   };
 
   const url = editId ? `/api/assets/${editId}` : '/api/assets';
@@ -1310,14 +1345,14 @@ async function saveMaterial(e) {
     trans_date: document.getElementById('m_date').value,
     material_code: '',
     material_name: '',
-    party: document.getElementById('m_party').value.trim(),
-    doc_no: document.getElementById('m_doc').value.trim(),
-    budget_type: document.getElementById('m_budget').value.trim(),
+    party: cleanFieldText(document.getElementById('m_party').value),
+    doc_no: cleanFieldText(document.getElementById('m_doc').value),
+    budget_type: cleanFieldText(document.getElementById('m_budget').value),
     opening_stock: parseInt(document.getElementById('m_open').value) || 0,
     qty_in: parseInt(document.getElementById('m_in').value) || 0,
     qty_out: parseInt(document.getElementById('m_out').value) || 0,
     unit_price: parseFloat(document.getElementById('m_price').value) || 0,
-    remark: document.getElementById('m_remark').value.trim()
+    remark: cleanFieldText(document.getElementById('m_remark').value)
   };
 
   const url = editId ? `/api/materials/${editId}` : '/api/materials';

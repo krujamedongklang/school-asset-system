@@ -73,6 +73,14 @@ db.serialize(() => {
     unit_price REAL,
     remark TEXT
   )`);
+
+  // ล้างข้อมูลจุดไข่ปลาที่ไม่มีข้อความจริง (เช่น มีแต่จุดล้วนๆ) ให้เป็นค่าว่าง
+  const cleanDotSqls = [
+    `UPDATE assets SET model = '' WHERE model IS NOT NULL AND TRIM(REPLACE(REPLACE(model, '.', ''), ' ', '')) = ''`,
+    `UPDATE assets SET vendor_phone = '' WHERE vendor_phone IS NOT NULL AND TRIM(REPLACE(REPLACE(vendor_phone, '.', ''), ' ', '')) = ''`,
+    `UPDATE assets SET vendor_address = '' WHERE vendor_address IS NOT NULL AND TRIM(REPLACE(REPLACE(vendor_address, '.', ''), ' ', '')) = ''`
+  ];
+  cleanDotSqls.forEach(sql => db.run(sql, () => {}));
 });
 
 // Helper: คำนวณค่าเสื่อมราคาและมูลค่าทางบัญชี
