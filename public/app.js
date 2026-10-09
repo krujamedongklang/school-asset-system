@@ -1093,3 +1093,33 @@ function closeModal(id) {
   const el = document.getElementById(id);
   if (el) el.classList.add('hidden');
 }
+
+// ==================== System Menu Dropdown Helpers ====================
+function toggleSystemMenu() {
+  const dropdown = document.getElementById('system-menu-dropdown');
+  const arrow = document.getElementById('system-menu-arrow');
+  if (!dropdown) return;
+  const isHidden = dropdown.classList.contains('hidden');
+  if (isHidden) {
+    dropdown.classList.remove('hidden');
+    if (arrow) arrow.classList.add('rotate-180');
+  } else {
+    dropdown.classList.add('hidden');
+    if (arrow) arrow.classList.remove('rotate-180');
+  }
+}
+
+function closeSystemMenu() {
+  const dropdown = document.getElementById('system-menu-dropdown');
+  const arrow = document.getElementById('system-menu-arrow');
+  if (dropdown) dropdown.classList.add('hidden');
+  if (arrow) arrow.classList.remove('rotate-180');
+}
+
+// ปิดเมนูดรอปดาวน์เมื่อคลิกนอกพื้นที่
+document.addEventListener('click', (e) => {
+  const container = document.getElementById('system-menu-container');
+  if (container && !container.contains(e.target)) {
+    closeSystemMenu();
+  }
+});

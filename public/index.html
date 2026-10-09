@@ -93,7 +93,7 @@
     <nav class="bg-gradient-to-r from-red-950 via-red-900 to-rose-950 text-white p-4 shadow-xl border-b-2 border-amber-400 no-print">
       <div class="container mx-auto flex flex-wrap justify-between items-center gap-3">
         <h1 class="text-xl font-bold flex items-center gap-3 tracking-wide">
-          <span class="p-2 bg-gradient-to-br from-amber-400 to-amber-500 text-red-950 rounded-xl shadow-md text-lg leading-none">🏫</span>
+          <img src="logo.jpg" alt="ตราโรงเรียนดงกลาง" class="w-11 h-11 object-contain rounded-xl shadow-md bg-white p-0.5 border border-amber-300" onerror="this.outerHTML='<span class=\'p-2 bg-gradient-to-br from-amber-400 to-amber-500 text-red-950 rounded-xl shadow-md text-lg leading-none\'>🏫</span>'">
           <div class="flex flex-col">
             <span class="text-white text-base sm:text-lg font-bold leading-tight drop-shadow-sm">ระบบงานพัสดุและครุภัณฑ์สถานศึกษา</span>
             <span class="text-amber-300/90 text-xs font-medium tracking-wide">โรงเรียนดงกลาง (เอกสารหมายเลข ๓)</span>
@@ -106,15 +106,42 @@
           <button onclick="switchTab('material')" id="tab-material-btn" class="px-4 py-2 bg-red-950/70 hover:bg-red-800/80 text-amber-100 font-medium rounded-xl border border-amber-400/20 transition">
             บัญชีคุมวัสดุ
           </button>
-          <button onclick="openModal('orgModal')" class="px-3 py-2 bg-red-950/70 hover:bg-red-800/80 rounded-xl text-xs font-semibold transition border border-amber-500/30 text-amber-200 flex items-center gap-1 shadow-xs">
-            ⚙️ ตั้งค่าหน่วยงาน
-          </button>
-          <button onclick="exportBackup()" class="px-3 py-2 bg-red-950/70 hover:bg-red-800/80 rounded-xl text-xs font-semibold transition border border-amber-500/30 text-amber-200 flex items-center gap-1 shadow-xs" title="ดาวน์โหลดไฟล์สำรองข้อมูล">
-            📥 สำรองข้อมูล
-          </button>
-          <button onclick="openModal('restoreModal')" class="px-3 py-2 bg-red-950/70 hover:bg-red-800/80 rounded-xl text-xs font-semibold transition border border-amber-500/30 text-amber-200 flex items-center gap-1 shadow-xs" title="นำเข้าข้อมูลจากไฟล์สำรอง">
-            📤 นำเข้าข้อมูล
-          </button>
+          <!-- เมนูจัดการระบบ (ซ่อนรวม: ตั้งค่าหน่วยงาน, สำรองข้อมูล, นำเข้าข้อมูล) -->
+          <div class="relative inline-block text-left" id="system-menu-container">
+            <button type="button" onclick="toggleSystemMenu()" id="system-menu-btn" class="px-3.5 py-2 bg-red-950/70 hover:bg-red-800/80 rounded-xl text-xs font-semibold transition border border-amber-400/30 text-amber-200 flex items-center gap-1.5 shadow-xs cursor-pointer focus:outline-none">
+              <span>⚙️ จัดการระบบ</span>
+              <svg id="system-menu-arrow" class="w-3.5 h-3.5 text-amber-300 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+            <div id="system-menu-dropdown" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-amber-200/80 py-1.5 z-50 text-xs divide-y divide-slate-100">
+              <div class="py-1">
+                <button type="button" onclick="openModal('orgModal'); closeSystemMenu();" class="w-full text-left px-4 py-2.5 text-slate-700 hover:bg-amber-50 hover:text-red-900 flex items-center gap-2.5 font-medium transition cursor-pointer">
+                  <span class="text-base">⚙️</span>
+                  <div>
+                    <div class="font-bold text-slate-800">ตั้งค่าหน่วยงาน</div>
+                    <div class="text-[10px] text-slate-400">ชื่อส่วนราชการและหน่วยงานพิมพ์</div>
+                  </div>
+                </button>
+              </div>
+              <div class="py-1">
+                <button type="button" onclick="exportBackup(); closeSystemMenu();" class="w-full text-left px-4 py-2.5 text-slate-700 hover:bg-amber-50 hover:text-red-900 flex items-center gap-2.5 font-medium transition cursor-pointer">
+                  <span class="text-base">📥</span>
+                  <div>
+                    <div class="font-bold text-slate-800">สำรองข้อมูล</div>
+                    <div class="text-[10px] text-slate-400">ดาวน์โหลดไฟล์สำรอง (.json)</div>
+                  </div>
+                </button>
+                <button type="button" onclick="openModal('restoreModal'); closeSystemMenu();" class="w-full text-left px-4 py-2.5 text-slate-700 hover:bg-amber-50 hover:text-red-900 flex items-center gap-2.5 font-medium transition cursor-pointer">
+                  <span class="text-base">📤</span>
+                  <div>
+                    <div class="font-bold text-slate-800">นำเข้าข้อมูล</div>
+                    <div class="text-[10px] text-slate-400">กู้คืนข้อมูลจากไฟล์สำรอง (.json)</div>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </nav>
@@ -600,6 +627,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=3.0"></script>
+  <script src="app.js?v=3.1"></script>
 </body>
 </html>
