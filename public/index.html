@@ -97,7 +97,9 @@
         box-sizing: border-box !important;
       }
       .print-asset-card:last-child,
-      #print-material-section {
+      #print-material-section,
+      #print-annual-inspection-section,
+      #print-disposal-report-section {
         page-break-after: avoid !important;
         break-after: avoid !important;
       }
@@ -257,7 +259,7 @@
               </span>
             </div>
           </div>
-          <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
             <!-- ตัวเลือกรูปแบบการพิมพ์ -->
             <select id="asset-print-mode" onchange="onAssetPrintModeChange()" class="flex-1 sm:flex-initial text-xs border border-amber-200 rounded-xl px-2.5 py-2 sm:px-3 sm:py-2 bg-white font-semibold text-slate-700 shadow-xs cursor-pointer focus:ring-2 focus:ring-amber-500">
               <option value="single-pages">📄 แยกพิมพ์แผ่นละ 1 รายการ</option>
@@ -270,13 +272,21 @@
             <button onclick="printSelectedAssets()" id="btn-print-assets" class="flex-1 sm:flex-initial justify-center bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold px-3 py-2 sm:px-4 sm:py-2 rounded-xl shadow-xs transition flex items-center gap-1.5 text-xs sm:text-sm border border-amber-600/30 whitespace-nowrap">
               <span>🖨️</span> <span id="btn-print-text">พิมพ์รายการที่เลือก</span>
             </button>
+
+            <!-- ปุ่มรายงานตรวจสอบพัสดุประจำปี และ รายงานขอจำหน่าย -->
+            <button onclick="openAnnualInspectionModal()" class="flex-1 sm:flex-initial justify-center bg-gradient-to-r from-blue-700 to-indigo-800 hover:from-blue-800 hover:to-indigo-900 text-white px-3 py-2 rounded-xl font-bold shadow-xs transition flex items-center gap-1.5 text-xs whitespace-nowrap border border-blue-900/30" title="สร้างและพิมพ์รายงานผลการตรวจสอบพัสดุประจำปีงบประมาณ">
+              <span>📋</span> <span>รายงานตรวจสอบประจำปี</span>
+            </button>
+            <button onclick="openDisposalReportModal()" class="flex-1 sm:flex-initial justify-center bg-gradient-to-r from-rose-700 to-red-800 hover:from-rose-800 hover:to-red-900 text-white px-3 py-2 rounded-xl font-bold shadow-xs transition flex items-center gap-1.5 text-xs whitespace-nowrap border border-rose-900/30" title="สร้างและพิมพ์รายงานขออนุมัติจำหน่ายครุภัณฑ์ชำรุด/เสื่อมสภาพ">
+              <span>🗑️</span> <span>รายงานขอจำหน่าย</span>
+            </button>
           </div>
         </div>
 
-        <!-- แถบกรองปีงบประมาณ / เดือน / ค้นหาครุภัณฑ์ -->
+        <!-- แถบกรองปีงบประมาณ / เดือน / สถานะ / ค้นหาครุภัณฑ์ -->
         <div class="mb-3 sm:mb-4 bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-xs border border-amber-200/80 no-print space-y-2.5 sm:space-y-3">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
-            <div class="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <div class="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-3 w-full sm:w-auto flex-wrap">
               <div class="col-span-1 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-1.5">
                 <span class="text-[11px] sm:text-xs font-bold text-red-950 flex items-center gap-1">
                   <span class="p-1 bg-amber-100 text-amber-900 rounded-md text-xs leading-none">📅</span>
@@ -305,6 +315,20 @@
                   <option value="7">กรกฎาคม (ก.ค.)</option>
                   <option value="8">สิงหาคม (ส.ค.)</option>
                   <option value="9">กันยายน (ก.ย.)</option>
+                </select>
+              </div>
+
+              <div class="col-span-1 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-1.5">
+                <span class="text-[11px] sm:text-xs font-bold text-red-950">
+                  <span>สภาพ/สถานะ:</span>
+                </span>
+                <select id="asset-status-select" onchange="onAssetFilterChange()" class="w-full sm:w-auto text-xs font-semibold border border-amber-300 rounded-xl px-2.5 py-1.5 bg-amber-50/50 text-red-950 shadow-2xs focus:ring-2 focus:ring-amber-500 cursor-pointer">
+                  <option value="all">ทุกสถานะ</option>
+                  <option value="good">🟢 ใช้งานได้ดี</option>
+                  <option value="repair">🟠 ชำรุด (ซ่อมได้)</option>
+                  <option value="disposal">🔴 ชำรุด/เสื่อมสภาพ (ขอจำหน่าย)</option>
+                  <option value="disposed">⚫ จำหน่ายแล้ว</option>
+                  <option value="lost">⚪ สูญหาย</option>
                 </select>
               </div>
             </div>
@@ -562,6 +586,16 @@
       </table>
     </div>
 
+    <!-- === PRINT FORM 3: รายงานผลการตรวจสอบพัสดุประจำปี (แบบฟอร์มราชการ สพฐ.) === -->
+    <div id="print-annual-inspection-section" class="hidden">
+      <!-- Populated dynamically by JS -->
+    </div>
+
+    <!-- === PRINT FORM 4: รายงานขออนุมัติจำหน่ายครุภัณฑ์ชำรุด/เสื่อมสภาพ === -->
+    <div id="print-disposal-report-section" class="hidden">
+      <!-- Populated dynamically by JS -->
+    </div>
+
   </div>
 
   <!-- ========================================== -->
@@ -628,13 +662,47 @@
         </div>
 
         <div>
-          <label class="font-semibold block mb-1 text-slate-700">สถานะ</label>
-          <select id="a_status" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl font-medium focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
-            <option value="ใช้งานได้ดี">ใช้งานได้ดี</option>
-            <option value="ชำรุด">ชำรุด</option>
-            <option value="รอซ่อม">รอซ่อม</option>
-            <option value="ขอจำหน่าย">ขอจำหน่าย</option>
+          <label class="font-semibold block mb-1 text-slate-700">สภาพ/สถานะครุภัณฑ์</label>
+          <select id="a_status" onchange="onAssetStatusChange(this.value)" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl font-medium focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+            <option value="ใช้งานได้ดี">🟢 ใช้งานได้ดี</option>
+            <option value="ชำรุด (ซ่อมได้)">🟠 ชำรุด (ซ่อมแซมได้)</option>
+            <option value="ชำรุด/เสื่อมสภาพ (ขอจำหน่าย)">🔴 ชำรุด/เสื่อมสภาพ (ขอจำหน่าย)</option>
+            <option value="จำหน่ายแล้ว">⚫ จำหน่ายแล้ว (แทงจำหน่าย)</option>
+            <option value="สูญหาย">⚪ สูญหาย</option>
           </select>
+        </div>
+
+        <!-- ส่วนข้อมูลการขอจำหน่ายครุภัณฑ์ (แสดงเมื่อเลือก ขอจำหน่าย หรือ จำหน่ายแล้ว) -->
+        <div id="disposal-fields-group" class="hidden col-span-1 sm:col-span-2 md:col-span-3 p-3.5 bg-rose-50/80 border border-rose-200 rounded-2xl space-y-2.5">
+          <div class="font-bold text-xs text-rose-900 flex items-center gap-1.5">
+            <span>🗑️</span> <span>ข้อมูลการเสนอขอจำหน่าย / แทงจำหน่ายครุภัณฑ์</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="font-semibold block mb-1 text-rose-950">สภาพและสาเหตุที่ขอจำหน่าย</label>
+              <select id="a_disposal_reason" class="w-full border border-rose-300 p-2 rounded-xl focus:ring-2 focus:ring-rose-500 bg-white text-xs">
+                <option value="ชำรุดจนไม่สามารถซ่อมแซมได้">ชำรุดจนไม่สามารถซ่อมแซมได้</option>
+                <option value="เสื่อมสภาพตามอายุการใช้งาน">เสื่อมสภาพตามอายุการใช้งาน</option>
+                <option value="ซ่อมแซมแล้วไม่คุ้มค่าทางราชการ">ซ่อมแซมแล้วไม่คุ้มค่าทางราชการ</option>
+                <option value="ตกรุ่นไม่มีอะไหล่ทดแทน">ตกรุ่นไม่มีอะไหล่ทดแทน</option>
+                <option value="สูญหาย">สูญหาย</option>
+                <option value="อื่นๆ">อื่นๆ</option>
+              </select>
+            </div>
+            <div>
+              <label class="font-semibold block mb-1 text-rose-950">วิธีการจำหน่ายที่เสนอ</label>
+              <select id="a_disposal_method" class="w-full border border-rose-300 p-2 rounded-xl focus:ring-2 focus:ring-rose-500 bg-white text-xs">
+                <option value="ขายทอดตลาด">ขายทอดตลาด</option>
+                <option value="แปรสภาพหรือทำลาย">แปรสภาพหรือทำลาย</option>
+                <option value="โอนให้หน่วยงานอื่น">โอนให้หน่วยงานอื่น</option>
+                <option value="บริจาค">บริจาค</option>
+              </select>
+            </div>
+            <div>
+              <label class="font-semibold block mb-1 text-rose-950">วันที่เสนอ / วันที่จำหน่าย</label>
+              <input type="date" id="a_disposal_date" class="w-full border border-rose-300 p-2 rounded-xl focus:ring-2 focus:ring-rose-500 bg-white text-xs">
+            </div>
+          </div>
         </div>
         <div>
           <label class="font-semibold block mb-1 text-slate-700">ซื้อจาก (ชื่อผู้ขาย/ผู้บริจาค)</label>
@@ -931,6 +999,198 @@
     </div>
   </div>
 
-  <script src="app.js?v=5.0"></script>
+  <!-- MODAL: รายงานผลการตรวจสอบพัสดุประจำปี -->
+  <div id="annualInspectionModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs hidden flex items-center justify-center p-2.5 sm:p-4 z-50 no-print">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl p-4 sm:p-6 max-h-[92vh] overflow-y-auto touch-scroll border border-blue-200/80">
+      <div class="flex justify-between items-center mb-3 sm:mb-4 border-b border-blue-100 pb-2.5 sm:pb-3">
+        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+          <span>📋</span> <span>รายงานผลการตรวจสอบพัสดุประจำปีงบประมาณ</span>
+        </h3>
+        <button onclick="closeModal('annualInspectionModal')" class="text-slate-400 hover:text-slate-600 text-2xl font-bold leading-none p-1 -mr-1">&times;</button>
+      </div>
+
+      <!-- กล่องสรุปสถานะพัสดุปีงบประมาณ -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4 text-center">
+        <div class="bg-blue-50 border border-blue-200 p-2.5 rounded-xl">
+          <div class="text-[11px] text-blue-700 font-medium">ครุภัณฑ์ทั้งหมด</div>
+          <div class="text-base font-bold text-blue-950" id="ai-sum-total">0 รายการ</div>
+          <div class="text-[10px] text-blue-600" id="ai-sum-total-val">0.00 บาท</div>
+        </div>
+        <div class="bg-emerald-50 border border-emerald-200 p-2.5 rounded-xl">
+          <div class="text-[11px] text-emerald-700 font-medium">ใช้การได้ดี</div>
+          <div class="text-base font-bold text-emerald-950" id="ai-sum-good">0 รายการ</div>
+          <div class="text-[10px] text-emerald-600" id="ai-sum-good-val">0.00 บาท</div>
+        </div>
+        <div class="bg-amber-50 border border-amber-200 p-2.5 rounded-xl">
+          <div class="text-[11px] text-amber-700 font-medium">ชำรุดซ่อมได้</div>
+          <div class="text-base font-bold text-amber-950" id="ai-sum-repair">0 รายการ</div>
+          <div class="text-[10px] text-amber-600" id="ai-sum-repair-val">0.00 บาท</div>
+        </div>
+        <div class="bg-rose-50 border border-rose-200 p-2.5 rounded-xl">
+          <div class="text-[11px] text-rose-700 font-medium">สมควรขอจำหน่าย</div>
+          <div class="text-base font-bold text-rose-950" id="ai-sum-disposal">0 รายการ</div>
+          <div class="text-[10px] text-rose-600" id="ai-sum-disposal-val">0.00 บาท</div>
+        </div>
+      </div>
+
+      <form onsubmit="handlePrintAnnualInspection(event)" class="space-y-3 text-xs">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="font-semibold block mb-1 text-slate-700">ประจำปีงบประมาณ *</label>
+            <select id="ai-fiscal-year" onchange="updateAnnualInspectionPreview()" class="w-full border border-slate-300 p-2.5 rounded-xl font-bold bg-amber-50/50">
+              <!-- Populated by JS -->
+            </select>
+          </div>
+          <div>
+            <label class="font-semibold block mb-1 text-slate-700">คำสั่งโรงเรียนที่ (แต่งตั้งกรรมการ)</label>
+            <input type="text" id="ai-order-no" placeholder="เช่น 45/2570" class="w-full border border-slate-300 p-2.5 rounded-xl">
+          </div>
+          <div>
+            <label class="font-semibold block mb-1 text-slate-700">ลงวันที่คำสั่ง</label>
+            <input type="date" id="ai-order-date" class="w-full border border-slate-300 p-2.5 rounded-xl">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="font-semibold block mb-1 text-slate-700">วันที่ทำการตรวจนับพัสดุ</label>
+            <input type="date" id="ai-inspect-date" class="w-full border border-slate-300 p-2.5 rounded-xl">
+          </div>
+          <div>
+            <label class="font-semibold block mb-1 text-slate-700">เลขที่หนังสือรายงาน (ที่ ศธ...)</label>
+            <input type="text" id="ai-doc-no" placeholder="เช่น ศธ 04153.25/..." class="w-full border border-slate-300 p-2.5 rounded-xl">
+          </div>
+        </div>
+
+        <div class="border-t border-slate-100 pt-2.5">
+          <div class="font-bold text-xs text-slate-800 mb-2">👥 คณะกรรมการตรวจสอบพัสดุประจำปี:</div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div>
+              <label class="font-medium block mb-0.5 text-slate-600">1. ประธานกรรมการ</label>
+              <input type="text" id="ai-chair-name" placeholder="นาย/นาง/นางสาว..." class="w-full border border-slate-300 p-2 rounded-xl">
+            </div>
+            <div>
+              <label class="font-medium block mb-0.5 text-slate-600">2. กรรมการ</label>
+              <input type="text" id="ai-member1-name" placeholder="นาย/นาง/นางสาว..." class="w-full border border-slate-300 p-2 rounded-xl">
+            </div>
+            <div>
+              <label class="font-medium block mb-0.5 text-slate-600">3. กรรมการและเลขานุการ</label>
+              <input type="text" id="ai-member2-name" placeholder="นาย/นาง/นางสาว..." class="w-full border border-slate-300 p-2 rounded-xl">
+            </div>
+          </div>
+        </div>
+
+        <div class="border-t border-slate-100 pt-2.5">
+          <div>
+            <label class="font-bold block mb-1 text-slate-800">ผู้อำนวยการโรงเรียน (ผู้สั่งการ/อนุมัติ):</label>
+            <input type="text" id="ai-director-name" placeholder="นาย/นาง/นางสาว... ผู้อำนวยการโรงเรียนบ้านดงกลาง" class="w-full border border-slate-300 p-2 rounded-xl">
+          </div>
+        </div>
+
+        <div class="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeModal('annualInspectionModal')" class="w-full sm:w-auto px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 font-medium transition text-center">ยกเลิก</button>
+          <button type="submit" class="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-blue-700 to-indigo-800 hover:from-blue-800 hover:to-indigo-900 text-white rounded-xl font-bold shadow-md transition border border-blue-900/30 text-center flex items-center justify-center gap-1.5 cursor-pointer">
+            <span>🖨️</span> <span>พิมพ์รายงานผลการตรวจสอบพัสดุประจำปี (A4 แนวนอน)</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: รายงานขออนุมัติจำหน่ายครุภัณฑ์ชำรุด/เสื่อมสภาพ -->
+  <div id="disposalReportModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs hidden flex items-center justify-center p-2.5 sm:p-4 z-50 no-print">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl p-4 sm:p-6 max-h-[92vh] overflow-y-auto touch-scroll border border-rose-200/80">
+      <div class="flex justify-between items-center mb-3 sm:mb-4 border-b border-rose-100 pb-2.5 sm:pb-3">
+        <h3 class="text-base font-bold text-rose-950 flex items-center gap-2">
+          <span>🗑️</span> <span>รายงานขออนุมัติจำหน่ายครุภัณฑ์ชำรุด / เสื่อมสภาพ</span>
+        </h3>
+        <button onclick="closeModal('disposalReportModal')" class="text-slate-400 hover:text-slate-600 text-2xl font-bold leading-none p-1 -mr-1">&times;</button>
+      </div>
+
+      <!-- สรุปรายการที่เข้าเกณฑ์ขอจำหน่าย -->
+      <div class="p-3 bg-rose-50 border border-rose-200 rounded-xl mb-3.5 text-xs text-rose-950 flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+        <div>
+          <span class="font-bold">รายการที่เข้าเกณฑ์ขอจำหน่าย: </span>
+          <span id="dr-eligible-count" class="font-bold text-rose-700">0</span> รายการ
+          <span class="text-slate-500 text-[11px] ml-1">(รวมราคาทุน <span id="dr-eligible-cost">0.00</span> บาท | มูลค่าสุทธิคงเหลือ <span id="dr-eligible-net">0.00</span> บาท)</span>
+        </div>
+        <div class="text-[11px] text-rose-600 font-medium">
+          * ดึงเฉพาะรายการที่สถานะเป็น "ชำรุด/เสื่อมสภาพ (ขอจำหน่าย)" หรือ "จำหน่ายแล้ว"
+        </div>
+      </div>
+
+      <form onsubmit="handlePrintDisposalReport(event)" class="space-y-3 text-xs">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="font-semibold block mb-1 text-slate-700">ประจำปีงบประมาณ</label>
+            <select id="dr-fiscal-year" onchange="updateDisposalReportPreview()" class="w-full border border-slate-300 p-2.5 rounded-xl font-bold bg-amber-50/50">
+              <option value="all">ทุกปีงบประมาณ</option>
+            </select>
+          </div>
+          <div>
+            <label class="font-semibold block mb-1 text-slate-700">วันที่รายงานขออนุมัติ</label>
+            <input type="date" id="dr-report-date" class="w-full border border-slate-300 p-2.5 rounded-xl">
+          </div>
+          <div>
+            <label class="font-semibold block mb-1 text-slate-700">เลขที่หนังสือรายงาน (ที่ ศธ...)</label>
+            <input type="text" id="dr-doc-no" placeholder="เช่น ศธ 04153.25/..." class="w-full border border-slate-300 p-2.5 rounded-xl">
+          </div>
+        </div>
+
+        <div class="border-t border-slate-100 pt-2.5">
+          <div class="font-bold text-xs text-slate-800 mb-2">✍️ ผู้เสนอและผู้อนุมัติจำหน่าย:</div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div>
+              <label class="font-medium block mb-0.5 text-slate-600">เจ้าหน้าที่พัสดุ</label>
+              <input type="text" id="dr-officer-name" placeholder="นาย/นาง/นางสาว..." class="w-full border border-slate-300 p-2 rounded-xl">
+            </div>
+            <div>
+              <label class="font-medium block mb-0.5 text-slate-600">หัวหน้าเจ้าหน้าที่พัสดุ</label>
+              <input type="text" id="dr-head-name" placeholder="นาย/นาง/นางสาว..." class="w-full border border-slate-300 p-2 rounded-xl">
+            </div>
+            <div>
+              <label class="font-medium block mb-0.5 text-slate-600">ผู้อำนวยการโรงเรียน (ผู้อนุมัติ)</label>
+              <input type="text" id="dr-director-name" placeholder="นาย/นาง/นางสาว..." class="w-full border border-slate-300 p-2 rounded-xl">
+            </div>
+          </div>
+        </div>
+
+        <!-- ตัวอย่างตารางรายการที่จะพิมพ์ -->
+        <div class="border-t border-slate-100 pt-2.5">
+          <div class="font-bold text-xs text-slate-700 mb-1.5 flex justify-between items-center">
+            <span>ตารางรายการครุภัณฑ์ที่จะออกรายงาน:</span>
+            <span class="text-[11px] text-slate-500 font-normal">หากยังไม่มีรายการ ให้ไปแก้ไขสถานะครุภัณฑ์เป็น "ขอจำหน่าย" ก่อน</span>
+          </div>
+          <div class="border border-slate-200 rounded-xl overflow-x-auto max-h-48 text-[11px]">
+            <table class="w-full text-left border-collapse">
+              <thead class="bg-slate-100 text-slate-700 sticky top-0">
+                <tr>
+                  <th class="p-1.5 border-b border-slate-200 text-center w-10">ลำดับ</th>
+                  <th class="p-1.5 border-b border-slate-200">รหัสครุภัณฑ์</th>
+                  <th class="p-1.5 border-b border-slate-200">ชื่อรายการ</th>
+                  <th class="p-1.5 border-b border-slate-200 text-right">ราคาทุน</th>
+                  <th class="p-1.5 border-b border-slate-200 text-right">มูลค่าสุทธิ</th>
+                  <th class="p-1.5 border-b border-slate-200">สาเหตุที่ขอจำหน่าย</th>
+                  <th class="p-1.5 border-b border-slate-200">วิธีจำหน่าย</th>
+                </tr>
+              </thead>
+              <tbody id="dr-preview-table-body">
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeModal('disposalReportModal')" class="w-full sm:w-auto px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 font-medium transition text-center">ยกเลิก</button>
+          <button type="submit" id="btn-print-disposal-submit" class="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-rose-700 to-red-800 hover:from-rose-800 hover:to-red-900 text-white rounded-xl font-bold shadow-md transition border border-rose-900/30 text-center flex items-center justify-center gap-1.5 cursor-pointer">
+            <span>🖨️</span> <span>พิมพ์รายงานขออนุมัติจำหน่าย (A4 แนวนอน)</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js?v=6.0"></script>
 </body>
 </html>

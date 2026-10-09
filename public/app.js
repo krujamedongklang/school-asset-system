@@ -23,6 +23,34 @@ let selectedMaterialIds = new Set();
 // รูปแบบการพิมพ์ครุภัณฑ์ ('single-pages' = แยกแผ่นละ 1 รายการ, 'combined-table' = รวมในตารางเดียว)
 let assetPrintMode = 'single-pages';
 
+// กำหนดเป้าหมายการพิมพ์ (asset, material, annualInspection, disposalReport)
+let currentPrintTarget = 'asset';
+
+function setPrintTarget(target) {
+  currentPrintTarget = target;
+  const sections = {
+    asset: document.getElementById('print-asset-section'),
+    material: document.getElementById('print-material-section'),
+    annualInspection: document.getElementById('print-annual-inspection-section'),
+    disposalReport: document.getElementById('print-disposal-report-section')
+  };
+
+  Object.entries(sections).forEach(([key, el]) => {
+    if (!el) return;
+    if (key === target) {
+      el.classList.remove('hidden');
+      el.classList.add('block');
+    } else {
+      el.classList.add('hidden');
+      el.classList.remove('block');
+    }
+  });
+}
+
+window.addEventListener('afterprint', () => {
+  setPrintTarget(currentTab === 'asset' ? 'asset' : 'material');
+});
+
 // ==================== ระบบสิทธิ์เข้าใช้งาน & AUTHENTICATION ====================
 function getAuthToken() {
   return localStorage.getItem('school_auth_token') || sessionStorage.getItem('school_auth_token') || '';
@@ -392,28 +420,20 @@ function switchTab(tab) {
   currentTab = tab;
   const screenAsset = document.getElementById('tab-asset-screen');
   const screenMaterial = document.getElementById('tab-material-screen');
-  const printAsset = document.getElementById('print-asset-section');
-  const printMaterial = document.getElementById('print-material-section');
   const btnAsset = document.getElementById('tab-asset-btn');
   const btnMaterial = document.getElementById('tab-material-btn');
 
   if (tab === 'asset') {
     screenAsset.classList.remove('hidden');
     screenMaterial.classList.add('hidden');
-    printAsset.classList.remove('hidden');
-    printAsset.classList.add('block');
-    printMaterial.classList.add('hidden');
-    printMaterial.classList.remove('block');
+    setPrintTarget('asset');
 
     btnAsset.className = 'flex-1 sm:flex-initial text-center justify-center px-3 py-2 sm:px-4 sm:py-2 bg-gradient-to-r from-amber-400 via-amber-400 to-amber-500 text-red-950 font-bold rounded-xl shadow-md hover:from-amber-300 hover:to-amber-400 transition text-xs sm:text-sm whitespace-nowrap';
     btnMaterial.className = 'flex-1 sm:flex-initial text-center justify-center px-3 py-2 sm:px-4 sm:py-2 bg-red-950/70 hover:bg-red-800/80 text-amber-100 font-medium rounded-xl border border-amber-400/20 transition text-xs sm:text-sm whitespace-nowrap';
   } else {
     screenAsset.classList.add('hidden');
     screenMaterial.classList.remove('hidden');
-    printAsset.classList.add('hidden');
-    printAsset.classList.remove('block');
-    printMaterial.classList.remove('hidden');
-    printMaterial.classList.add('block');
+    setPrintTarget('material');
 
     btnAsset.className = 'flex-1 sm:flex-initial text-center justify-center px-3 py-2 sm:px-4 sm:py-2 bg-red-950/70 hover:bg-red-800/80 text-amber-100 font-medium rounded-xl border border-amber-400/20 transition text-xs sm:text-sm whitespace-nowrap';
     btnMaterial.className = 'flex-1 sm:flex-initial text-center justify-center px-3 py-2 sm:px-4 sm:py-2 bg-gradient-to-r from-amber-400 via-amber-400 to-amber-500 text-red-950 font-bold rounded-xl shadow-md hover:from-amber-300 hover:to-amber-400 transition text-xs sm:text-sm whitespace-nowrap';
@@ -534,11 +554,62 @@ function formatThaiDate(dateStr) {
 const START_FISCAL_YEAR = 2570; // เริ่มต้นที่ปีงบประมาณ 2570 (ปีงบ 70)
 let assetFiscalYear = '2570';
 let assetMonth = 'all';
+let assetStatusFilter = 'all';
 let materialFiscalYear = '2570';
 let materialMonth = 'all';
 
 let assetSearchQuery = '';
 let materialSearchQuery = '';
+
+// ==================== ตัวช่วยข้อมูลจำหน่ายครุภัณฑ์ (Disposal Helpers) ====================
+function extractDisposalInfo(item) {
+  if (!item) return { reason: '', method: '', date: '', cleanRemark: '' };
+  let reason = item.disposal_reason || '';
+  let method = item.disposal_method || '';
+  let date = item.disposal_date || '';
+  let cleanRemark = item.remark || '';
+
+  // ตรวจจับแท็ก [จำหน่าย: ... | วิธี: ... | วันที่: ...] ที่ฝังไว้ใน remark
+  const match = cleanRemark.match(/\[จำหน่าย:\s*(.*?)\s*\|\s*วิธี:\s*(.*?)(?:\s*\|\s*วันที่:\s*(.*?))?\]/);
+  if (match) {
+    if (!reason) reason = match[1] || '';
+    if (!method) method = match[2] || '';
+    if (!date && match[3]) date = match[3] || '';
+    cleanRemark = cleanRemark.replace(match[0], '').trim();
+  }
+  return { reason, method, date, cleanRemark };
+}
+
+function onAssetStatusChange(status) {
+  const group = document.getElementById('disposal-fields-group');
+  if (!group) return;
+  const isDisposal = (status === 'ชำรุด/เสื่อมสภาพ (ขอจำหน่าย)' || status === 'จำหน่ายแล้ว' || status === 'สูญหาย');
+  if (isDisposal) {
+    group.classList.remove('hidden');
+    const dDate = document.getElementById('a_disposal_date');
+    if (dDate && !dDate.value) {
+      dDate.value = new Date().toISOString().split('T')[0];
+    }
+  } else {
+    group.classList.add('hidden');
+  }
+}
+
+function getAssetStatusBadge(status) {
+  const s = status || 'ใช้งานได้ดี';
+  if (s === 'ใช้งานได้ดี') {
+    return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs whitespace-nowrap">🟢 ใช้งานได้ดี</span>`;
+  } else if (s.includes('ซ่อม')) {
+    return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs whitespace-nowrap">🟠 ชำรุด (ซ่อมได้)</span>`;
+  } else if (s.includes('ขอจำหน่าย')) {
+    return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-300 shadow-2xs whitespace-nowrap animate-pulse">🔴 ขอจำหน่าย</span>`;
+  } else if (s.includes('จำหน่ายแล้ว') || s.includes('แทงจำหน่าย')) {
+    return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-200 text-slate-800 border border-slate-400 shadow-2xs whitespace-nowrap">⚫ จำหน่ายแล้ว</span>`;
+  } else if (s.includes('สูญหาย')) {
+    return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-purple-100 text-purple-800 border border-purple-300 shadow-2xs whitespace-nowrap">⚪ สูญหาย</span>`;
+  }
+  return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs whitespace-nowrap">${escapeHtml(s)}</span>`;
+}
 
 function getCurrentFiscalYear() {
   const now = new Date();
@@ -640,8 +711,10 @@ function populateFiscalYearOptions(tab) {
 function onAssetFilterChange() {
   const fySelect = document.getElementById('asset-fiscal-year-select');
   const mSelect = document.getElementById('asset-month-select');
+  const statusSelect = document.getElementById('asset-status-select');
   if (fySelect) assetFiscalYear = fySelect.value;
   if (mSelect) assetMonth = mSelect.value;
+  if (statusSelect) assetStatusFilter = statusSelect.value;
   renderAssetTable();
   updateAssetSelectionUI();
 }
@@ -711,7 +784,17 @@ function getFilteredAssets() {
       }
     }
 
-    // 3. กรองคำค้นหา
+    // 3. กรองสภาพ/สถานะ
+    if (assetStatusFilter !== 'all') {
+      const s = (item.status || '').trim();
+      if (assetStatusFilter === 'good' && s !== 'ใช้งานได้ดี') return false;
+      if (assetStatusFilter === 'repair' && !s.includes('ซ่อม')) return false;
+      if (assetStatusFilter === 'disposal' && !s.includes('ขอจำหน่าย')) return false;
+      if (assetStatusFilter === 'disposed' && !s.includes('จำหน่ายแล้ว') && !s.includes('แทงจำหน่าย')) return false;
+      if (assetStatusFilter === 'lost' && !s.includes('สูญหาย')) return false;
+    }
+
+    // 4. กรองคำค้นหา
     if (assetSearchQuery && assetSearchQuery.trim()) {
       const q = assetSearchQuery.trim().toLowerCase();
       const match =
@@ -723,7 +806,8 @@ function getFilteredAssets() {
         (item.responsible_person && item.responsible_person.toLowerCase().includes(q)) ||
         (item.doc_no && item.doc_no.toLowerCase().includes(q)) ||
         (item.vendor && item.vendor.toLowerCase().includes(q)) ||
-        (item.status && item.status.toLowerCase().includes(q));
+        (item.status && item.status.toLowerCase().includes(q)) ||
+        (item.remark && item.remark.toLowerCase().includes(q));
       if (!match) return false;
     }
 
@@ -879,9 +963,7 @@ function renderAssetTable() {
       <td class="p-2 border border-slate-200 text-right font-bold text-red-900">${Number(item.net_book_value).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
       <td class="p-2 border border-slate-200">${item.location || ''}</td>
       <td class="p-2 border border-slate-200 text-center">
-        <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold shadow-2xs ${item.status === 'ใช้งานได้ดี' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-rose-100 text-rose-800 border border-rose-300'}">
-          ${item.status}
-        </span>
+        ${getAssetStatusBadge(item.status)}
       </td>
       <td class="p-2 border border-slate-200">${item.responsible_person || ''}</td>
       <td class="p-2 border border-slate-200 text-center whitespace-nowrap space-x-1" onclick="event.stopPropagation()">
@@ -980,6 +1062,7 @@ function printSelectedAssets() {
     alert('กรุณาติ๊กเครื่องหมายถูก ☑️ หน้าแถวของรายการที่ต้องการพิมพ์อย่างน้อย 1 รายการครับ');
     return;
   }
+  setPrintTarget('asset');
   renderAssetPrint();
   window.print();
 }
@@ -992,6 +1075,7 @@ function printSingleAsset(id) {
   if (printAssetSection) {
     printAssetSection.innerHTML = generateAssetCardHtml(item, false);
   }
+  setPrintTarget('asset');
   window.print();
 }
 
@@ -1369,6 +1453,14 @@ function openAddAssetModal() {
   document.getElementById('a_date').value = new Date().toISOString().split('T')[0];
   document.getElementById('a_qty').value = '1';
   document.getElementById('a_life').value = '5';
+  document.getElementById('a_status').value = 'ใช้งานได้ดี';
+  const rSel = document.getElementById('a_disposal_reason');
+  const mSel = document.getElementById('a_disposal_method');
+  const dInp = document.getElementById('a_disposal_date');
+  if (rSel) rSel.value = 'ชำรุดจนไม่สามารถซ่อมแซมได้';
+  if (mSel) mSel.value = 'ขายทอดตลาด';
+  if (dInp) dInp.value = new Date().toISOString().split('T')[0];
+  onAssetStatusChange('ใช้งานได้ดี');
   openModal('assetModal');
 }
 
@@ -1398,14 +1490,36 @@ function editAsset(id) {
   document.getElementById('a_vendor_phone').value = item.vendor_phone || '';
   document.getElementById('a_budget_source').value = item.budget_source || 'เงินงบประมาณ';
   document.getElementById('a_acquisition_method').value = item.acquisition_method || 'เฉพาะเจาะจง';
-  document.getElementById('a_remark').value = item.remark || '';
 
+  const dispInfo = extractDisposalInfo(item);
+  const rSel = document.getElementById('a_disposal_reason');
+  const mSel = document.getElementById('a_disposal_method');
+  const dInp = document.getElementById('a_disposal_date');
+  if (rSel) rSel.value = dispInfo.reason || 'ชำรุดจนไม่สามารถซ่อมแซมได้';
+  if (mSel) mSel.value = dispInfo.method || 'ขายทอดตลาด';
+  if (dInp) dInp.value = dispInfo.date || (new Date().toISOString().split('T')[0]);
+  document.getElementById('a_remark').value = dispInfo.cleanRemark || '';
+
+  onAssetStatusChange(item.status || 'ใช้งานได้ดี');
   openModal('assetModal');
 }
 
 async function saveAsset(e) {
   e.preventDefault();
   const editId = document.getElementById('edit_asset_id').value;
+  const status = document.getElementById('a_status').value;
+  const dispReason = cleanFieldText(document.getElementById('a_disposal_reason')?.value);
+  const dispMethod = cleanFieldText(document.getElementById('a_disposal_method')?.value);
+  const dispDate = cleanFieldText(document.getElementById('a_disposal_date')?.value);
+  let rawRemark = cleanFieldText(document.getElementById('a_remark').value);
+
+  let fullRemark = rawRemark;
+  if (status === 'ชำรุด/เสื่อมสภาพ (ขอจำหน่าย)' || status === 'จำหน่ายแล้ว' || status === 'สูญหาย') {
+    if (dispReason || dispMethod || dispDate) {
+      fullRemark = `[จำหน่าย: ${dispReason || '-'} | วิธี: ${dispMethod || '-'}${dispDate ? ` | วันที่: ${dispDate}` : ''}] ${rawRemark}`.trim();
+    }
+  }
+
   const body = {
     asset_name: cleanFieldText(document.getElementById('a_name').value),
     asset_code: cleanFieldText(document.getElementById('a_code').value),
@@ -1418,14 +1532,14 @@ async function saveAsset(e) {
     cost: parseFloat(document.getElementById('a_cost').value) || 0,
     useful_life: parseInt(document.getElementById('a_life').value) || 5,
     location: cleanFieldText(document.getElementById('a_location').value),
-    status: document.getElementById('a_status').value,
+    status: status,
     vendor: cleanFieldText(document.getElementById('a_vendor').value),
     vendor_address: cleanFieldText(document.getElementById('a_vendor_address').value),
     vendor_phone: cleanFieldText(document.getElementById('a_vendor_phone').value),
     budget_source: document.getElementById('a_budget_source').value,
     acquisition_method: document.getElementById('a_acquisition_method').value,
     responsible_person: cleanFieldText(document.getElementById('a_person').value),
-    remark: cleanFieldText(document.getElementById('a_remark').value)
+    remark: fullRemark
   };
 
   const url = editId ? `/api/assets/${editId}` : '/api/assets';
@@ -1692,6 +1806,7 @@ function printSelectedMaterials() {
     alert('กรุณาติ๊กเลือกรายการในตารางเพื่อพิมพ์ หรือกด "เลือกทั้งหมด" ครับ');
     return;
   }
+  setPrintTarget('material');
   renderMaterialPrint();
   window.print();
 }
@@ -1967,3 +2082,687 @@ document.addEventListener('click', (e) => {
     closeSystemMenu();
   }
 });
+
+// ==============================================================
+// 4. รายงานผลการตรวจสอบพัสดุประจำปีงบประมาณ (ระเบียบฯ พ.ศ. ๒๕๖๐ ข้อ ๒๑๓)
+// ==============================================================
+function getInspectionAssets(fiscalYear) {
+  if (fiscalYear === 'all') return [...assetList];
+  return assetList.filter(item => {
+    const { fiscalYear: fy } = getFiscalYearAndMonth(item.received_date);
+    return String(fy) === String(fiscalYear);
+  });
+}
+
+function openAnnualInspectionModal() {
+  const selectEl = document.getElementById('ai-fiscal-year');
+  if (selectEl) {
+    const availableYears = getAvailableFiscalYears(assetList, 'received_date');
+    selectEl.innerHTML = '';
+    const optAll = document.createElement('option');
+    optAll.value = 'all';
+    optAll.innerText = 'ทุกปีงบประมาณ (สะสมทั้งหมด)';
+    selectEl.appendChild(optAll);
+
+    availableYears.forEach(year => {
+      const opt = document.createElement('option');
+      opt.value = String(year);
+      const shortYear = String(year).slice(-2);
+      opt.innerText = `ปีงบประมาณ ${year} (ปีงบ ${shortYear})`;
+      selectEl.appendChild(opt);
+    });
+
+    if (assetFiscalYear && assetFiscalYear !== 'all') {
+      selectEl.value = assetFiscalYear;
+    } else if (availableYears.includes(START_FISCAL_YEAR)) {
+      selectEl.value = String(START_FISCAL_YEAR);
+    }
+  }
+
+  // โหลดรายชื่อและข้อมูลที่บันทึกไว้ใน localStorage
+  const chair = localStorage.getItem('ai_chair_name') || '';
+  const mem1 = localStorage.getItem('ai_member1_name') || '';
+  const mem2 = localStorage.getItem('ai_member2_name') || '';
+  let director = localStorage.getItem('ai_director_name') || '';
+  if (!director) director = 'ผู้อำนวยการโรงเรียนบ้านดงกลาง';
+
+  const orderNo = localStorage.getItem('ai_order_no') || '45/2570';
+  const docNo = localStorage.getItem('ai_doc_no') || 'ศธ 04153.25/...';
+
+  const inpChair = document.getElementById('ai-chair-name');
+  const inpMem1 = document.getElementById('ai-member1-name');
+  const inpMem2 = document.getElementById('ai-member2-name');
+  const inpDir = document.getElementById('ai-director-name');
+  const inpOrder = document.getElementById('ai-order-no');
+  const inpDoc = document.getElementById('ai-doc-no');
+  const inpOrderDate = document.getElementById('ai-order-date');
+  const inpInspectDate = document.getElementById('ai-inspect-date');
+
+  if (inpChair) inpChair.value = chair;
+  if (inpMem1) inpMem1.value = mem1;
+  if (inpMem2) inpMem2.value = mem2;
+  if (inpDir) inpDir.value = director;
+  if (inpOrder) inpOrder.value = orderNo;
+  if (inpDoc) inpDoc.value = docNo;
+
+  const today = new Date().toISOString().split('T')[0];
+  if (inpOrderDate && !inpOrderDate.value) inpOrderDate.value = today;
+  if (inpInspectDate && !inpInspectDate.value) inpInspectDate.value = today;
+
+  updateAnnualInspectionPreview();
+  openModal('annualInspectionModal');
+}
+
+function updateAnnualInspectionPreview() {
+  const fySelect = document.getElementById('ai-fiscal-year');
+  const fy = fySelect ? fySelect.value : 'all';
+  const list = getInspectionAssets(fy);
+
+  let totalCost = 0;
+  let goodCount = 0, goodCost = 0;
+  let repairCount = 0, repairCost = 0;
+  let disposalCount = 0, disposalCost = 0;
+  let lostCount = 0, lostCost = 0;
+
+  list.forEach(item => {
+    const cost = parseFloat(item.cost) || 0;
+    totalCost += cost;
+    const s = (item.status || '').trim();
+    if (s === 'ใช้งานได้ดี') {
+      goodCount++;
+      goodCost += cost;
+    } else if (s.includes('ซ่อม')) {
+      repairCount++;
+      repairCost += cost;
+    } else if (s.includes('ขอจำหน่าย') || s.includes('จำหน่ายแล้ว')) {
+      disposalCount++;
+      disposalCost += cost;
+    } else if (s.includes('สูญหาย')) {
+      lostCount++;
+      lostCost += cost;
+    } else {
+      goodCount++;
+      goodCost += cost;
+    }
+  });
+
+  const sumTotal = document.getElementById('ai-sum-total');
+  const sumTotalVal = document.getElementById('ai-sum-total-val');
+  const sumGood = document.getElementById('ai-sum-good');
+  const sumGoodVal = document.getElementById('ai-sum-good-val');
+  const sumRepair = document.getElementById('ai-sum-repair');
+  const sumRepairVal = document.getElementById('ai-sum-repair-val');
+  const sumDisposal = document.getElementById('ai-sum-disposal');
+  const sumDisposalVal = document.getElementById('ai-sum-disposal-val');
+
+  if (sumTotal) sumTotal.innerText = `${list.length} รายการ`;
+  if (sumTotalVal) sumTotalVal.innerText = `${Number(totalCost).toLocaleString('th-TH', {minimumFractionDigits: 2})} บาท`;
+  if (sumGood) sumGood.innerText = `${goodCount} รายการ`;
+  if (sumGoodVal) sumGoodVal.innerText = `${Number(goodCost).toLocaleString('th-TH', {minimumFractionDigits: 2})} บาท`;
+  if (sumRepair) sumRepair.innerText = `${repairCount} รายการ`;
+  if (sumRepairVal) sumRepairVal.innerText = `${Number(repairCost).toLocaleString('th-TH', {minimumFractionDigits: 2})} บาท`;
+  if (sumDisposal) sumDisposal.innerText = `${disposalCount} รายการ`;
+  if (sumDisposalVal) sumDisposalVal.innerText = `${Number(disposalCost).toLocaleString('th-TH', {minimumFractionDigits: 2})} บาท`;
+}
+
+function handlePrintAnnualInspection(e) {
+  e.preventDefault();
+  const fySelect = document.getElementById('ai-fiscal-year');
+  const fiscalYear = fySelect ? fySelect.value : 'all';
+  const orderNo = cleanFieldText(document.getElementById('ai-order-no').value) || '45/2570';
+  const orderDate = document.getElementById('ai-order-date').value || new Date().toISOString().split('T')[0];
+  const inspectDate = document.getElementById('ai-inspect-date').value || new Date().toISOString().split('T')[0];
+  const docNo = cleanFieldText(document.getElementById('ai-doc-no').value) || 'ศธ 04153.25/...';
+  const chair = cleanFieldText(document.getElementById('ai-chair-name').value);
+  const mem1 = cleanFieldText(document.getElementById('ai-member1-name').value);
+  const mem2 = cleanFieldText(document.getElementById('ai-member2-name').value);
+  const director = cleanFieldText(document.getElementById('ai-director-name').value) || 'ผู้อำนวยการโรงเรียนบ้านดงกลาง';
+
+  // บันทึกความจำลง localStorage อัตโนมัติ
+  localStorage.setItem('ai_chair_name', chair);
+  localStorage.setItem('ai_member1_name', mem1);
+  localStorage.setItem('ai_member2_name', mem2);
+  localStorage.setItem('ai_director_name', director);
+  localStorage.setItem('ai_order_no', orderNo);
+  localStorage.setItem('ai_doc_no', docNo);
+
+  const items = getInspectionAssets(fiscalYear);
+  const printSection = document.getElementById('print-annual-inspection-section');
+  if (printSection) {
+    printSection.innerHTML = generateAnnualInspectionPrintHtml(fiscalYear, orderNo, orderDate, inspectDate, docNo, chair, mem1, mem2, director, items);
+  }
+
+  setPrintTarget('annualInspection');
+  closeModal('annualInspectionModal');
+  window.print();
+}
+
+function generateAnnualInspectionPrintHtml(fiscalYear, orderNo, orderDate, inspectDate, docNo, chair, mem1, mem2, director, items) {
+  const org = cleanFieldText(localStorage.getItem('gov_org')) || DEFAULT_ORG;
+  const dept = cleanFieldText(localStorage.getItem('gov_dept')) || DEFAULT_DEPT;
+  const fyDisplay = fiscalYear === 'all' ? 'ทั้งหมด (สะสม)' : fiscalYear;
+
+  let totalCost = 0, totalNet = 0;
+  let goodCount = 0, goodCost = 0;
+  let repairCount = 0, repairCost = 0;
+  let disposalCount = 0, disposalCost = 0;
+  let lostCount = 0, lostCost = 0;
+
+  items.forEach(item => {
+    const cost = parseFloat(item.cost) || 0;
+    const net = parseFloat(item.net_book_value) || 0;
+    totalCost += cost;
+    totalNet += net;
+    const s = (item.status || '').trim();
+    if (s === 'ใช้งานได้ดี') {
+      goodCount++;
+      goodCost += cost;
+    } else if (s.includes('ซ่อม')) {
+      repairCount++;
+      repairCost += cost;
+    } else if (s.includes('ขอจำหน่าย') || s.includes('จำหน่ายแล้ว')) {
+      disposalCount++;
+      disposalCost += cost;
+    } else if (s.includes('สูญหาย')) {
+      lostCount++;
+      lostCost += cost;
+    } else {
+      goodCount++;
+      goodCost += cost;
+    }
+  });
+
+  // สร้างแถวตารางแนบท้าย
+  const tableRowsHtml = items.map((item, idx) => {
+    const s = (item.status || '').trim();
+    const isGood = s === 'ใช้งานได้ดี';
+    const isRepair = s.includes('ซ่อม');
+    const isDisposal = s.includes('ขอจำหน่าย') || s.includes('จำหน่ายแล้ว');
+    const isLost = s.includes('สูญหาย');
+
+    return `
+      <tr>
+        <td class="text-center font-normal">${idx + 1}</td>
+        <td class="text-left font-medium whitespace-nowrap">${escapeHtml(item.asset_code || '')}</td>
+        <td class="text-left font-medium">${escapeHtml(item.asset_name || '')} ${item.spec ? `<span class="text-[9px] text-slate-600 block">(${escapeHtml(item.spec)})</span>` : ''}</td>
+        <td class="text-center whitespace-nowrap">${formatThaiDate(item.received_date)}</td>
+        <td class="text-center">${item.useful_life ? item.useful_life + ' ปี' : '-'}</td>
+        <td class="text-right whitespace-nowrap">${Number(item.cost || 0).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+        <td class="text-right whitespace-nowrap font-semibold">${Number(item.net_book_value || 0).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+        <td class="text-left text-[10px]">${escapeHtml(item.location || item.responsible_person || '-')}</td>
+        <td class="text-center whitespace-nowrap text-[10px]">
+          ${isGood ? '☑ ใช้ได้ดี' : (isRepair ? '☑ ชำรุดซ่อมได้' : (isDisposal ? '☑ ขอจำหน่าย' : (isLost ? '☑ สูญหาย' : escapeHtml(s))))}
+        </td>
+        <td class="text-left text-[9px]">${escapeHtml(item.remark || '')}</td>
+      </tr>
+    `;
+  }).join('');
+
+  return `
+    <div class="print-asset-card page-break">
+      <!-- บันทึกข้อความ รายงานผลการตรวจสอบพัสดุประจำปี (หน้า 1) -->
+      <div class="border-b-2 border-black pb-2 mb-3">
+        <div class="flex items-center justify-between">
+          <div class="w-20">
+            <span class="text-3xl font-bold">🦅</span>
+          </div>
+          <div class="text-center flex-grow">
+            <h1 class="text-2xl font-bold tracking-widest text-black">บันทึกข้อความ</h1>
+          </div>
+          <div class="w-24 text-right text-[10px] text-slate-600">
+            (ระเบียบกระทรวงการคลังฯ พ.ศ. ๒๕๖๐ ข้อ ๒๑๓)
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-12 gap-y-1.5 text-xs text-black mt-2">
+          <div class="col-span-8 flex items-end">
+            <span class="font-bold whitespace-nowrap">ส่วนราชการ&nbsp;&nbsp;</span>
+            <span class="border-b border-dotted border-black flex-grow px-1 font-medium">${dept} ${org}</span>
+          </div>
+          <div class="col-span-4 flex items-end justify-end">
+            <span class="font-bold whitespace-nowrap">โทร.&nbsp;&nbsp;</span>
+            <span class="border-b border-dotted border-black w-28 px-1 text-center font-medium">-</span>
+          </div>
+          <div class="col-span-6 flex items-end">
+            <span class="font-bold whitespace-nowrap">ที่&nbsp;&nbsp;</span>
+            <span class="border-b border-dotted border-black flex-grow px-1 font-medium">${docNo}</span>
+          </div>
+          <div class="col-span-6 flex items-end justify-end">
+            <span class="font-bold whitespace-nowrap">วันที่&nbsp;&nbsp;</span>
+            <span class="border-b border-dotted border-black w-48 px-1 text-center font-medium">${formatThaiDate(inspectDate)}</span>
+          </div>
+          <div class="col-span-12 flex items-end mt-0.5">
+            <span class="font-bold whitespace-nowrap">เรื่อง&nbsp;&nbsp;</span>
+            <span class="font-bold flex-grow px-1">รายงานผลการตรวจสอบพัสดุประจำปีงบประมาณ พ.ศ. ${fyDisplay}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-xs text-black space-y-2 mb-3 leading-relaxed">
+        <div>
+          <span class="font-bold">เรียน&nbsp;&nbsp;</span>
+          <span>${director}</span>
+        </div>
+        <div class="pl-8 text-justify">
+          ตามคำสั่ง ${dept} ที่ ${orderNo} ลงวันที่ ${formatThaiDate(orderDate)} ได้แต่งตั้งคณะกรรมการตรวจสอบพัสดุประจำปีงบประมาณ พ.ศ. ${fyDisplay} เพื่อดำเนินการตรวจสอบการรับจ่ายพัสดุและตรวจนับพัสดุคงเหลือ ณ วันสิ้นปีงบประมาณ (๓๐ กันยายน) นั้น
+        </div>
+        <div class="pl-8 text-justify">
+          บัดนี้ คณะกรรมการได้ดำเนินการตรวจสอบพัสดุและตรวจนับครุภัณฑ์ของโรงเรียนเสร็จสิ้นเรียบร้อยแล้ว จึงขอรายงานผลการตรวจสอบพัสดุประจำปีงบประมาณ พ.ศ. ${fyDisplay} ปรากฏผลการตรวจนับ ดังนี้:
+        </div>
+        <div class="pl-12 space-y-1 my-1">
+          <div>๑. ครุภัณฑ์ทั้งหมด จำนวน <b class="border-b border-dotted border-black px-2">${items.length}</b> รายการ รวมมูลค่า <b class="border-b border-dotted border-black px-2">${Number(totalCost).toLocaleString('th-TH', {minimumFractionDigits: 2})}</b> บาท (มูลค่าสุทธิ <b class="border-b border-dotted border-black px-2">${Number(totalNet).toLocaleString('th-TH', {minimumFractionDigits: 2})}</b> บาท)</div>
+          <div>๒. ครุภัณฑ์ที่อยู่ในสภาพใช้งานได้ดี จำนวน <b class="border-b border-dotted border-black px-2">${goodCount}</b> รายการ รวมมูลค่า <b class="border-b border-dotted border-black px-2">${Number(goodCost).toLocaleString('th-TH', {minimumFractionDigits: 2})}</b> บาท</div>
+          <div>๓. ครุภัณฑ์ที่ชำรุดแต่สามารถซ่อมแซมได้ จำนวน <b class="border-b border-dotted border-black px-2">${repairCount}</b> รายการ รวมมูลค่า <b class="border-b border-dotted border-black px-2">${Number(repairCost).toLocaleString('th-TH', {minimumFractionDigits: 2})}</b> บาท</div>
+          <div>๔. ครุภัณฑ์ที่ชำรุด/เสื่อมสภาพ สมควรขอจำหน่าย จำนวน <b class="border-b border-dotted border-black px-2">${disposalCount}</b> รายการ รวมมูลค่า <b class="border-b border-dotted border-black px-2">${Number(disposalCost).toLocaleString('th-TH', {minimumFractionDigits: 2})}</b> บาท</div>
+          ${lostCount > 0 ? `<div>๕. ครุภัณฑ์สูญหาย จำนวน <b class="border-b border-dotted border-black px-2">${lostCount}</b> รายการ รวมมูลค่า <b class="border-b border-dotted border-black px-2">${Number(lostCost).toLocaleString('th-TH', {minimumFractionDigits: 2})}</b> บาท</div>` : ''}
+        </div>
+        <div class="pl-8 text-justify">
+          รายละเอียดรายการครุภัณฑ์ทั้งหมดปรากฏตามบัญชีรายละเอียดแนบท้ายรายงานนี้
+        </div>
+        <div class="pl-8 text-justify">
+          จึงเรียนมาเพื่อโปรดทราบและพิจารณา
+        </div>
+      </div>
+
+      <!-- ลายมือชื่อคณะกรรมการ 3 ท่าน -->
+      <div class="grid grid-cols-3 gap-2 text-xs text-black text-center my-4">
+        <div class="space-y-1">
+          <div>(ลงชื่อ).....................................................ประธานกรรมการ</div>
+          <div>( ${chair || '.....................................................'} )</div>
+          <div class="text-[11px] text-slate-600">ประธานกรรมการตรวจสอบพัสดุ</div>
+        </div>
+        <div class="space-y-1">
+          <div>(ลงชื่อ).....................................................กรรมการ</div>
+          <div>( ${mem1 || '.....................................................'} )</div>
+          <div class="text-[11px] text-slate-600">กรรมการตรวจสอบพัสดุ</div>
+        </div>
+        <div class="space-y-1">
+          <div>(ลงชื่อ).....................................................กรรมการและเลขานุการ</div>
+          <div>( ${mem2 || '.....................................................'} )</div>
+          <div class="text-[11px] text-slate-600">กรรมการและเลขานุการ</div>
+        </div>
+      </div>
+
+      <!-- ความเห็น / คำสั่งผู้อำนวยการโรงเรียน -->
+      <div class="border border-black p-2.5 text-xs text-black rounded-none mt-2 max-w-xl mx-auto">
+        <div class="font-bold mb-1">ความเห็น / คำสั่งของผู้อำนวยการโรงเรียน:</div>
+        <div class="flex items-center gap-6 my-1 pl-2 font-medium">
+          <label class="flex items-center gap-1.5"><span>☑</span> <span>ทราบ / เห็นชอบตามรายงานของคณะกรรมการ</span></label>
+          <label class="flex items-center gap-1.5"><span>☐</span> <span>อื่นๆ .................................................</span></label>
+        </div>
+        <div class="text-center mt-3 space-y-1">
+          <div>(ลงชื่อ)....................................................................</div>
+          <div>( ${director} )</div>
+          <div class="text-[11px]">ผู้อำนวยการ${dept}</div>
+          <div class="text-[11px]">วันที่ ........ เดือน .................... พ.ศ. ............</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- บัญชีรายละเอียดแนบท้ายรายงานผลการตรวจสอบพัสดุประจำปี (หน้า 2 เป็นต้นไป) -->
+    <div class="print-asset-card">
+      <div class="text-center mb-2">
+        <h2 class="text-base font-bold text-black">บัญชีรายละเอียดการตรวจสอบพัสดุประจำปีงบประมาณ พ.ศ. ${fyDisplay}</h2>
+        <div class="text-xs text-slate-700">${dept} ${org} (ตรวจนับ ณ วันที่ ${formatThaiDate(inspectDate)})</div>
+      </div>
+
+      <table class="form-table w-full text-[10px]">
+        <thead>
+          <tr class="bg-white font-bold text-center">
+            <th class="w-7">ลำดับ</th>
+            <th class="w-32">เลขทะเบียนครุภัณฑ์</th>
+            <th class="min-w-[140px]">รายการ / คุณลักษณะ</th>
+            <th class="w-16">วันที่ได้มา</th>
+            <th class="w-14">อายุใช้งาน</th>
+            <th class="w-20 leading-tight">ราคาต่อหน่วย<br>(บาท)</th>
+            <th class="w-20 leading-tight">มูลค่าสุทธิ<br>(บาท)</th>
+            <th class="w-28">สถานที่ตั้ง / ผู้รับผิดชอบ</th>
+            <th class="w-24">ผลการตรวจสอบ</th>
+            <th class="w-24">หมายเหตุ</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRowsHtml || '<tr><td colspan="10" class="text-center p-4">ไม่มีรายการครุภัณฑ์</td></tr>'}
+        </tbody>
+        <tfoot>
+          <tr class="font-bold text-black bg-slate-50">
+            <td colspan="5" class="text-center p-1 font-bold">รวมทั้งสิ้น ${items.length} รายการ</td>
+            <td class="text-right p-1 whitespace-nowrap">${Number(totalCost).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+            <td class="text-right p-1 whitespace-nowrap">${Number(totalNet).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+            <td colspan="3" class="text-center p-1 text-[10px] font-normal text-slate-600">
+              (ใช้งานได้ดี ${goodCount} | ชำรุดซ่อมได้ ${repairCount} | ขอจำหน่าย ${disposalCount} | สูญหาย ${lostCount})
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <div class="flex justify-between items-center text-[10px] text-black mt-3 pt-2 border-t border-slate-300">
+        <div>คณะกรรมการตรวจสอบพัสดุได้ร่วมกันตรวจนับถูกต้องตรงตามความเป็นจริง</div>
+        <div class="flex gap-4">
+          <span>(ลงชื่อ)........................................ประธาน</span>
+          <span>(ลงชื่อ)........................................กรรมการ</span>
+          <span>(ลงชื่อ)........................................เลขานุการ</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ==============================================================
+// 5. รายงานขออนุมัติจำหน่ายครุภัณฑ์ชำรุด/เสื่อมสภาพ (ระเบียบฯ พ.ศ. ๒๕๖๐ ข้อ ๒๑๕)
+// ==============================================================
+function getDisposalAssets(fiscalYear = 'all') {
+  return assetList.filter(item => {
+    const s = (item.status || '').trim();
+    const isDisposal = s.includes('ขอจำหน่าย') || s.includes('จำหน่ายแล้ว');
+    if (!isDisposal) return false;
+
+    if (fiscalYear !== 'all') {
+      const { fiscalYear: fy } = getFiscalYearAndMonth(item.received_date);
+      if (String(fy) !== String(fiscalYear)) return false;
+    }
+    return true;
+  });
+}
+
+function openDisposalReportModal() {
+  const selectEl = document.getElementById('dr-fiscal-year');
+  if (selectEl) {
+    const availableYears = getAvailableFiscalYears(assetList, 'received_date');
+    selectEl.innerHTML = '';
+    const optAll = document.createElement('option');
+    optAll.value = 'all';
+    optAll.innerText = 'ทุกปีงบประมาณ (รายการที่ขอจำหน่ายทั้งหมด)';
+    selectEl.appendChild(optAll);
+
+    availableYears.forEach(year => {
+      const opt = document.createElement('option');
+      opt.value = String(year);
+      const shortYear = String(year).slice(-2);
+      opt.innerText = `ปีงบประมาณ ${year} (ปีงบ ${shortYear})`;
+      selectEl.appendChild(opt);
+    });
+    selectEl.value = 'all';
+  }
+
+  const officer = localStorage.getItem('dr_officer_name') || '';
+  const head = localStorage.getItem('dr_head_name') || '';
+  let director = localStorage.getItem('dr_director_name') || localStorage.getItem('ai_director_name') || '';
+  if (!director) director = 'ผู้อำนวยการโรงเรียนบ้านดงกลาง';
+  const docNo = localStorage.getItem('dr_doc_no') || 'ศธ 04153.25/...';
+
+  const inpOff = document.getElementById('dr-officer-name');
+  const inpHd = document.getElementById('dr-head-name');
+  const inpDir = document.getElementById('dr-director-name');
+  const inpDoc = document.getElementById('dr-doc-no');
+  const inpRepDate = document.getElementById('dr-report-date');
+
+  if (inpOff) inpOff.value = officer;
+  if (inpHd) inpHd.value = head;
+  if (inpDir) inpDir.value = director;
+  if (inpDoc) inpDoc.value = docNo;
+
+  const today = new Date().toISOString().split('T')[0];
+  if (inpRepDate && !inpRepDate.value) inpRepDate.value = today;
+
+  updateDisposalReportPreview();
+  openModal('disposalReportModal');
+}
+
+function updateDisposalReportPreview() {
+  const fySelect = document.getElementById('dr-fiscal-year');
+  const fy = fySelect ? fySelect.value : 'all';
+  const list = getDisposalAssets(fy);
+
+  let totalCost = 0;
+  let totalNet = 0;
+
+  list.forEach(item => {
+    totalCost += parseFloat(item.cost) || 0;
+    totalNet += parseFloat(item.net_book_value) || 0;
+  });
+
+  const countSpan = document.getElementById('dr-eligible-count');
+  const costSpan = document.getElementById('dr-eligible-cost');
+  const netSpan = document.getElementById('dr-eligible-net');
+  const tbody = document.getElementById('dr-preview-table-body');
+  const btnSubmit = document.getElementById('btn-print-disposal-submit');
+
+  if (countSpan) countSpan.innerText = list.length;
+  if (costSpan) costSpan.innerText = Number(totalCost).toLocaleString('th-TH', {minimumFractionDigits: 2});
+  if (netSpan) netSpan.innerText = Number(totalNet).toLocaleString('th-TH', {minimumFractionDigits: 2});
+
+  if (tbody) {
+    if (list.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" class="p-4 text-center text-slate-400">
+            ℹ️ ยังไม่มีรายการครุภัณฑ์ที่มีสถานะ "ชำรุด/เสื่อมสภาพ (ขอจำหน่าย)" หรือ "จำหน่ายแล้ว"<br>
+            <span class="text-[10px] text-amber-700">สามารถกดปุ่ม ✏️ แก้ไขรายการในตารางครุภัณฑ์เพื่อเปลี่ยนสถานะเป็น "ขอจำหน่าย" ได้</span>
+          </td>
+        </tr>
+      `;
+      if (btnSubmit) {
+        btnSubmit.disabled = true;
+        btnSubmit.classList.add('opacity-50', 'cursor-not-allowed');
+      }
+    } else {
+      if (btnSubmit) {
+        btnSubmit.disabled = false;
+        btnSubmit.classList.remove('opacity-50', 'cursor-not-allowed');
+      }
+      tbody.innerHTML = list.map((item, idx) => {
+        const info = extractDisposalInfo(item);
+        return `
+          <tr class="hover:bg-rose-50/50 border-b border-slate-100">
+            <td class="p-1.5 text-center">${idx + 1}</td>
+            <td class="p-1.5 font-medium text-red-950">${escapeHtml(item.asset_code || '')}</td>
+            <td class="p-1.5 font-medium">${escapeHtml(item.asset_name || '')}</td>
+            <td class="p-1.5 text-right">${Number(item.cost || 0).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+            <td class="p-1.5 text-right font-bold text-red-900">${Number(item.net_book_value || 0).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+            <td class="p-1.5 text-slate-700">${escapeHtml(info.reason || 'ชำรุดจนไม่สามารถซ่อมแซมได้')}</td>
+            <td class="p-1.5 font-semibold text-rose-800">${escapeHtml(info.method || 'ขายทอดตลาด')}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+  }
+}
+
+function handlePrintDisposalReport(e) {
+  e.preventDefault();
+  const fySelect = document.getElementById('dr-fiscal-year');
+  const fiscalYear = fySelect ? fySelect.value : 'all';
+  const reportDate = document.getElementById('dr-report-date').value || new Date().toISOString().split('T')[0];
+  const docNo = cleanFieldText(document.getElementById('dr-doc-no').value) || 'ศธ 04153.25/...';
+  const officer = cleanFieldText(document.getElementById('dr-officer-name').value);
+  const head = cleanFieldText(document.getElementById('dr-head-name').value);
+  const director = cleanFieldText(document.getElementById('dr-director-name').value) || 'ผู้อำนวยการโรงเรียนบ้านดงกลาง';
+
+  // บันทึกความจำลง localStorage อัตโนมัติ
+  localStorage.setItem('dr_officer_name', officer);
+  localStorage.setItem('dr_head_name', head);
+  localStorage.setItem('dr_director_name', director);
+  localStorage.setItem('dr_doc_no', docNo);
+
+  const items = getDisposalAssets(fiscalYear);
+  if (items.length === 0) {
+    alert('ไม่มีรายการครุภัณฑ์ที่เข้าเกณฑ์ขอจำหน่าย กรุณาแก้ไขสถานะครุภัณฑ์ในตารางเป็น "ชำรุด/เสื่อมสภาพ (ขอจำหน่าย)" ก่อนครับ');
+    return;
+  }
+
+  const printSection = document.getElementById('print-disposal-report-section');
+  if (printSection) {
+    printSection.innerHTML = generateDisposalReportPrintHtml(fiscalYear, reportDate, docNo, officer, head, director, items);
+  }
+
+  setPrintTarget('disposalReport');
+  closeModal('disposalReportModal');
+  window.print();
+}
+
+function generateDisposalReportPrintHtml(fiscalYear, reportDate, docNo, officer, head, director, items) {
+  const org = cleanFieldText(localStorage.getItem('gov_org')) || DEFAULT_ORG;
+  const dept = cleanFieldText(localStorage.getItem('gov_dept')) || DEFAULT_DEPT;
+  const fyDisplay = fiscalYear === 'all' ? '' : `ประจำปีงบประมาณ พ.ศ. ${fiscalYear}`;
+
+  let totalCost = 0;
+  let totalNet = 0;
+
+  items.forEach(item => {
+    totalCost += parseFloat(item.cost) || 0;
+    totalNet += parseFloat(item.net_book_value) || 0;
+  });
+
+  const tableRowsHtml = items.map((item, idx) => {
+    const info = extractDisposalInfo(item);
+    return `
+      <tr>
+        <td class="text-center font-normal">${idx + 1}</td>
+        <td class="text-left font-medium whitespace-nowrap">${escapeHtml(item.asset_code || '')}</td>
+        <td class="text-left font-medium">${escapeHtml(item.asset_name || '')} ${item.spec ? `<span class="text-[9px] text-slate-600 block">(${escapeHtml(item.spec)})</span>` : ''}</td>
+        <td class="text-center whitespace-nowrap">${formatThaiDate(item.received_date)}</td>
+        <td class="text-center">${item.useful_life ? item.useful_life + ' ปี' : '-'}</td>
+        <td class="text-right whitespace-nowrap">${Number(item.cost || 0).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+        <td class="text-right whitespace-nowrap font-bold">${Number(item.net_book_value || 0).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+        <td class="text-left">${escapeHtml(info.reason || 'ชำรุดจนไม่สามารถซ่อมแซมได้')}</td>
+        <td class="text-center font-semibold">${escapeHtml(info.method || 'ขายทอดตลาด')}</td>
+        <td class="text-left text-[9px]">${escapeHtml(info.cleanRemark || '')}</td>
+      </tr>
+    `;
+  }).join('');
+
+  return `
+    <div class="print-asset-card page-break">
+      <!-- บันทึกข้อความ ขออนุมัติจำหน่ายครุภัณฑ์ (หน้า 1) -->
+      <div class="border-b-2 border-black pb-2 mb-3">
+        <div class="flex items-center justify-between">
+          <div class="w-20">
+            <span class="text-3xl font-bold">🦅</span>
+          </div>
+          <div class="text-center flex-grow">
+            <h1 class="text-2xl font-bold tracking-widest text-black">บันทึกข้อความ</h1>
+          </div>
+          <div class="w-24 text-right text-[10px] text-slate-600">
+            (ระเบียบกระทรวงการคลังฯ พ.ศ. ๒๕๖๐ ข้อ ๒๑๕)
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-12 gap-y-1.5 text-xs text-black mt-2">
+          <div class="col-span-8 flex items-end">
+            <span class="font-bold whitespace-nowrap">ส่วนราชการ&nbsp;&nbsp;</span>
+            <span class="border-b border-dotted border-black flex-grow px-1 font-medium">${dept} ${org}</span>
+          </div>
+          <div class="col-span-4 flex items-end justify-end">
+            <span class="font-bold whitespace-nowrap">โทร.&nbsp;&nbsp;</span>
+            <span class="border-b border-dotted border-black w-28 px-1 text-center font-medium">-</span>
+          </div>
+          <div class="col-span-6 flex items-end">
+            <span class="font-bold whitespace-nowrap">ที่&nbsp;&nbsp;</span>
+            <span class="border-b border-dotted border-black flex-grow px-1 font-medium">${docNo}</span>
+          </div>
+          <div class="col-span-6 flex items-end justify-end">
+            <span class="font-bold whitespace-nowrap">วันที่&nbsp;&nbsp;</span>
+            <span class="border-b border-dotted border-black w-48 px-1 text-center font-medium">${formatThaiDate(reportDate)}</span>
+          </div>
+          <div class="col-span-12 flex items-end mt-0.5">
+            <span class="font-bold whitespace-nowrap">เรื่อง&nbsp;&nbsp;</span>
+            <span class="font-bold flex-grow px-1">ขออนุมัติจำหน่ายพัสดุและครุภัณฑ์ชำรุด / เสื่อมสภาพ ${fyDisplay}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-xs text-black space-y-2 mb-3 leading-relaxed">
+        <div>
+          <span class="font-bold">เรียน&nbsp;&nbsp;</span>
+          <span>${director}</span>
+        </div>
+        <div class="pl-8 text-justify">
+          ด้วยเจ้าหน้าที่พัสดุได้ดำเนินการตรวจสอบพัสดุและครุภัณฑ์ของ${dept} ปรากฏว่ามีครุภัณฑ์ที่ชำรุด เสื่อมสภาพตามอายุการใช้งาน จนไม่สามารถใช้งานในราชการต่อไปได้ หรือหากซ่อมแซมแล้วจะไม่คุ้มค่าต่อทางราชการ จำนวนทั้งสิ้น <b class="border-b border-dotted border-black px-2">${items.length}</b> รายการ ราคาทุนรวม <b class="border-b border-dotted border-black px-2">${Number(totalCost).toLocaleString('th-TH', {minimumFractionDigits: 2})}</b> บาท มูลค่าสุทธิคงเหลือตามบัญชี <b class="border-b border-dotted border-black px-2">${Number(totalNet).toLocaleString('th-TH', {minimumFractionDigits: 2})}</b> บาท
+        </div>
+        <div class="pl-8 text-justify">
+          เพื่อให้การบริหารพัสดุเป็นไปตามระเบียบกระทรวงการคลังว่าด้วยการจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ พ.ศ. ๒๕๖๐ ข้อ ๒๑๕ จึงเห็นสมควรขออนุมัติจำหน่ายพัสดุดังกล่าวออกจากบัญชีหรือทะเบียนคุมทรัพย์สิน โดยเสนอวิธีการจำหน่ายตามที่ระบุในบัญชีรายละเอียดแนบท้ายนี้
+        </div>
+        <div class="pl-8 text-justify">
+          จึงเรียนมาเพื่อโปรดพิจารณาอนุมัติการจำหน่ายพัสดุและครุภัณฑ์ดังกล่าว
+        </div>
+      </div>
+
+      <!-- ลายมือชื่อเจ้าหน้าที่พัสดุ และหัวหน้าเจ้าหน้าที่พัสดุ -->
+      <div class="grid grid-cols-2 gap-8 text-xs text-black text-center my-5">
+        <div class="space-y-1">
+          <div>(ลงชื่อ).....................................................ผู้เสนอขอจำหน่าย</div>
+          <div>( ${officer || '.....................................................'} )</div>
+          <div class="text-[11px] text-slate-600">เจ้าหน้าที่พัสดุ</div>
+        </div>
+        <div class="space-y-1">
+          <div>(ลงชื่อ).....................................................ผู้เห็นชอบ</div>
+          <div>( ${head || '.....................................................'} )</div>
+          <div class="text-[11px] text-slate-600">หัวหน้าเจ้าหน้าที่พัสดุ</div>
+        </div>
+      </div>
+
+      <!-- คำสั่ง / การอนุมัติของผู้อำนวยการโรงเรียน -->
+      <div class="border border-black p-3 text-xs text-black rounded-none mt-3 max-w-xl mx-auto">
+        <div class="font-bold mb-1">คำสั่ง / การอนุมัติของผู้อำนวยการโรงเรียน:</div>
+        <div class="flex items-center gap-6 my-1.5 pl-2 font-medium">
+          <label class="flex items-center gap-1.5"><span>☑</span> <span>อนุมัติให้ดำเนินการจำหน่ายตามที่เสนอ</span></label>
+          <label class="flex items-center gap-1.5"><span>☐</span> <span>อื่นๆ .................................................</span></label>
+        </div>
+        <div class="text-center mt-3 space-y-1">
+          <div>(ลงชื่อ)....................................................................</div>
+          <div>( ${director} )</div>
+          <div class="text-[11px]">ผู้อำนวยการ${dept}</div>
+          <div class="text-[11px]">วันที่ ........ เดือน .................... พ.ศ. ............</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- บัญชีรายละเอียดครุภัณฑ์ขออนุมัติจำหน่ายแนบท้าย (หน้า 2 เป็นต้นไป) -->
+    <div class="print-asset-card">
+      <div class="text-center mb-2">
+        <h2 class="text-base font-bold text-black">บัญชีรายละเอียดครุภัณฑ์ที่ขออนุมัติจำหน่าย ${fyDisplay}</h2>
+        <div class="text-xs text-slate-700">${dept} ${org}</div>
+      </div>
+
+      <table class="form-table w-full text-[10px]">
+        <thead>
+          <tr class="bg-white font-bold text-center">
+            <th class="w-7">ลำดับ</th>
+            <th class="w-32">เลขทะเบียนครุภัณฑ์</th>
+            <th class="min-w-[140px]">รายการ / คุณลักษณะ</th>
+            <th class="w-16">วันที่ได้มา</th>
+            <th class="w-14">อายุใช้งาน</th>
+            <th class="w-20 leading-tight">ราคาทุน<br>(บาท)</th>
+            <th class="w-20 leading-tight">มูลค่าสุทธิ<br>(บาท)</th>
+            <th class="w-36">สภาพและสาเหตุที่ขอจำหน่าย</th>
+            <th class="w-24">วิธีการจำหน่ายที่เสนอ</th>
+            <th class="w-24">หมายเหตุ</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRowsHtml || '<tr><td colspan="10" class="text-center p-4">ไม่มีรายการขอจำหน่าย</td></tr>'}
+        </tbody>
+        <tfoot>
+          <tr class="font-bold text-black bg-slate-50">
+            <td colspan="5" class="text-center p-1 font-bold">รวมทั้งสิ้น ${items.length} รายการ</td>
+            <td class="text-right p-1 whitespace-nowrap">${Number(totalCost).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+            <td class="text-right p-1 whitespace-nowrap">${Number(totalNet).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+            <td colspan="3" class="text-center p-1 text-[10px] font-normal text-slate-600">
+              เสนอจำหน่ายตามระเบียบ มท./กค. ๒๕๖๐ ข้อ ๒๑๕
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <div class="flex justify-between items-center text-[10px] text-black mt-3 pt-2 border-t border-slate-300">
+        <div>ขอรับรองว่ารายการครุภัณฑ์ข้างต้นมีสภาพชำรุด/เสื่อมสภาพตามที่รายงานจริง</div>
+        <div class="flex gap-6">
+          <span>(ลงชื่อ)....................................เจ้าหน้าที่พัสดุ</span>
+          <span>(ลงชื่อ)....................................หัวหน้าเจ้าหน้าที่</span>
+          <span>(ลงชื่อ)....................................ผู้อนุมัติ</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
