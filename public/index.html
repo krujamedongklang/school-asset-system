@@ -8,6 +8,7 @@
   <meta http-equiv="Expires" content="0">
   <title>ระบบบริหารจัดการพัสดุและครุภัณฑ์โรงเรียน</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="qrcode.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     body {
@@ -112,9 +113,15 @@
       .print-asset-card:last-child,
       #print-material-section,
       #print-annual-inspection-section,
-      #print-disposal-report-section {
+      #print-disposal-report-section,
+      #print-qr-sticker-section {
         page-break-after: avoid !important;
         break-after: avoid !important;
+      }
+      .qr-canvas-box canvas, .qr-canvas-box img {
+        width: 100% !important;
+        height: 100% !important;
+        display: block !important;
       }
     }
   </style>
@@ -284,6 +291,9 @@
             </button>
             <button onclick="printSelectedAssets()" id="btn-print-assets" class="flex-1 sm:flex-initial justify-center bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold px-3 py-2 sm:px-4 sm:py-2 rounded-xl shadow-xs transition flex items-center gap-1.5 text-xs sm:text-sm border border-amber-600/30 whitespace-nowrap">
               <span>🖨️</span> <span id="btn-print-text">พิมพ์รายการที่เลือก</span>
+            </button>
+            <button onclick="openQrStickerModal()" class="flex-1 sm:flex-initial justify-center bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold px-3 py-2 sm:px-4 sm:py-2 rounded-xl shadow-xs transition flex items-center gap-1.5 text-xs whitespace-nowrap border border-emerald-700/30 cursor-pointer" title="พิมพ์สติกเกอร์ QR Code / Barcode ติดตัวครุภัณฑ์">
+              <span>🏷️</span> <span>พิมพ์สติกเกอร์ QR Code</span>
             </button>
 
             <!-- ปุ่มรายงานตรวจสอบพัสดุประจำปี และ รายงานขอจำหน่าย -->
@@ -606,6 +616,11 @@
 
     <!-- === PRINT FORM 4: รายงานขออนุมัติจำหน่ายครุภัณฑ์ชำรุด/เสื่อมสภาพ === -->
     <div id="print-disposal-report-section" class="hidden">
+      <!-- Populated dynamically by JS -->
+    </div>
+
+    <!-- === PRINT FORM 5: สติกเกอร์ QR Code / Barcode ติดตัวครุภัณฑ์ === -->
+    <div id="print-qr-sticker-section" class="hidden">
       <!-- Populated dynamically by JS -->
     </div>
 
@@ -1232,6 +1247,105 @@
     </div>
   </div>
 
+  <!-- MODAL: พิมพ์สติกเกอร์ QR Code / Barcode ติดตัวครุภัณฑ์ -->
+  <div id="qrStickerModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs hidden flex items-center justify-center p-2.5 sm:p-4 z-50 no-print">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-4 sm:p-6 max-h-[92vh] overflow-y-auto touch-scroll border border-emerald-200">
+      <div class="flex justify-between items-center mb-3 sm:mb-4 border-b border-emerald-100 pb-2.5 sm:pb-3">
+        <h3 class="text-base font-bold text-emerald-950 flex items-center gap-2">
+          <span>🏷️</span> <span>พิมพ์สติกเกอร์ QR Code ติดตัวครุภัณฑ์</span>
+        </h3>
+        <button onclick="closeModal('qrStickerModal')" class="text-slate-400 hover:text-slate-600 text-2xl font-bold leading-none p-1 -mr-1">&times;</button>
+      </div>
+
+      <div class="space-y-3.5 text-xs">
+        <!-- ตัวเลือกรายการที่จะพิมพ์ -->
+        <div class="bg-emerald-50/70 border border-emerald-200/80 p-3 rounded-xl space-y-2">
+          <div class="font-bold text-emerald-950 flex items-center justify-between">
+            <span>📋 ขอบเขตรายการที่จะพิมพ์:</span>
+            <span id="sticker-item-count-badge" class="bg-emerald-200 text-emerald-900 font-bold px-2 py-0.5 rounded-full text-[11px]">0 รายการ</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+            <label class="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-emerald-200 cursor-pointer hover:bg-emerald-50 shadow-2xs">
+              <input type="radio" name="sticker_scope" value="filter" checked onchange="updateQrStickerScope()" class="text-emerald-600 focus:ring-emerald-500">
+              <span class="font-semibold text-slate-800">ตามตัวกรองปัจจุบัน (<span id="sticker-scope-filter-count">0</span> รายการ)</span>
+            </label>
+            <label class="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-emerald-200 cursor-pointer hover:bg-emerald-50 shadow-2xs">
+              <input type="radio" name="sticker_scope" value="selected" onchange="updateQrStickerScope()" class="text-emerald-600 focus:ring-emerald-500">
+              <span class="font-semibold text-slate-800">เฉพาะรายการที่ติ๊กเลือก (<span id="sticker-scope-selected-count">0</span> รายการ)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- ตัวเลือกขนาดสติกเกอร์และเลย์เอาต์ -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="font-semibold block mb-1 text-slate-700">ขนาดสติกเกอร์ (กระดาษ A4 แนวตั้ง):</label>
+            <select id="sticker-layout-size" onchange="updateQrStickerPreview()" class="w-full border border-slate-300 p-2.5 rounded-xl font-medium bg-white focus:ring-2 focus:ring-emerald-500">
+              <option value="compact">📐 ขนาดมาตรฐาน (3 x 8 = 24 ดวง/หน้า A4) • คอม/อุปกรณ์ทั่วไป</option>
+              <option value="large">📐 ขนาดใหญ่ชัดเจน (2 x 5 = 10 ดวง/หน้า A4) • โต๊ะ/เก้าอี้/ตู้/แอร์</option>
+              <option value="single">📐 พิมพ์ดวงเดี่ยว (พิมพ์เฉพาะรายการแรก)</option>
+            </select>
+          </div>
+          <div>
+            <label class="font-semibold block mb-1 text-slate-700">ข้อความหัวป้ายสติกเกอร์:</label>
+            <input type="text" id="sticker-school-header" value="โรงเรียนบ้านดงกลาง" oninput="updateQrStickerPreview()" class="w-full border border-slate-300 p-2.5 rounded-xl font-medium focus:ring-2 focus:ring-emerald-500">
+          </div>
+        </div>
+
+        <!-- ตัวอย่าง Live Preview สติกเกอร์ -->
+        <div class="border border-slate-200 rounded-xl p-3 bg-slate-50">
+          <div class="font-bold text-slate-700 mb-2 flex items-center justify-between text-[11px]">
+            <span>👁️ ตัวอย่างสติกเกอร์จริง (Live Preview):</span>
+            <span class="text-slate-400 font-normal">* เครื่องพิมพ์จะพิมพ์ออกมาตามขนาดจริง</span>
+          </div>
+          <div id="sticker-live-preview-box" class="flex justify-center p-3 bg-white border border-dashed border-slate-300 rounded-xl overflow-x-auto min-h-[90px] items-center">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <div class="p-2.5 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 text-[11px] leading-relaxed flex items-start gap-1.5">
+          <span class="text-base leading-none">💡</span>
+          <span>
+            <strong>คำแนะนำ:</strong> สามารถพิมพ์ลงบน <strong>กระดาษสติกเกอร์ A4 ขาวด้าน หรือ สติกเกอร์สำเร็จรูป</strong> แล้วตัดตามเส้นประ นำไปติดที่คอมพิวเตอร์ โต๊ะ หรือครุภัณฑ์ได้ทันที เมื่อใช้กล้องมือถือสแกน QR Code จะเปิดหน้าตรวจสอบข้อมูลครุภัณฑ์นั้นได้ทันทีครับ
+          </span>
+        </div>
+
+        <div class="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeModal('qrStickerModal')" class="w-full sm:w-auto px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 font-medium transition text-center">ยกเลิก</button>
+          <button type="button" onclick="handlePrintQrStickers()" class="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-xl font-bold shadow-md transition border border-emerald-800/30 text-center flex items-center justify-center gap-1.5 cursor-pointer">
+            <span>🖨️</span> <span>สั่งพิมพ์สติกเกอร์ (A4 แนวตั้ง)</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: แสดงบัตรข้อมูลครุภัณฑ์เมื่อสแกน QR Code (Public Verification Card) -->
+  <div id="publicAssetModal" class="fixed inset-0 bg-black/70 backdrop-blur-xs hidden flex items-center justify-center p-3 sm:p-4 z-50">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-5 sm:p-6 max-h-[92vh] overflow-y-auto border border-amber-200">
+      <div class="text-center pb-3 border-b border-slate-100">
+        <div class="w-14 h-14 mx-auto mb-2 rounded-2xl bg-amber-100 border border-amber-300 flex items-center justify-center text-3xl shadow-xs">
+          🏫
+        </div>
+        <h3 class="font-bold text-base text-red-950">โรงเรียนบ้านดงกลาง</h3>
+        <p class="text-xs font-semibold text-amber-800">ระบบตรวจสอบทะเบียนคุมทรัพย์สิน (ครุภัณฑ์)</p>
+      </div>
+
+      <div id="public-asset-content" class="py-3 space-y-3 text-xs">
+        <!-- Populated dynamically by JS -->
+      </div>
+
+      <div class="flex justify-between items-center pt-3 border-t border-slate-100 gap-2">
+        <button type="button" onclick="closeModal('publicAssetModal')" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition text-center">
+          ปิดหน้าต่าง
+        </button>
+        <button type="button" id="public-asset-edit-btn" onclick="goToEditFromPublicCard()" class="hidden w-full py-2.5 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 text-white rounded-xl font-bold transition text-center shadow-xs">
+          ✏️ แก้ไขข้อมูล
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Datalist รายชื่อครูและบุคลากรโรงเรียนบ้านดงกลาง สำหรับ Auto-complete -->
   <datalist id="school-staff-datalist">
     <option value="นางสายสายใจ  วิลัยทอง">ผู้อำนวยการโรงเรียน</option>
@@ -1253,6 +1367,6 @@
     <option value="นางสาวภัฐธีรา  จุลพันธ์">ธุรการโรงเรียน</option>
   </datalist>
 
-  <script src="app.js?v=6.2"></script>
+  <script src="app.js?v=8.0"></script>
 </body>
 </html>

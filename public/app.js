@@ -23,8 +23,30 @@ let selectedMaterialIds = new Set();
 // รูปแบบการพิมพ์ครุภัณฑ์ ('single-pages' = แยกแผ่นละ 1 รายการ, 'combined-table' = รวมในตารางเดียว)
 let assetPrintMode = 'single-pages';
 
-// กำหนดเป้าหมายการพิมพ์ (asset, material, annualInspection, disposalReport)
+// กำหนดเป้าหมายการพิมพ์ (asset, material, annualInspection, disposalReport, qrSticker)
 let currentPrintTarget = 'asset';
+
+function applyStickerPrintPageStyle() {
+  let styleEl = document.getElementById('sticker-print-style');
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = 'sticker-print-style';
+    document.head.appendChild(styleEl);
+  }
+  styleEl.innerHTML = `
+    @media print {
+      @page {
+        size: A4 portrait !important;
+        margin: 6mm 6mm !important;
+      }
+    }
+  `;
+}
+
+function removeStickerPrintPageStyle() {
+  const styleEl = document.getElementById('sticker-print-style');
+  if (styleEl) styleEl.remove();
+}
 
 function setPrintTarget(target) {
   currentPrintTarget = target;
@@ -32,7 +54,8 @@ function setPrintTarget(target) {
     asset: document.getElementById('print-asset-section'),
     material: document.getElementById('print-material-section'),
     annualInspection: document.getElementById('print-annual-inspection-section'),
-    disposalReport: document.getElementById('print-disposal-report-section')
+    disposalReport: document.getElementById('print-disposal-report-section'),
+    qrSticker: document.getElementById('print-qr-sticker-section')
   };
 
   Object.entries(sections).forEach(([key, el]) => {
@@ -48,6 +71,7 @@ function setPrintTarget(target) {
 }
 
 window.addEventListener('afterprint', () => {
+  removeStickerPrintPageStyle();
   setPrintTarget(currentTab === 'asset' ? 'asset' : 'material');
 });
 
@@ -413,6 +437,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ตรวจสอบการเข้าสู่ระบบ
   await checkAuthAndInitialize();
+
+  // ตรวจสอบว่ามีการสแกน QR Code ดูข้อมูลครุภัณฑ์หรือไม่
+  const urlParams = new URLSearchParams(window.location.search);
+  const viewAssetId = urlParams.get('view_asset');
+  if (viewAssetId) {
+    showPublicAssetCard(viewAssetId);
+  }
 });
 
 // ==================== สลับแท็บ (Screen & Print Sync) ====================
@@ -1010,9 +1041,10 @@ function renderAssetTable() {
       </td>
       <td class="p-2 border border-slate-200">${item.responsible_person || ''}</td>
       <td class="p-2 border border-slate-200 text-center whitespace-nowrap space-x-1" onclick="event.stopPropagation()">
-        <button onclick="printSingleAsset(${item.id})" class="text-amber-600 hover:text-amber-800 p-1.5 font-semibold rounded-lg hover:bg-amber-100 transition shadow-2xs" title="พิมพ์บัตรรายการนี้เฉพาะใบเดียว">🖨️</button>
-        <button onclick="editAsset(${item.id})" class="text-red-700 hover:text-red-900 p-1.5 font-semibold rounded-lg hover:bg-red-100 transition shadow-2xs" title="แก้ไขรายการนี้">✏️</button>
-        <button onclick="deleteAsset(${item.id})" class="text-slate-400 hover:text-rose-600 p-1.5 font-semibold rounded-lg hover:bg-rose-50 transition shadow-2xs" title="ลบรายการ">🗑️</button>
+        <button onclick="printSingleQrSticker(${item.id})" class="text-emerald-700 hover:text-emerald-900 p-1.5 font-semibold rounded-lg hover:bg-emerald-100 transition shadow-2xs cursor-pointer" title="พิมพ์สติกเกอร์ QR Code ติดตัวครุภัณฑ์">🏷️</button>
+        <button onclick="printSingleAsset(${item.id})" class="text-amber-600 hover:text-amber-800 p-1.5 font-semibold rounded-lg hover:bg-amber-100 transition shadow-2xs cursor-pointer" title="พิมพ์บัตรรายการนี้เฉพาะใบเดียว">🖨️</button>
+        <button onclick="editAsset(${item.id})" class="text-red-700 hover:text-red-900 p-1.5 font-semibold rounded-lg hover:bg-red-100 transition shadow-2xs cursor-pointer" title="แก้ไขรายการนี้">✏️</button>
+        <button onclick="deleteAsset(${item.id})" class="text-slate-400 hover:text-rose-600 p-1.5 font-semibold rounded-lg hover:bg-rose-50 transition shadow-2xs cursor-pointer" title="ลบรายการ">🗑️</button>
       </td>
     `;
     screenTbody.appendChild(tr);
@@ -2904,3 +2936,374 @@ function generateDisposalReportPrintHtml(fiscalYear, reportDate, docNo, officer,
     </div>
   `;
 }
+
+// ==============================================================
+// 5. ระบบพิมพ์สติกเกอร์ QR Code / Barcode ติดตัวครุภัณฑ์
+// ==============================================================
+
+let qrStickerSingleAssetId = null;
+let currentPublicAssetId = null;
+
+// ดึงรายการครุภัณฑ์ที่จะพิมพ์สติกเกอร์ตามตัวเลือก
+function getStickerAssetsList() {
+  if (qrStickerSingleAssetId) {
+    const single = assetList.find(a => a.id === qrStickerSingleAssetId);
+    return single ? [single] : [];
+  }
+
+  const scopeRadios = document.getElementsByName('sticker_scope');
+  let scope = 'filter';
+  for (const r of scopeRadios) {
+    if (r.checked) {
+      scope = r.value;
+      break;
+    }
+  }
+
+  if (scope === 'selected' && selectedAssetIds.size > 0) {
+    return assetList.filter(a => selectedAssetIds.has(a.id));
+  }
+
+  return getFilteredAssets();
+}
+
+function openQrStickerModal(singleAssetId = null) {
+  qrStickerSingleAssetId = singleAssetId;
+  const filteredCount = getFilteredAssets().length;
+  const selectedCount = selectedAssetIds.size;
+
+  const filterCountEl = document.getElementById('sticker-scope-filter-count');
+  const selectedCountEl = document.getElementById('sticker-scope-selected-count');
+  const sizeSelect = document.getElementById('sticker-layout-size');
+
+  if (filterCountEl) filterCountEl.innerText = filteredCount;
+  if (selectedCountEl) selectedCountEl.innerText = selectedCount;
+
+  // ตั้งค่าตัวเลือกตามกรณี single หรือ bulk
+  const radios = document.getElementsByName('sticker_scope');
+  if (singleAssetId) {
+    if (sizeSelect) sizeSelect.value = 'single';
+  } else {
+    if (selectedCount > 0) {
+      if (radios[1]) radios[1].checked = true;
+    } else {
+      if (radios[0]) radios[0].checked = true;
+    }
+    if (sizeSelect && sizeSelect.value === 'single') {
+      sizeSelect.value = 'compact';
+    }
+  }
+
+  updateQrStickerScope();
+  openModal('qrStickerModal');
+}
+
+function printSingleQrSticker(id) {
+  openQrStickerModal(id);
+}
+
+function updateQrStickerScope() {
+  const items = getStickerAssetsList();
+  const countBadge = document.getElementById('sticker-item-count-badge');
+  if (countBadge) countBadge.innerText = `${items.length} รายการ`;
+  updateQrStickerPreview();
+}
+
+function updateQrStickerPreview() {
+  const previewBox = document.getElementById('sticker-live-preview-box');
+  if (!previewBox) return;
+
+  const items = getStickerAssetsList();
+  const sizeSelect = document.getElementById('sticker-layout-size');
+  const layoutSize = sizeSelect ? sizeSelect.value : 'compact';
+  const headerInput = document.getElementById('sticker-school-header');
+  const schoolHeader = headerInput ? headerInput.value.trim() : 'โรงเรียนบ้านดงกลาง';
+
+  if (!items || items.length === 0) {
+    previewBox.innerHTML = '<span class="text-slate-400 text-xs">ไม่มีรายการครุภัณฑ์ที่เลือก</span>';
+    return;
+  }
+
+  const sampleItem = items[0];
+  const stickerHtml = renderSingleStickerHtml(sampleItem, layoutSize, schoolHeader, true);
+  previewBox.innerHTML = stickerHtml;
+
+  // Render QR Code in preview box
+  const qrBox = previewBox.querySelector('.qr-canvas-box');
+  if (qrBox && window.QRCode) {
+    const url = qrBox.dataset.url;
+    const qrSize = (layoutSize === 'large' || layoutSize === 'single') ? 72 : 48;
+    new QRCode(qrBox, {
+      text: url,
+      width: qrSize,
+      height: qrSize,
+      colorDark: "#000000",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  }
+}
+
+function getAssetQrVerificationUrl(item) {
+  const origin = window.location.origin;
+  const path = window.location.pathname;
+  return `${origin}${path}?view_asset=${item.id}`;
+}
+
+function renderSingleStickerHtml(item, layoutSize, schoolHeader, isPreview = false) {
+  const qrUrl = getAssetQrVerificationUrl(item);
+  const code = item.asset_code || '-';
+  const name = item.asset_name || '-';
+  const dateStr = item.received_date || '-';
+  const { fiscalYear } = getFiscalYearAndMonth(dateStr);
+  const shortYear = fiscalYear ? String(fiscalYear).slice(-2) : '-';
+  const person = item.responsible_person || '-';
+  const location = item.location || '-';
+  const spec = item.spec || '';
+
+  if (layoutSize === 'large' || layoutSize === 'single') {
+    // ขนาดใหญ่ (2 คอลัมน์ x 5 แถว บนหน้า A4)
+    return `
+      <div class="asset-sticker-large" style="border: 1.5px solid #000; border-radius: 6px; padding: 2.5mm 3mm; box-sizing: border-box; width: ${isPreview ? '320px' : '95mm'}; height: ${isPreview ? 'auto' : '52mm'}; min-height: 52mm; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; background: #fff; font-family: 'Sarabun', sans-serif;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #000; padding-bottom: 1px; margin-bottom: 2px;">
+          <span style="font-size: 10pt; font-weight: bold; color: #000;">${schoolHeader}</span>
+          <span style="font-size: 7.5pt; font-weight: bold; background: #e5e7eb; padding: 1px 4px; border-radius: 3px; color: #000;">ทะเบียนครุภัณฑ์</span>
+        </div>
+        <div style="display: flex; gap: 3mm; align-items: center; flex: 1; overflow: hidden;">
+          <div style="flex: 1; min-width: 0; line-height: 1.25;">
+            <div style="font-size: 10.5pt; font-weight: bold; color: #000; word-break: break-all;">${code}</div>
+            <div style="font-size: 8.5pt; font-weight: bold; color: #111; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.15; margin: 1px 0;">${name}</div>
+            ${spec ? `<div style="font-size: 7.5pt; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">สเปก: ${spec}</div>` : ''}
+            <div style="font-size: 7.5pt; color: #222;">วันที่รับ: ${dateStr} (ปีงบ ${fiscalYear})</div>
+            <div style="font-size: 7.5pt; color: #222; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">สถานที่: ${location}</div>
+            <div style="font-size: 7.5pt; color: #000; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">ผู้รับผิดชอบ: ${person}</div>
+          </div>
+          <div style="width: 82px; height: 82px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <div class="qr-canvas-box" data-url="${qrUrl}" style="width: 72px; height: 72px;"></div>
+            <div style="font-size: 6pt; color: #444; text-align: center; margin-top: 1px; font-weight: 500;">สแกนตรวจสอบ</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // ขนาดมาตรฐาน Compact (3 คอลัมน์ x 8 แถว บนหน้า A4)
+  return `
+    <div class="asset-sticker-compact" style="border: 1px dashed #555; border-radius: 4px; padding: 1.8mm 2mm; box-sizing: border-box; width: ${isPreview ? '230px' : '63.5mm'}; height: ${isPreview ? 'auto' : '33mm'}; min-height: 33mm; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; background: #fff; font-family: 'Sarabun', sans-serif;">
+      <div style="font-size: 8pt; font-weight: bold; text-align: center; border-bottom: 1px solid #111; padding-bottom: 1px; margin-bottom: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #000;">
+        ${schoolHeader}
+      </div>
+      <div style="display: flex; gap: 2mm; align-items: center; flex: 1; overflow: hidden;">
+        <div style="flex: 1; min-width: 0; line-height: 1.15;">
+          <div style="font-size: 8pt; font-weight: bold; color: #000; word-break: break-all;">${code}</div>
+          <div style="font-size: 7pt; font-weight: 600; color: #111; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; margin-bottom: 1px;">${name}</div>
+          <div style="font-size: 6.5pt; color: #333;">ปีงบ: ${shortYear} (${dateStr})</div>
+          <div style="font-size: 6.5pt; color: #000; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">ผู้ดูแล: ${person}</div>
+        </div>
+        <div style="width: 54px; height: 54px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+          <div class="qr-canvas-box" data-url="${qrUrl}" style="width: 48px; height: 48px;"></div>
+          <div style="font-size: 5pt; color: #555; text-align: center; margin-top: 1px;">สแกนดูข้อมูล</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function handlePrintQrStickers() {
+  const items = getStickerAssetsList();
+  if (!items || items.length === 0) {
+    alert('ไม่พบรายการครุภัณฑ์ที่จะพิมพ์');
+    return;
+  }
+
+  const sizeSelect = document.getElementById('sticker-layout-size');
+  const layoutSize = sizeSelect ? sizeSelect.value : 'compact';
+  const headerInput = document.getElementById('sticker-school-header');
+  const schoolHeader = headerInput ? headerInput.value.trim() : 'โรงเรียนบ้านดงกลาง';
+
+  const printSection = document.getElementById('print-qr-sticker-section');
+  if (!printSection) return;
+
+  let pagesHtml = '';
+
+  if (layoutSize === 'single') {
+    // พิมพ์ดวงเดี่ยว 1 ชิ้น
+    const item = items[0];
+    pagesHtml = `
+      <div class="sticker-page" style="display: flex; justify-content: center; align-items: center; min-height: 100vh;">
+        ${renderSingleStickerHtml(item, 'large', schoolHeader, false)}
+      </div>
+    `;
+  } else if (layoutSize === 'large') {
+    // 2 คอลัมน์ x 5 แถว = 10 ดวงต่อหน้า A4
+    const itemsPerPage = 10;
+    const totalPages = Math.ceil(items.length / itemsPerPage);
+
+    for (let p = 0; p < totalPages; p++) {
+      const pageItems = items.slice(p * itemsPerPage, (p + 1) * itemsPerPage);
+      const isLastPage = (p === totalPages - 1);
+      const gridItemsHtml = pageItems.map(item => renderSingleStickerHtml(item, 'large', schoolHeader, false)).join('');
+
+      pagesHtml += `
+        <div class="sticker-page" style="width: 100%; box-sizing: border-box; page-break-after: ${isLastPage ? 'avoid' : 'always'}; break-after: ${isLastPage ? 'avoid' : 'page'}; padding: 4mm 2mm;">
+          <div style="display: grid; grid-template-columns: repeat(2, 95mm); gap: 4mm 5mm; justify-content: center;">
+            ${gridItemsHtml}
+          </div>
+        </div>
+      `;
+    }
+  } else {
+    // ขนาดมาตรฐาน Compact (3 คอลัมน์ x 8 แถว = 24 ดวงต่อหน้า A4)
+    const itemsPerPage = 24;
+    const totalPages = Math.ceil(items.length / itemsPerPage);
+
+    for (let p = 0; p < totalPages; p++) {
+      const pageItems = items.slice(p * itemsPerPage, (p + 1) * itemsPerPage);
+      const isLastPage = (p === totalPages - 1);
+      const gridItemsHtml = pageItems.map(item => renderSingleStickerHtml(item, 'compact', schoolHeader, false)).join('');
+
+      pagesHtml += `
+        <div class="sticker-page" style="width: 100%; box-sizing: border-box; page-break-after: ${isLastPage ? 'avoid' : 'always'}; break-after: ${isLastPage ? 'avoid' : 'page'}; padding: 3mm 1mm;">
+          <div style="display: grid; grid-template-columns: repeat(3, 63.5mm); gap: 2.2mm 2.5mm; justify-content: center;">
+            ${gridItemsHtml}
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  printSection.innerHTML = pagesHtml;
+
+  // Render QR Codes on all rendered canvas boxes
+  const qrBoxes = printSection.querySelectorAll('.qr-canvas-box');
+  const qrPixSize = (layoutSize === 'large' || layoutSize === 'single') ? 72 : 48;
+
+  qrBoxes.forEach(box => {
+    const url = box.dataset.url;
+    new QRCode(box, {
+      text: url,
+      width: qrPixSize,
+      height: qrPixSize,
+      colorDark: "#000000",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  });
+
+  applyStickerPrintPageStyle();
+  setPrintTarget('qrSticker');
+  closeModal('qrStickerModal');
+  window.print();
+}
+
+// ==================== ระบบสแกน QR Code ตรวจสอบครุภัณฑ์ดิจิทัล ====================
+async function showPublicAssetCard(id) {
+  const contentEl = document.getElementById('public-asset-content');
+  const editBtn = document.getElementById('public-asset-edit-btn');
+  if (!contentEl) return;
+
+  currentPublicAssetId = id;
+  contentEl.innerHTML = `
+    <div class="text-center py-8">
+      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600 mb-2"></div>
+      <div class="text-xs text-slate-500">กำลังโหลดข้อมูลครุภัณฑ์...</div>
+    </div>
+  `;
+  openModal('publicAssetModal');
+
+  try {
+    const res = await fetch(`/api/public/asset/${id}`);
+    if (!res.ok) {
+      contentEl.innerHTML = `
+        <div class="text-center py-6 text-rose-600 bg-rose-50 border border-rose-200 rounded-2xl p-4">
+          <div class="text-2xl mb-1">❌</div>
+          <div class="font-bold">ไม่พบข้อมูลครุภัณฑ์นี้ในระบบ</div>
+          <div class="text-[11px] text-slate-500 mt-1">รหัสอาจถูกลบหรือยังไม่ได้ลงทะเบียนในระบบ</div>
+        </div>
+      `;
+      if (editBtn) editBtn.classList.add('hidden');
+      return;
+    }
+
+    const item = await res.json();
+    currentPublicAssetId = item.id;
+
+    // สถานะ Badge
+    let statusClass = 'bg-emerald-100 text-emerald-800 border-emerald-300';
+    if (item.status === 'ชำรุด (สามารถซ่อมได้)') statusClass = 'bg-amber-100 text-amber-800 border-amber-300';
+    else if (item.status === 'ชำรุด/เสื่อมสภาพ (ขอจำหน่าย)') statusClass = 'bg-rose-100 text-rose-800 border-rose-300';
+    else if (item.status === 'จำหน่ายแล้ว') statusClass = 'bg-slate-200 text-slate-700 border-slate-300';
+
+    contentEl.innerHTML = `
+      <!-- หมายเลขครุภัณฑ์เด่นชัด -->
+      <div class="p-3.5 bg-gradient-to-r from-red-50 to-amber-50 rounded-2xl border border-amber-200 text-center space-y-1">
+        <div class="text-[10px] font-bold text-amber-900 tracking-wider uppercase">รหัสทะเบียนครุภัณฑ์</div>
+        <div class="text-lg sm:text-xl font-bold font-mono text-red-950">${item.asset_code || '-'}</div>
+        <div>
+          <span class="inline-block text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${statusClass}">
+            ${item.status || 'ใช้งานได้ดี'}
+          </span>
+        </div>
+      </div>
+
+      <!-- รายละเอียด -->
+      <div class="border border-slate-200 rounded-2xl p-3 bg-white space-y-2 text-xs">
+        <div class="pb-2 border-b border-slate-100">
+          <div class="text-[10px] text-slate-400 font-medium">รายการครุภัณฑ์</div>
+          <div class="font-bold text-slate-900 text-sm leading-snug">${item.asset_name || '-'}</div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 text-[11px]">
+          <div>
+            <span class="text-slate-400 block">หมวดหมู่:</span>
+            <span class="font-medium text-slate-800">${item.category || '-'}</span>
+          </div>
+          <div>
+            <span class="text-slate-400 block">รุ่น/ยี่ห้อ:</span>
+            <span class="font-medium text-slate-800">${item.model || '-'}</span>
+          </div>
+          <div>
+            <span class="text-slate-400 block">วันที่ได้รับ:</span>
+            <span class="font-medium text-slate-800">${item.received_date || '-'}</span>
+          </div>
+          <div>
+            <span class="text-slate-400 block">ราคาทุน:</span>
+            <span class="font-medium text-slate-800">${Number(item.cost || 0).toLocaleString('th-TH', {minimumFractionDigits: 2})} บาท</span>
+          </div>
+          <div>
+            <span class="text-slate-400 block">สถานที่จัดเก็บ:</span>
+            <span class="font-medium text-slate-800">${item.location || '-'}</span>
+          </div>
+          <div>
+            <span class="text-slate-400 block">อายุใช้งาน:</span>
+            <span class="font-medium text-slate-800">${item.useful_life || 5} ปี</span>
+          </div>
+        </div>
+
+        <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
+          <span class="text-slate-500 font-medium">ผู้รับผิดชอบ:</span>
+          <span class="font-bold text-amber-950 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">${item.responsible_person || '-'}</span>
+        </div>
+      </div>
+    `;
+
+    // ถ้ามี auth token อยู่แล้ว ให้แสดงปุ่มแก้ไข
+    if (editBtn) {
+      const token = getAuthToken();
+      if (token) {
+        editBtn.classList.remove('hidden');
+      } else {
+        editBtn.classList.add('hidden');
+      }
+    }
+  } catch (e) {
+    contentEl.innerHTML = `<div class="text-center py-4 text-rose-600 text-xs">เกิดข้อผิดพลาดในการดึงข้อมูล</div>`;
+  }
+}
+
+function goToEditFromPublicCard() {
+  if (!currentPublicAssetId) return;
+  closeModal('publicAssetModal');
+  editAsset(Number(currentPublicAssetId));
+}
+

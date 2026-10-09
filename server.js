@@ -151,6 +151,37 @@ app.post('/api/database/sync', requireAuth, async (req, res) => {
 
 // ==================== ASSETS API ====================
 
+// ดึงข้อมูลครุภัณฑ์สำหรับสแกน QR Code (Public Read-only)
+app.get('/api/public/asset/:id', async (req, res) => {
+  try {
+    const assets = await db.getAssets();
+    const item = assets.find(a => String(a.id) === String(req.params.id) || a.asset_code === req.params.id);
+    if (!item) {
+      return res.status(404).json({ error: 'ไม่พบข้อมูลครุภัณฑ์นี้ในระบบ' });
+    }
+    const calculated = calculateDepreciation(item);
+    res.json({
+      id: calculated.id,
+      asset_code: calculated.asset_code,
+      asset_name: calculated.asset_name,
+      category: calculated.category,
+      spec: calculated.spec,
+      model: calculated.model,
+      received_date: calculated.received_date,
+      useful_life: calculated.useful_life,
+      cost: calculated.cost,
+      location: calculated.location,
+      status: calculated.status,
+      responsible_person: calculated.responsible_person,
+      vendor: calculated.vendor,
+      budget_source: calculated.budget_source,
+      department: calculated.department || 'โรงเรียนบ้านดงกลาง'
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ดึงรายการครุภัณฑ์ทั้งหมด
 app.get('/api/assets', requireAuth, async (req, res) => {
   try {
