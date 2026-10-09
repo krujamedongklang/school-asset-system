@@ -126,16 +126,6 @@
             </div>
           </div>
           <div class="flex flex-wrap items-center gap-2">
-            <!-- ปุ่มลัดเลือกทั้งหมด / ยกเลิก -->
-            <div class="flex items-center gap-1 bg-slate-200/80 rounded-lg p-1 text-xs">
-              <button type="button" onclick="selectAllAssets(true)" class="px-2.5 py-1 bg-white hover:bg-slate-50 rounded text-indigo-900 font-semibold shadow-sm transition">
-                ☑️ เลือกทั้งหมด
-              </button>
-              <button type="button" onclick="selectAllAssets(false)" class="px-2.5 py-1 bg-white hover:bg-slate-50 rounded text-slate-600 font-semibold shadow-sm transition">
-                ⬜ ยกเลิกเลือก
-              </button>
-            </div>
-
             <!-- ตัวเลือกรูปแบบการพิมพ์ -->
             <select id="asset-print-mode" onchange="onAssetPrintModeChange()" class="text-xs border border-slate-300 rounded-lg px-2.5 py-2 bg-white font-semibold text-slate-700 shadow-sm cursor-pointer">
               <option value="single-pages">📄 แยกพิมพ์แผ่นละ 1 รายการ (มาตรฐาน)</option>
@@ -193,16 +183,6 @@
             </div>
           </div>
           <div class="flex flex-wrap items-center gap-2">
-            <!-- ปุ่มลัดเลือกทั้งหมด / ยกเลิก -->
-            <div class="flex items-center gap-1 bg-slate-200/80 rounded-lg p-1 text-xs">
-              <button type="button" onclick="selectAllMaterials(true)" class="px-2.5 py-1 bg-white hover:bg-slate-50 rounded text-emerald-900 font-semibold shadow-sm transition">
-                ☑️ เลือกทั้งหมด
-              </button>
-              <button type="button" onclick="selectAllMaterials(false)" class="px-2.5 py-1 bg-white hover:bg-slate-50 rounded text-slate-600 font-semibold shadow-sm transition">
-                ⬜ ยกเลิกเลือก
-              </button>
-            </div>
-
             <button onclick="openModal('materialMetaModal')" class="bg-amber-600 text-white px-3 py-2 rounded-lg font-semibold hover:bg-amber-700 shadow text-xs transition">
               📝 ข้อมูลหัวบัตรวัสดุ
             </button>
