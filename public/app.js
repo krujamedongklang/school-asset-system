@@ -47,34 +47,8 @@ function setPrintTarget(target) {
   });
 }
 
-// กำหนดทิศทางหน้ากระดาษก่อนพิมพ์ (A4 portrait หรือ landscape)
-function setPrintOrientation(orientation = 'portrait') {
-  const dynamicStyle = document.getElementById('dynamic-print-orientation');
-  if (!dynamicStyle) return;
-  const isLandscape = orientation === 'landscape';
-  dynamicStyle.innerHTML = `
-    @page {
-      size: A4 ${isLandscape ? 'landscape' : 'portrait'} !important;
-      margin: ${isLandscape ? '6mm 8mm' : '8mm 10mm'} !important;
-    }
-  `;
-}
-
-function onAssetPrintOrientationChange() {
-  const select = document.getElementById('asset-print-orientation');
-  const orientation = select ? select.value : 'portrait';
-  setPrintOrientation(orientation);
-}
-
-function onMaterialPrintOrientationChange() {
-  const select = document.getElementById('material-print-orientation');
-  const orientation = select ? select.value : 'portrait';
-  setPrintOrientation(orientation);
-}
-
 window.addEventListener('afterprint', () => {
   setPrintTarget(currentTab === 'asset' ? 'asset' : 'material');
-  setPrintOrientation('portrait');
 });
 
 // ==================== ระบบสิทธิ์เข้าใช้งาน & AUTHENTICATION ====================
@@ -1088,8 +1062,6 @@ function printSelectedAssets() {
     alert('กรุณาติ๊กเครื่องหมายถูก ☑️ หน้าแถวของรายการที่ต้องการพิมพ์อย่างน้อย 1 รายการครับ');
     return;
   }
-  const orientation = document.getElementById('asset-print-orientation')?.value || 'portrait';
-  setPrintOrientation(orientation);
   setPrintTarget('asset');
   renderAssetPrint();
   window.print();
@@ -1099,8 +1071,6 @@ function printSelectedAssets() {
 function printSingleAsset(id) {
   const item = assetList.find(a => a.id === id);
   if (!item) return;
-  const orientation = document.getElementById('asset-print-orientation')?.value || 'portrait';
-  setPrintOrientation(orientation);
   const printAssetSection = document.getElementById('print-asset-section');
   if (printAssetSection) {
     printAssetSection.innerHTML = generateAssetCardHtml(item, false);
@@ -1836,8 +1806,6 @@ function printSelectedMaterials() {
     alert('กรุณาติ๊กเลือกรายการในตารางเพื่อพิมพ์ หรือกด "เลือกทั้งหมด" ครับ');
     return;
   }
-  const orientation = document.getElementById('material-print-orientation')?.value || 'portrait';
-  setPrintOrientation(orientation);
   setPrintTarget('material');
   renderMaterialPrint();
   window.print();
@@ -2258,9 +2226,6 @@ function handlePrintAnnualInspection(e) {
   localStorage.setItem('ai_order_no', orderNo);
   localStorage.setItem('ai_doc_no', docNo);
 
-  const orientation = document.getElementById('ai-page-orientation')?.value || 'portrait';
-  setPrintOrientation(orientation);
-
   const items = getInspectionAssets(fiscalYear);
   const printSection = document.getElementById('print-annual-inspection-section');
   if (printSection) {
@@ -2318,17 +2283,17 @@ function generateAnnualInspectionPrintHtml(fiscalYear, orderNo, orderDate, inspe
     return `
       <tr>
         <td class="text-center font-normal">${idx + 1}</td>
-        <td class="text-left font-medium whitespace-nowrap text-[9px]">${escapeHtml(item.asset_code || '')}</td>
-        <td class="text-left font-medium leading-tight text-[9.5px]">${escapeHtml(item.asset_name || '')} ${item.spec ? `<span class="text-[8px] text-slate-600 block">(${escapeHtml(item.spec)})</span>` : ''}</td>
-        <td class="text-center whitespace-nowrap text-[8.5px]">${formatThaiDate(item.received_date)}</td>
-        <td class="text-center text-[9px]">${item.useful_life ? item.useful_life + ' ปี' : '-'}</td>
-        <td class="text-right whitespace-nowrap text-[9px]">${Number(item.cost || 0).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-        <td class="text-right whitespace-nowrap font-semibold text-[9px]">${Number(item.net_book_value || 0).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-        <td class="text-left text-[8.5px] leading-tight">${escapeHtml(item.location || item.responsible_person || '-')}</td>
-        <td class="text-center whitespace-nowrap text-[8.5px]">
-          ${isGood ? '☑ ใช้ได้ดี' : (isRepair ? '☑ ซ่อมได้' : (isDisposal ? '☑ ขอจำหน่าย' : (isLost ? '☑ สูญหาย' : escapeHtml(s))))}
+        <td class="text-left font-medium whitespace-nowrap">${escapeHtml(item.asset_code || '')}</td>
+        <td class="text-left font-medium">${escapeHtml(item.asset_name || '')} ${item.spec ? `<span class="text-[9px] text-slate-600 block">(${escapeHtml(item.spec)})</span>` : ''}</td>
+        <td class="text-center whitespace-nowrap">${formatThaiDate(item.received_date)}</td>
+        <td class="text-center">${item.useful_life ? item.useful_life + ' ปี' : '-'}</td>
+        <td class="text-right whitespace-nowrap">${Number(item.cost || 0).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+        <td class="text-right whitespace-nowrap font-semibold">${Number(item.net_book_value || 0).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+        <td class="text-left text-[10px]">${escapeHtml(item.location || item.responsible_person || '-')}</td>
+        <td class="text-center whitespace-nowrap text-[10px]">
+          ${isGood ? '☑ ใช้ได้ดี' : (isRepair ? '☑ ชำรุดซ่อมได้' : (isDisposal ? '☑ ขอจำหน่าย' : (isLost ? '☑ สูญหาย' : escapeHtml(s))))}
         </td>
-        <td class="text-left text-[8px] leading-tight">${escapeHtml(item.remark || '')}</td>
+        <td class="text-left text-[9px]">${escapeHtml(item.remark || '')}</td>
       </tr>
     `;
   }).join('');
@@ -2441,19 +2406,19 @@ function generateAnnualInspectionPrintHtml(fiscalYear, orderNo, orderDate, inspe
         <div class="text-xs text-slate-700">${dept} ${org} (ตรวจนับ ณ วันที่ ${formatThaiDate(inspectDate)})</div>
       </div>
 
-      <table class="form-table w-full text-[9px]">
+      <table class="form-table w-full text-[10px]">
         <thead>
           <tr class="bg-white font-bold text-center">
-            <th style="width: 4%;">ลำดับ</th>
-            <th style="width: 16%;">เลขทะเบียนครุภัณฑ์</th>
-            <th style="width: 21%;">รายการ / คุณลักษณะ</th>
-            <th style="width: 9%;">วันที่ได้มา</th>
-            <th style="width: 6%;">อายุใช้งาน</th>
-            <th style="width: 9%;" class="leading-tight">ราคาต่อหน่วย<br>(บาท)</th>
-            <th style="width: 9%;" class="leading-tight">มูลค่าสุทธิ<br>(บาท)</th>
-            <th style="width: 9%;">สถานที่ตั้ง / ผู้รับผิดชอบ</th>
-            <th style="width: 9%;">ผลการตรวจ</th>
-            <th style="width: 8%;">หมายเหตุ</th>
+            <th class="w-7">ลำดับ</th>
+            <th class="w-32">เลขทะเบียนครุภัณฑ์</th>
+            <th class="min-w-[140px]">รายการ / คุณลักษณะ</th>
+            <th class="w-16">วันที่ได้มา</th>
+            <th class="w-14">อายุใช้งาน</th>
+            <th class="w-20 leading-tight">ราคาต่อหน่วย<br>(บาท)</th>
+            <th class="w-20 leading-tight">มูลค่าสุทธิ<br>(บาท)</th>
+            <th class="w-28">สถานที่ตั้ง / ผู้รับผิดชอบ</th>
+            <th class="w-24">ผลการตรวจสอบ</th>
+            <th class="w-24">หมายเหตุ</th>
           </tr>
         </thead>
         <tbody>
@@ -2462,16 +2427,16 @@ function generateAnnualInspectionPrintHtml(fiscalYear, orderNo, orderDate, inspe
         <tfoot>
           <tr class="font-bold text-black bg-slate-50">
             <td colspan="5" class="text-center p-1 font-bold">รวมทั้งสิ้น ${items.length} รายการ</td>
-            <td class="text-right p-1 whitespace-nowrap text-[9px]">${Number(totalCost).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-            <td class="text-right p-1 whitespace-nowrap text-[9px]">${Number(totalNet).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-            <td colspan="3" class="text-center p-1 text-[8.5px] font-normal text-slate-600">
-              (ใช้งานได้ดี ${goodCount} | ซ่อมได้ ${repairCount} | ขอจำหน่าย ${disposalCount} | สูญหาย ${lostCount})
+            <td class="text-right p-1 whitespace-nowrap">${Number(totalCost).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+            <td class="text-right p-1 whitespace-nowrap">${Number(totalNet).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+            <td colspan="3" class="text-center p-1 text-[10px] font-normal text-slate-600">
+              (ใช้งานได้ดี ${goodCount} | ชำรุดซ่อมได้ ${repairCount} | ขอจำหน่าย ${disposalCount} | สูญหาย ${lostCount})
             </td>
           </tr>
         </tfoot>
       </table>
 
-      <div class="flex justify-between items-center text-[9.5px] text-black mt-3 pt-2 border-t border-slate-300">
+      <div class="flex justify-between items-center text-[10px] text-black mt-3 pt-2 border-t border-slate-300">
         <div>คณะกรรมการตรวจสอบพัสดุได้ร่วมกันตรวจนับถูกต้องตรงตามความเป็นจริง</div>
         <div class="flex gap-4">
           <span>(ลงชื่อ)........................................ประธาน</span>
@@ -2626,9 +2591,6 @@ function handlePrintDisposalReport(e) {
     return;
   }
 
-  const orientation = document.getElementById('dr-page-orientation')?.value || 'portrait';
-  setPrintOrientation(orientation);
-
   const printSection = document.getElementById('print-disposal-report-section');
   if (printSection) {
     printSection.innerHTML = generateDisposalReportPrintHtml(fiscalYear, reportDate, docNo, officer, head, director, items);
@@ -2657,15 +2619,15 @@ function generateDisposalReportPrintHtml(fiscalYear, reportDate, docNo, officer,
     return `
       <tr>
         <td class="text-center font-normal">${idx + 1}</td>
-        <td class="text-left font-medium whitespace-nowrap text-[9px]">${escapeHtml(item.asset_code || '')}</td>
-        <td class="text-left font-medium leading-tight text-[9.5px]">${escapeHtml(item.asset_name || '')} ${item.spec ? `<span class="text-[8px] text-slate-600 block">(${escapeHtml(item.spec)})</span>` : ''}</td>
-        <td class="text-center whitespace-nowrap text-[8.5px]">${formatThaiDate(item.received_date)}</td>
-        <td class="text-center text-[9px]">${item.useful_life ? item.useful_life + ' ปี' : '-'}</td>
-        <td class="text-right whitespace-nowrap text-[9px]">${Number(item.cost || 0).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-        <td class="text-right whitespace-nowrap font-bold text-[9px]">${Number(item.net_book_value || 0).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-        <td class="text-left text-[8.5px] leading-tight">${escapeHtml(info.reason || 'ชำรุดจนไม่สามารถซ่อมแซมได้')}</td>
-        <td class="text-center font-semibold text-[8.5px] whitespace-nowrap">${escapeHtml(info.method || 'ขายทอดตลาด')}</td>
-        <td class="text-left text-[8px] leading-tight">${escapeHtml(info.cleanRemark || '')}</td>
+        <td class="text-left font-medium whitespace-nowrap">${escapeHtml(item.asset_code || '')}</td>
+        <td class="text-left font-medium">${escapeHtml(item.asset_name || '')} ${item.spec ? `<span class="text-[9px] text-slate-600 block">(${escapeHtml(item.spec)})</span>` : ''}</td>
+        <td class="text-center whitespace-nowrap">${formatThaiDate(item.received_date)}</td>
+        <td class="text-center">${item.useful_life ? item.useful_life + ' ปี' : '-'}</td>
+        <td class="text-right whitespace-nowrap">${Number(item.cost || 0).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+        <td class="text-right whitespace-nowrap font-bold">${Number(item.net_book_value || 0).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+        <td class="text-left">${escapeHtml(info.reason || 'ชำรุดจนไม่สามารถซ่อมแซมได้')}</td>
+        <td class="text-center font-semibold">${escapeHtml(info.method || 'ขายทอดตลาด')}</td>
+        <td class="text-left text-[9px]">${escapeHtml(info.cleanRemark || '')}</td>
       </tr>
     `;
   }).join('');
@@ -2763,19 +2725,19 @@ function generateDisposalReportPrintHtml(fiscalYear, reportDate, docNo, officer,
         <div class="text-xs text-slate-700">${dept} ${org}</div>
       </div>
 
-      <table class="form-table w-full text-[9px]">
+      <table class="form-table w-full text-[10px]">
         <thead>
           <tr class="bg-white font-bold text-center">
-            <th style="width: 4%;">ลำดับ</th>
-            <th style="width: 16%;">เลขทะเบียนครุภัณฑ์</th>
-            <th style="width: 20%;">รายการ / คุณลักษณะ</th>
-            <th style="width: 9%;">วันที่ได้มา</th>
-            <th style="width: 6%;">อายุใช้งาน</th>
-            <th style="width: 9%;" class="leading-tight">ราคาทุน<br>(บาท)</th>
-            <th style="width: 9%;" class="leading-tight">มูลค่าสุทธิ<br>(บาท)</th>
-            <th style="width: 10%;">สภาพและสาเหตุที่ขอจำหน่าย</th>
-            <th style="width: 9%;">วิธีการจำหน่ายที่เสนอ</th>
-            <th style="width: 8%;">หมายเหตุ</th>
+            <th class="w-7">ลำดับ</th>
+            <th class="w-32">เลขทะเบียนครุภัณฑ์</th>
+            <th class="min-w-[140px]">รายการ / คุณลักษณะ</th>
+            <th class="w-16">วันที่ได้มา</th>
+            <th class="w-14">อายุใช้งาน</th>
+            <th class="w-20 leading-tight">ราคาทุน<br>(บาท)</th>
+            <th class="w-20 leading-tight">มูลค่าสุทธิ<br>(บาท)</th>
+            <th class="w-36">สภาพและสาเหตุที่ขอจำหน่าย</th>
+            <th class="w-24">วิธีการจำหน่ายที่เสนอ</th>
+            <th class="w-24">หมายเหตุ</th>
           </tr>
         </thead>
         <tbody>
@@ -2784,16 +2746,16 @@ function generateDisposalReportPrintHtml(fiscalYear, reportDate, docNo, officer,
         <tfoot>
           <tr class="font-bold text-black bg-slate-50">
             <td colspan="5" class="text-center p-1 font-bold">รวมทั้งสิ้น ${items.length} รายการ</td>
-            <td class="text-right p-1 whitespace-nowrap text-[9px]">${Number(totalCost).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-            <td class="text-right p-1 whitespace-nowrap text-[9px]">${Number(totalNet).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-            <td colspan="3" class="text-center p-1 text-[8.5px] font-normal text-slate-600">
+            <td class="text-right p-1 whitespace-nowrap">${Number(totalCost).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+            <td class="text-right p-1 whitespace-nowrap">${Number(totalNet).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+            <td colspan="3" class="text-center p-1 text-[10px] font-normal text-slate-600">
               เสนอจำหน่ายตามระเบียบ มท./กค. ๒๕๖๐ ข้อ ๒๑๕
             </td>
           </tr>
         </tfoot>
       </table>
 
-      <div class="flex justify-between items-center text-[9.5px] text-black mt-3 pt-2 border-t border-slate-300">
+      <div class="flex justify-between items-center text-[10px] text-black mt-3 pt-2 border-t border-slate-300">
         <div>ขอรับรองว่ารายการครุภัณฑ์ข้างต้นมีสภาพชำรุด/เสื่อมสภาพตามที่รายงานจริง</div>
         <div class="flex gap-6">
           <span>(ลงชื่อ)....................................เจ้าหน้าที่พัสดุ</span>

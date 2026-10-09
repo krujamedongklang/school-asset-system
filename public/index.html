@@ -62,22 +62,20 @@
         border: none !important;
       }
       @page {
-        size: A4 portrait;
-        margin: 8mm 10mm;
+        size: A4 landscape;
+        margin: 5mm 8mm;
       }
       .form-table {
         width: 100% !important;
         border-collapse: collapse !important;
         border: 1px solid #000 !important;
-        font-size: 10px !important;
-        line-height: 1.25 !important;
+        font-size: 11px !important;
       }
       .form-table th, .form-table td {
         border: 1px solid #000 !important;
-        padding: 2.5px 3px !important;
+        padding: 3px 4px !important;
         color: #000 !important;
         vertical-align: middle;
-        word-break: break-word;
       }
       .form-table th {
         background-color: #fff !important;
@@ -85,10 +83,10 @@
         text-align: center;
       }
       .form-table tr {
-        height: 22px !important;
+        height: 23px !important;
       }
       .empty-row td {
-        height: 22px !important;
+        height: 23px !important;
       }
       .page-break {
         page-break-after: always !important;
@@ -107,7 +105,6 @@
       }
     }
   </style>
-  <style id="dynamic-print-orientation"></style>
 </head>
 <body class="bg-[#FAF8F5] text-slate-800 antialiased">
 
@@ -268,10 +265,6 @@
               <option value="single-pages">📄 แยกพิมพ์แผ่นละ 1 รายการ</option>
               <option value="combined-table">📑 รวมพิมพ์ในตารางเดียว</option>
             </select>
-            <select id="asset-print-orientation" onchange="onAssetPrintOrientationChange()" class="flex-1 sm:flex-initial text-xs border border-amber-200 rounded-xl px-2.5 py-2 sm:px-3 sm:py-2 bg-white font-semibold text-slate-700 shadow-xs cursor-pointer focus:ring-2 focus:ring-amber-500" title="ทิศทางกระดาษพิมพ์">
-              <option value="portrait" selected>📄 A4 แนวตั้ง</option>
-              <option value="landscape">📑 A4 แนวนอน</option>
-            </select>
 
             <button onclick="openAddAssetModal()" class="flex-1 sm:flex-initial justify-center bg-gradient-to-r from-red-700 to-red-800 hover:from-red-800 hover:to-red-900 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-xl font-semibold shadow-xs transition flex items-center gap-1.5 text-xs sm:text-sm border border-red-900/30 whitespace-nowrap">
               <span>+</span> <span>เพิ่มครุภัณฑ์ใหม่</span>
@@ -413,10 +406,6 @@
             <button onclick="printSelectedMaterials()" id="btn-print-materials" class="flex-1 sm:flex-initial justify-center bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold px-3 py-2 sm:px-4 sm:py-2 rounded-xl shadow-xs transition flex items-center gap-1.5 text-xs sm:text-sm border border-amber-600/30 whitespace-nowrap">
               <span>🖨️</span> <span id="btn-print-material-text">พิมพ์บัญชีคุมวัสดุ (PDF)</span>
             </button>
-            <select id="material-print-orientation" onchange="onMaterialPrintOrientationChange()" class="flex-1 sm:flex-initial text-xs border border-amber-200 rounded-xl px-2.5 py-2 sm:px-3 sm:py-2 bg-white font-semibold text-slate-700 shadow-xs cursor-pointer focus:ring-2 focus:ring-amber-500" title="ทิศทางกระดาษพิมพ์">
-              <option value="portrait" selected>📄 A4 แนวตั้ง</option>
-              <option value="landscape">📑 A4 แนวนอน</option>
-            </select>
           </div>
         </div>
 
@@ -1062,7 +1051,7 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label class="font-semibold block mb-1 text-slate-700">วันที่ทำการตรวจนับพัสดุ</label>
             <input type="date" id="ai-inspect-date" class="w-full border border-slate-300 p-2.5 rounded-xl">
@@ -1070,13 +1059,6 @@
           <div>
             <label class="font-semibold block mb-1 text-slate-700">เลขที่หนังสือรายงาน (ที่ ศธ...)</label>
             <input type="text" id="ai-doc-no" placeholder="เช่น ศธ 04153.25/..." class="w-full border border-slate-300 p-2.5 rounded-xl">
-          </div>
-          <div>
-            <label class="font-semibold block mb-1 text-slate-700">ทิศทางกระดาษพิมพ์</label>
-            <select id="ai-page-orientation" class="w-full border border-slate-300 p-2.5 rounded-xl font-bold bg-amber-50/40 text-blue-950">
-              <option value="portrait" selected>📄 A4 แนวตั้ง (แนะนำ - มาตรฐานราชการ)</option>
-              <option value="landscape">📑 A4 แนวนอน</option>
-            </select>
           </div>
         </div>
 
@@ -1108,7 +1090,7 @@
         <div class="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-100">
           <button type="button" onclick="closeModal('annualInspectionModal')" class="w-full sm:w-auto px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 font-medium transition text-center">ยกเลิก</button>
           <button type="submit" class="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-blue-700 to-indigo-800 hover:from-blue-800 hover:to-indigo-900 text-white rounded-xl font-bold shadow-md transition border border-blue-900/30 text-center flex items-center justify-center gap-1.5 cursor-pointer">
-            <span>🖨️</span> <span>พิมพ์รายงานผลการตรวจสอบพัสดุประจำปี (A4 แนวตั้ง)</span>
+            <span>🖨️</span> <span>พิมพ์รายงานผลการตรวจสอบพัสดุประจำปี (A4 แนวนอน)</span>
           </button>
         </div>
       </form>
@@ -1138,7 +1120,7 @@
       </div>
 
       <form onsubmit="handlePrintDisposalReport(event)" class="space-y-3 text-xs">
-        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label class="font-semibold block mb-1 text-slate-700">ประจำปีงบประมาณ</label>
             <select id="dr-fiscal-year" onchange="updateDisposalReportPreview()" class="w-full border border-slate-300 p-2.5 rounded-xl font-bold bg-amber-50/50">
@@ -1152,13 +1134,6 @@
           <div>
             <label class="font-semibold block mb-1 text-slate-700">เลขที่หนังสือรายงาน (ที่ ศธ...)</label>
             <input type="text" id="dr-doc-no" placeholder="เช่น ศธ 04153.25/..." class="w-full border border-slate-300 p-2.5 rounded-xl">
-          </div>
-          <div>
-            <label class="font-semibold block mb-1 text-slate-700">ทิศทางกระดาษพิมพ์</label>
-            <select id="dr-page-orientation" class="w-full border border-slate-300 p-2.5 rounded-xl font-bold bg-amber-50/40 text-rose-950">
-              <option value="portrait" selected>📄 A4 แนวตั้ง (แนะนำ - มาตรฐานราชการ)</option>
-              <option value="landscape">📑 A4 แนวนอน</option>
-            </select>
           </div>
         </div>
 
@@ -1209,7 +1184,7 @@
         <div class="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-100">
           <button type="button" onclick="closeModal('disposalReportModal')" class="w-full sm:w-auto px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 font-medium transition text-center">ยกเลิก</button>
           <button type="submit" id="btn-print-disposal-submit" class="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-rose-700 to-red-800 hover:from-rose-800 hover:to-red-900 text-white rounded-xl font-bold shadow-md transition border border-rose-900/30 text-center flex items-center justify-center gap-1.5 cursor-pointer">
-            <span>🖨️</span> <span>พิมพ์รายงานขออนุมัติจำหน่าย (A4 แนวตั้ง)</span>
+            <span>🖨️</span> <span>พิมพ์รายงานขออนุมัติจำหน่าย (A4 แนวนอน)</span>
           </button>
         </div>
       </form>
