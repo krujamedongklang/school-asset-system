@@ -263,16 +263,8 @@ function updateDbStatusUI(status) {
 
   const isSupabase = status && status.mode === 'supabase' && status.supabase_connected;
 
-  if (badge && dot && text) {
-    if (isSupabase) {
-      badge.className = 'px-2.5 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold transition flex items-center gap-1.5 border shadow-2xs whitespace-nowrap bg-emerald-950/90 text-emerald-300 border-emerald-400/50 hover:bg-emerald-900 cursor-pointer';
-      dot.className = 'w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]';
-      text.textContent = '☁️ Cloud (Supabase)';
-    } else {
-      badge.className = 'px-2.5 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold transition flex items-center gap-1.5 border shadow-2xs whitespace-nowrap bg-slate-900/80 text-amber-300 border-amber-400/30 hover:bg-slate-800 cursor-pointer';
-      dot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
-      text.textContent = '💾 SQLite (เครื่อง)';
-    }
+  if (badge) {
+    badge.className = 'hidden';
   }
 
   if (modalBox && modalIcon && modalTitle && modalDesc) {
