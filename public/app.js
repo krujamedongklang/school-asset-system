@@ -45,8 +45,8 @@ function switchTab(tab) {
     printMaterial.classList.add('hidden');
     printMaterial.classList.remove('block');
 
-    btnAsset.className = 'px-4 py-2 bg-indigo-700 rounded-lg font-semibold hover:bg-indigo-600 transition';
-    btnMaterial.className = 'px-4 py-2 bg-indigo-950 rounded-lg font-semibold hover:bg-indigo-600 transition';
+    btnAsset.className = 'px-4 py-2 bg-gradient-to-r from-amber-400 via-amber-400 to-amber-500 text-red-950 font-bold rounded-xl shadow-md hover:from-amber-300 hover:to-amber-400 transition';
+    btnMaterial.className = 'px-4 py-2 bg-red-950/70 hover:bg-red-800/80 text-amber-100 font-medium rounded-xl border border-amber-400/20 transition';
   } else {
     screenAsset.classList.add('hidden');
     screenMaterial.classList.remove('hidden');
@@ -55,8 +55,8 @@ function switchTab(tab) {
     printMaterial.classList.remove('hidden');
     printMaterial.classList.add('block');
 
-    btnAsset.className = 'px-4 py-2 bg-indigo-950 rounded-lg font-semibold hover:bg-indigo-600 transition';
-    btnMaterial.className = 'px-4 py-2 bg-indigo-700 rounded-lg font-semibold hover:bg-indigo-600 transition';
+    btnAsset.className = 'px-4 py-2 bg-red-950/70 hover:bg-red-800/80 text-amber-100 font-medium rounded-xl border border-amber-400/20 transition';
+    btnMaterial.className = 'px-4 py-2 bg-gradient-to-r from-amber-400 via-amber-400 to-amber-500 text-red-950 font-bold rounded-xl shadow-md hover:from-amber-300 hover:to-amber-400 transition';
   }
 }
 
@@ -172,7 +172,7 @@ function renderAssetTable() {
   assetList.forEach((item, index) => {
     const isSelected = selectedAssetIds.has(item.id);
     const tr = document.createElement('tr');
-    tr.className = `hover:bg-indigo-50/50 border-b cursor-pointer transition ${isSelected ? 'bg-indigo-50/40' : ''}`;
+    tr.className = `hover:bg-amber-50/60 border-b border-amber-100/70 cursor-pointer transition ${isSelected ? 'bg-amber-50/40' : ''}`;
     
     // คลิกแถวเพื่อเปิด/ปิดการติ๊กเลือก
     tr.onclick = (e) => {
@@ -182,32 +182,32 @@ function renderAssetTable() {
     };
 
     tr.innerHTML = `
-      <td class="p-2 border text-center" onclick="event.stopPropagation()">
-        <input type="checkbox" class="w-4 h-4 text-indigo-600 rounded cursor-pointer" 
+      <td class="p-2 border border-slate-200 text-center" onclick="event.stopPropagation()">
+        <input type="checkbox" class="w-4 h-4 accent-amber-500 rounded cursor-pointer" 
           ${isSelected ? 'checked' : ''} 
           onchange="toggleAssetItemSelection(${item.id}, this.checked)">
       </td>
-      <td class="p-2 border text-center font-medium">${index + 1}</td>
-      <td class="p-2 border">${item.received_date || ''}</td>
-      <td class="p-2 border font-semibold text-indigo-950">${item.asset_code || ''}</td>
-      <td class="p-2 border font-medium">${item.asset_name || ''}</td>
-      <td class="p-2 border text-slate-600">${item.spec || ''}</td>
-      <td class="p-2 border">${item.doc_no || ''}</td>
-      <td class="p-2 border text-right">${Number(item.cost).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-      <td class="p-2 border text-center">${item.useful_life}</td>
-      <td class="p-2 border text-right text-slate-500">${Number(item.depr_per_year).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-      <td class="p-2 border text-right font-bold text-indigo-700">${Number(item.net_book_value).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-      <td class="p-2 border">${item.location || ''}</td>
-      <td class="p-2 border text-center">
-        <span class="px-2 py-0.5 rounded text-xs font-semibold ${item.status === 'ใช้งานได้ดี' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+      <td class="p-2 border border-slate-200 text-center font-medium">${index + 1}</td>
+      <td class="p-2 border border-slate-200">${item.received_date || ''}</td>
+      <td class="p-2 border border-slate-200 font-bold text-red-950">${item.asset_code || ''}</td>
+      <td class="p-2 border border-slate-200 font-medium">${item.asset_name || ''}</td>
+      <td class="p-2 border border-slate-200 text-slate-600">${item.spec || ''}</td>
+      <td class="p-2 border border-slate-200">${item.doc_no || ''}</td>
+      <td class="p-2 border border-slate-200 text-right font-medium">${Number(item.cost).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+      <td class="p-2 border border-slate-200 text-center">${item.useful_life}</td>
+      <td class="p-2 border border-slate-200 text-right text-slate-500">${Number(item.depr_per_year).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+      <td class="p-2 border border-slate-200 text-right font-bold text-red-900">${Number(item.net_book_value).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+      <td class="p-2 border border-slate-200">${item.location || ''}</td>
+      <td class="p-2 border border-slate-200 text-center">
+        <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold shadow-2xs ${item.status === 'ใช้งานได้ดี' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-rose-100 text-rose-800 border border-rose-300'}">
           ${item.status}
         </span>
       </td>
-      <td class="p-2 border">${item.responsible_person || ''}</td>
-      <td class="p-2 border text-center whitespace-nowrap space-x-1" onclick="event.stopPropagation()">
-        <button onclick="printSingleAsset(${item.id})" class="text-blue-600 hover:text-blue-800 p-1 font-semibold rounded hover:bg-blue-100 transition" title="พิมพ์บัตรรายการนี้เฉพาะใบเดียว">🖨️</button>
-        <button onclick="editAsset(${item.id})" class="text-amber-600 hover:text-amber-800 p-1 font-semibold rounded hover:bg-amber-100 transition" title="แก้ไขรายการนี้">✏️</button>
-        <button onclick="deleteAsset(${item.id})" class="text-red-500 hover:text-red-700 p-1 font-semibold rounded hover:bg-red-100 transition" title="ลบรายการ">🗑️</button>
+      <td class="p-2 border border-slate-200">${item.responsible_person || ''}</td>
+      <td class="p-2 border border-slate-200 text-center whitespace-nowrap space-x-1" onclick="event.stopPropagation()">
+        <button onclick="printSingleAsset(${item.id})" class="text-amber-600 hover:text-amber-800 p-1.5 font-semibold rounded-lg hover:bg-amber-100 transition shadow-2xs" title="พิมพ์บัตรรายการนี้เฉพาะใบเดียว">🖨️</button>
+        <button onclick="editAsset(${item.id})" class="text-red-700 hover:text-red-900 p-1.5 font-semibold rounded-lg hover:bg-red-100 transition shadow-2xs" title="แก้ไขรายการนี้">✏️</button>
+        <button onclick="deleteAsset(${item.id})" class="text-slate-400 hover:text-rose-600 p-1.5 font-semibold rounded-lg hover:bg-rose-50 transition shadow-2xs" title="ลบรายการ">🗑️</button>
       </td>
     `;
     screenTbody.appendChild(tr);
@@ -782,7 +782,7 @@ function renderMaterialTable() {
   materialList.forEach((item) => {
     const isSelected = selectedMaterialIds.has(item.id);
     const tr = document.createElement('tr');
-    tr.className = `hover:bg-emerald-50/50 border-b cursor-pointer transition ${isSelected ? 'bg-emerald-50/30' : ''}`;
+    tr.className = `hover:bg-amber-50/60 border-b border-amber-100/70 cursor-pointer transition ${isSelected ? 'bg-amber-50/40' : ''}`;
     
     tr.onclick = (e) => {
       if (!e.target.closest('button, input')) {
@@ -791,25 +791,25 @@ function renderMaterialTable() {
     };
 
     tr.innerHTML = `
-      <td class="p-2 border text-center" onclick="event.stopPropagation()">
-        <input type="checkbox" class="w-4 h-4 text-emerald-600 rounded cursor-pointer" 
+      <td class="p-2 border border-slate-200 text-center" onclick="event.stopPropagation()">
+        <input type="checkbox" class="w-4 h-4 accent-amber-500 rounded cursor-pointer" 
           ${isSelected ? 'checked' : ''} 
           onchange="toggleMaterialItemSelection(${item.id}, this.checked)">
       </td>
-      <td class="p-2 border">${item.trans_date || ''}</td>
-      <td class="p-2 border font-semibold">${item.party || ''}</td>
-      <td class="p-2 border">${item.doc_no || ''}</td>
-      <td class="p-2 border">${item.budget_type || ''}</td>
-      <td class="p-2 border text-center">${item.opening_stock || 0}</td>
-      <td class="p-2 border text-center text-green-600 font-semibold">${item.qty_in || 0}</td>
-      <td class="p-2 border text-center text-red-600 font-semibold">${item.qty_out || 0}</td>
-      <td class="p-2 border text-center font-bold bg-slate-100">${item.balance}</td>
-      <td class="p-2 border text-right">${Number(item.unit_price).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-      <td class="p-2 border text-right font-bold text-emerald-700">${Number(item.total_amount).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-      <td class="p-2 border text-slate-500">${item.remark || ''}</td>
-      <td class="p-2 border text-center whitespace-nowrap space-x-1" onclick="event.stopPropagation()">
-        <button onclick="editMaterial(${item.id})" class="text-amber-600 hover:text-amber-800 p-1 font-semibold rounded hover:bg-amber-100 transition" title="แก้ไขรายการนี้">✏️</button>
-        <button onclick="deleteMaterial(${item.id})" class="text-red-500 hover:text-red-700 p-1 font-semibold rounded hover:bg-red-100 transition" title="ลบรายการ">🗑️</button>
+      <td class="p-2 border border-slate-200">${item.trans_date || ''}</td>
+      <td class="p-2 border border-slate-200 font-semibold text-slate-900">${item.party || ''}</td>
+      <td class="p-2 border border-slate-200">${item.doc_no || ''}</td>
+      <td class="p-2 border border-slate-200">${item.budget_type || ''}</td>
+      <td class="p-2 border border-slate-200 text-center">${item.opening_stock || 0}</td>
+      <td class="p-2 border border-slate-200 text-center text-emerald-700 font-semibold">${item.qty_in || 0}</td>
+      <td class="p-2 border border-slate-200 text-center text-rose-700 font-semibold">${item.qty_out || 0}</td>
+      <td class="p-2 border border-slate-200 text-center font-bold bg-amber-50/70 text-slate-900">${item.balance}</td>
+      <td class="p-2 border border-slate-200 text-right">${Number(item.unit_price).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+      <td class="p-2 border border-slate-200 text-right font-bold text-amber-900">${Number(item.total_amount).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+      <td class="p-2 border border-slate-200 text-slate-500">${item.remark || ''}</td>
+      <td class="p-2 border border-slate-200 text-center whitespace-nowrap space-x-1" onclick="event.stopPropagation()">
+        <button onclick="editMaterial(${item.id})" class="text-red-700 hover:text-red-900 p-1.5 font-semibold rounded-lg hover:bg-red-100 transition shadow-2xs" title="แก้ไขรายการนี้">✏️</button>
+        <button onclick="deleteMaterial(${item.id})" class="text-slate-400 hover:text-rose-600 p-1.5 font-semibold rounded-lg hover:bg-rose-50 transition shadow-2xs" title="ลบรายการ">🗑️</button>
       </td>
     `;
     screenTbody.appendChild(tr);
@@ -916,7 +916,7 @@ function renderMaterialPrint() {
       <td class="text-center text-red-700 font-semibold">${qtyOut}</td>
       <td class="text-center font-bold bg-slate-50">${item.balance}</td>
       <td class="text-right whitespace-nowrap">${item.unit_price ? Number(item.unit_price).toLocaleString('th-TH', {minimumFractionDigits: 2}) : ''}</td>
-      <td class="text-right font-bold text-emerald-800 whitespace-nowrap">${item.total_amount ? Number(item.total_amount).toLocaleString('th-TH', {minimumFractionDigits: 2}) : ''}</td>
+      <td class="text-right font-bold text-black whitespace-nowrap">${item.total_amount ? Number(item.total_amount).toLocaleString('th-TH', {minimumFractionDigits: 2}) : ''}</td>
       <td class="text-left">${item.remark || ''}</td>
     `;
     printTbody.appendChild(tr);
