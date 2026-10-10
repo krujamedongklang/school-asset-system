@@ -173,7 +173,7 @@ app.post('/api/auth/logout', (req, res) => {
 // ดึงรายชื่อผู้ใช้งานทั้งหมด
 app.get('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const users = await db.getUsers();
+    const users = await db.getUsers(true);
     res.json(users);
   } catch (err) {
     res.status(500).json({ error: err.message });

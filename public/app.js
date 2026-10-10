@@ -619,6 +619,17 @@ function renderUsersManagement(users) {
           </div>
           <div class="text-[11px] text-slate-500 font-mono">@${escapeHtml(u.username)} ${u.position ? `• ${escapeHtml(u.position)}` : ''}</div>
         </td>
+        <td class="p-2.5 sm:p-3 text-center whitespace-nowrap">
+          <div class="inline-flex items-center gap-1.5 bg-slate-100/90 border border-slate-200 px-2 py-1 rounded-xl shadow-2xs">
+            <span id="pwd-text-${u.id}" class="font-mono text-[11px] text-slate-700 font-bold tracking-wider select-all" data-password="${escapeHtml(u.password_plain || '')}">••••••••</span>
+            <button type="button" onclick="togglePasswordView(${u.id})" class="p-0.5 hover:text-amber-800 text-slate-500 hover:scale-110 transition cursor-pointer" title="ดู/ซ่อนรหัสผ่าน">
+              <span id="pwd-icon-${u.id}">👁️</span>
+            </button>
+            <button type="button" onclick="copyUserPassword(${u.id})" class="p-0.5 hover:text-amber-800 text-slate-500 hover:scale-110 transition cursor-pointer" title="คัดลอกรหัสผ่าน">
+              📋
+            </button>
+          </div>
+        </td>
         <td class="p-2.5 sm:p-3 text-center">
           ${isAdmin ? `
             <span class="font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-md text-[11px]">ผู้ดูแลระบบ</span>
@@ -657,7 +668,7 @@ function renderUsersManagement(users) {
             title="${isAdmin ? 'แอดมินมีสิทธิ์เพิ่มข้อมูลเสมอ' : 'เปิด/ปิดสิทธิ์เพิ่มข้อมูล'}">
         </td>
         <td class="p-2.5 sm:p-3 text-center whitespace-nowrap space-x-1">
-          <button type="button" onclick="openAdminResetPassword(${u.id}, '${escapeHtml(u.full_name)}')" class="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 rounded-lg font-semibold text-[11px] transition cursor-pointer" title="ตั้งรหัสผ่านใหม่ให้ครู">
+          <button type="button" onclick="openAdminResetPassword(${u.id}, '${escapeHtml(u.full_name)}', '${escapeHtml(u.password_plain || '')}')" class="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 rounded-lg font-semibold text-[11px] transition cursor-pointer" title="ตั้งรหัสผ่านใหม่ให้ครู">
             🔑 รหัส
           </button>
           ${!isAdmin ? `
@@ -782,9 +793,48 @@ async function updateUserStatusDirect(userId, newStatus) {
   }
 }
 
-function openAdminResetPassword(userId, userName) {
+function togglePasswordView(userId) {
+  const span = document.getElementById(`pwd-text-${userId}`);
+  const icon = document.getElementById(`pwd-icon-${userId}`);
+  if (!span) return;
+  const pwd = span.getAttribute('data-password');
+  if (span.textContent === '••••••••') {
+    span.textContent = pwd || '(ไม่ได้บันทึกไว้)';
+    span.classList.add('text-amber-950', 'bg-amber-100', 'px-1.5', 'py-0.5', 'rounded-md');
+    if (icon) icon.textContent = '🙈';
+  } else {
+    span.textContent = '••••••••';
+    span.classList.remove('text-amber-950', 'bg-amber-100', 'px-1.5', 'py-0.5', 'rounded-md');
+    if (icon) icon.textContent = '👁️';
+  }
+}
+
+function copyUserPassword(userId) {
+  const span = document.getElementById(`pwd-text-${userId}`);
+  if (!span) return;
+  const pwd = span.getAttribute('data-password');
+  if (!pwd) {
+    alert('ไม่พบข้อมูลรหัสผ่านข้อความธรรมดา (คุณครูสามารถกดปุ่ม "🔑 รหัส" เพื่อตั้งรหัสผ่านใหม่ให้ครูท่านนี้ได้ทันทีครับ)');
+    return;
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(pwd).then(() => {
+      alert(`📋 คัดลอกรหัสผ่าน "${pwd}" เรียบร้อยแล้ว`);
+    }).catch(() => {
+      prompt('คัดลอกรหัสผ่าน:', pwd);
+    });
+  } else {
+    prompt('คัดลอกรหัสผ่าน:', pwd);
+  }
+}
+
+function openAdminResetPassword(userId, userName, currentPlain) {
   document.getElementById('reset-user-id').value = userId;
   document.getElementById('reset-user-display-name').textContent = userName;
+  const currPwdEl = document.getElementById('reset-user-current-pwd');
+  if (currPwdEl) {
+    currPwdEl.textContent = currentPlain || '(ยังไม่มีข้อมูล/เป็นรหัสเข้ารหัส)';
+  }
   document.getElementById('reset-new-password').value = '';
   const msgEl = document.getElementById('admin-reset-msg');
   if (msgEl) msgEl.classList.add('hidden');
@@ -814,6 +864,7 @@ async function handleAdminResetPassword(e) {
     if (res.ok) {
       alert('รีเซ็ตรหัสผ่านสำเร็จเรียบร้อยแล้ว');
       closeModal('adminResetPasswordModal');
+      await loadUsersManagement();
     } else {
       msgEl.className = 'text-xs p-2 rounded-xl text-center font-medium bg-rose-50 text-rose-700';
       msgEl.textContent = '❌ ' + (data.error || 'เกิดข้อผิดพลาด');
@@ -866,12 +917,16 @@ async function syncUsersToSupabase() {
   }
 }
 
-function copySupabaseUsersSql() {
-  const sql = `-- สร้างตารางข้อมูลผู้ใช้งานและสิทธิ์ (User & Permissions)
+function copySupabaseUsersSQL() {
+  const sql = `-- เพิ่มคอลัมน์ password_plain (ถ้ามีตารางเดิมอยู่แล้ว)
+ALTER TABLE app_users ADD COLUMN IF NOT EXISTS password_plain TEXT DEFAULT '';
+
+-- สร้างตารางข้อมูลผู้ใช้งานและสิทธิ์ (หากยังไม่เคยสร้าง)
 CREATE TABLE IF NOT EXISTS app_users (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   username TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
+  password_plain TEXT DEFAULT '',
   full_name TEXT NOT NULL,
   position TEXT DEFAULT '',
   role TEXT DEFAULT 'user',
@@ -885,12 +940,17 @@ CREATE TABLE IF NOT EXISTS app_users (
 
 ALTER TABLE app_users DISABLE ROW LEVEL SECURITY;`;
 
-  navigator.clipboard.writeText(sql).then(() => {
-    alert('คัดลอกคำสั่ง SQL เรียบร้อยแล้ว! สามารถนำไปวางใน Supabase SQL Editor ได้เลยครับ');
-  }).catch(() => {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(sql).then(() => {
+      alert('📋 คัดลอกคำสั่ง SQL เรียบร้อยแล้ว! นำไปวางใน Supabase SQL Editor แล้วกด Run ได้เลยครับ');
+    }).catch(() => {
+      prompt('คัดลอกคำสั่ง SQL ด้านล่างนี้:', sql);
+    });
+  } else {
     prompt('คัดลอกคำสั่ง SQL ด้านล่างนี้:', sql);
-  });
+  }
 }
+const copySupabaseUsersSql = copySupabaseUsersSQL;
 
 // ==================== CLOUD DATABASE (SUPABASE) MANAGEMENT ====================
 let currentDbStatus = null;

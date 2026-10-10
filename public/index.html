@@ -1298,6 +1298,7 @@
             <thead class="bg-slate-100 text-slate-700 border-b border-slate-200 uppercase font-semibold text-[11px]">
               <tr>
                 <th class="p-2.5 sm:p-3">ผู้ใช้งาน (ชื่อ-สกุล)</th>
+                <th class="p-2.5 sm:p-3 text-center">รหัสผ่าน (ดู/รีเซ็ต)</th>
                 <th class="p-2.5 sm:p-3 text-center">บทบาท</th>
                 <th class="p-2.5 sm:p-3 text-center">สถานะ</th>
                 <th class="p-2.5 sm:p-3 text-center">สิทธิ์แก้ไข</th>
@@ -1382,13 +1383,24 @@ ALTER TABLE app_users DISABLE ROW LEVEL SECURITY;</pre>
       </div>
       <form onsubmit="handleAdminResetPassword(event)" class="space-y-3 text-xs">
         <input type="hidden" id="reset-user-id">
-        <div>
-          <div class="text-[11px] text-slate-500 mb-0.5">ผู้ใช้งาน:</div>
-          <div id="reset-user-display-name" class="font-bold text-slate-800 text-sm">ครู...</div>
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-1">
+          <div class="flex justify-between items-center">
+            <span class="text-[11px] text-slate-500">ผู้ใช้งาน:</span>
+            <span id="reset-user-display-name" class="font-bold text-slate-800 text-xs">ครู...</span>
+          </div>
+          <div class="flex justify-between items-center pt-1 border-t border-slate-200/60">
+            <span class="text-[11px] text-slate-500">รหัสผ่านปัจจุบัน:</span>
+            <span id="reset-user-current-pwd" class="font-mono font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded text-xs select-all">-</span>
+          </div>
         </div>
         <div>
-          <label class="font-semibold block mb-1 text-slate-700">รหัสผ่านใหม่ (อย่างน้อย 4 ตัวอักษร)</label>
-          <input type="password" id="reset-new-password" required minlength="4" placeholder="กรอกรหัสผ่านใหม่ให้ครู..." class="w-full border border-slate-300 p-2.5 rounded-xl font-medium focus:ring-2 focus:ring-amber-500 outline-none">
+          <div class="flex justify-between items-center mb-1">
+            <label class="font-semibold text-slate-700">รหัสผ่านใหม่ (อย่างน้อย 4 ตัวอักษร)</label>
+            <button type="button" onclick="document.getElementById('reset-new-password').value='12345678';" class="text-[10px] text-amber-800 hover:underline font-bold cursor-pointer">
+              🎲 ใช้รหัส 12345678
+            </button>
+          </div>
+          <input type="text" id="reset-new-password" required minlength="4" placeholder="กรอกรหัสผ่านใหม่ให้ครู..." class="w-full border border-slate-300 p-2.5 rounded-xl font-mono text-sm focus:ring-2 focus:ring-amber-500 outline-none">
         </div>
         <div id="admin-reset-msg" class="hidden text-xs p-2 rounded-xl text-center font-medium"></div>
         <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
