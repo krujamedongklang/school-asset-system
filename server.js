@@ -58,38 +58,87 @@ function calculateDepreciation(item) {
 async function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  const isValid = await db.verifySession(token);
-  if (!isValid) {
+  const user = await db.verifySession(token);
+  if (!user) {
     return res.status(401).json({ error: 'กรุณาเข้าสู่ระบบก่อนดำเนินการ' });
+  }
+  req.user = user;
+  next();
+}
+
+function requireAdmin(req, res, next) {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'คุณไม่มีสิทธิ์เข้าถึงส่วนนี้ (เฉพาะผู้ดูแลระบบเท่านั้น)' });
   }
   next();
 }
 
-// ล็อกอินเข้าสู่ระบบ
+function requireEdit(req, res, next) {
+  if (!req.user || (req.user.role !== 'admin' && !req.user.canEdit)) {
+    return res.status(403).json({ error: 'คุณไม่ได้รับสิทธิ์ในการแก้ไขข้อมูล กรุณาติดต่อคุณครูผู้ดูแลระบบ' });
+  }
+  next();
+}
+
+function requireDelete(req, res, next) {
+  if (!req.user || (req.user.role !== 'admin' && !req.user.canDelete)) {
+    return res.status(403).json({ error: 'คุณไม่ได้รับสิทธิ์ในการลบข้อมูล กรุณาติดต่อคุณครูผู้ดูแลระบบ' });
+  }
+  next();
+}
+
+function requireAdd(req, res, next) {
+  if (!req.user || (req.user.role !== 'admin' && !req.user.canAdd)) {
+    return res.status(403).json({ error: 'คุณไม่ได้รับสิทธิ์ในการเพิ่มข้อมูล กรุณาติดต่อคุณครูผู้ดูแลระบบ' });
+  }
+  next();
+}
+
+// ล็อกอินเข้าสู่ระบบ (รองรับทั้ง username และ password)
 app.post('/api/auth/login', async (req, res) => {
-  const { password } = req.body;
-  if (!password) {
-    return res.status(400).json({ error: 'กรุณากรอกรหัสผ่าน' });
+  const { username, password } = req.body;
+  const result = await db.loginUser(username, password);
+  if (!result.success) {
+    const status = result.error && result.error.includes('รอผู้ดูแลระบบ') ? 403 : 401;
+    return res.status(status).json({ error: result.error });
   }
-
-  const isValid = await db.checkPassword(password);
-  if (!isValid) {
-    return res.status(401).json({ error: 'รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง' });
-  }
-
-  const token = await db.createSession();
-  res.json({ success: true, message: 'เข้าสู่ระบบสำเร็จ', token });
+  res.json({ success: true, message: 'เข้าสู่ระบบสำเร็จ', token: result.token, user: result.user });
 });
 
-// ตรวจสอบสถานะการล็อกอิน
+// ลงทะเบียนขอสิทธิ์เข้าใช้งาน
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { username, password, fullName, position } = req.body;
+    const user = await db.registerUser({ username, password, fullName, position });
+    res.json({
+      success: true,
+      message: 'ลงทะเบียนขอเข้าใช้งานสำเร็จแล้ว! ระบบได้ส่งข้อมูลไปยังผู้ดูแลระบบเรียบร้อย กรุณาแจ้งคุณครูผู้ดูแลระบบเพื่ออนุมัติสิทธิ์เข้าใช้งานครับ',
+      user: {
+        id: user.id,
+        username: user.username,
+        fullName: user.full_name,
+        position: user.position,
+        status: user.status
+      }
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// ตรวจสอบสถานะการล็อกอินและสิทธิ์
 app.get('/api/auth/verify', async (req, res) => {
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  const isValid = await db.verifySession(token);
-  res.json({ authenticated: isValid });
+  const user = await db.verifySession(token);
+  if (user) {
+    res.json({ authenticated: true, user });
+  } else {
+    res.json({ authenticated: false });
+  }
 });
 
-// เปลี่ยนรหัสผ่าน
+// เปลี่ยนรหัสผ่านของบัญชีตนเอง
 app.post('/api/auth/change-password', requireAuth, async (req, res) => {
   const { currentPassword, newPassword } = req.body;
   if (!currentPassword || !newPassword) {
@@ -99,12 +148,14 @@ app.post('/api/auth/change-password', requireAuth, async (req, res) => {
     return res.status(400).json({ error: 'รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 4 ตัวอักษร' });
   }
 
-  const isValid = await db.checkPassword(currentPassword);
-  if (!isValid) {
+  const user = await db.getUserById(req.user.id);
+  if (!user) return res.status(404).json({ error: 'ไม่พบบัญชีผู้ใช้งาน' });
+
+  if (user.password_hash !== db.hashPassword(currentPassword)) {
     return res.status(401).json({ error: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' });
   }
 
-  await db.setPassword(newPassword);
+  await db.updateUserPassword(user.id, newPassword);
   res.json({ success: true, message: 'เปลี่ยนรหัสผ่านสำเร็จเรียบร้อยแล้ว' });
 });
 
@@ -114,6 +165,63 @@ app.post('/api/auth/logout', (req, res) => {
   const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
   db.removeSession(token);
   res.json({ success: true, message: 'ออกจากระบบเรียบร้อยแล้ว' });
+});
+
+// ==================== USER MANAGEMENT API (ADMIN ONLY) ====================
+
+// ดึงรายชื่อผู้ใช้งานทั้งหมด
+app.get('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const users = await db.getUsers();
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// กำหนดสิทธิ์และสถานะบัญชีครู
+app.put('/api/admin/users/:id/permissions', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { canEdit, canDelete, canAdd, role, status } = req.body;
+    await db.updateUserPermissions(req.params.id, { canEdit, canDelete, canAdd, role, status });
+    res.json({ success: true, message: 'บันทึกสิทธิ์การใช้งานเรียบร้อยแล้ว' });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// รีเซ็ตรหัสผ่านให้ครู
+app.put('/api/admin/users/:id/reset-password', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { newPassword } = req.body;
+    if (!newPassword || newPassword.length < 4) {
+      return res.status(400).json({ error: 'รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 4 ตัวอักษร' });
+    }
+    await db.updateUserPassword(req.params.id, newPassword);
+    res.json({ success: true, message: 'รีเซ็ตรหัสผ่านให้ผู้ใช้เรียบร้อยแล้ว' });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// ลบบัญชีผู้ใช้งาน
+app.delete('/api/admin/users/:id', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    await db.deleteUser(req.params.id);
+    res.json({ success: true, message: 'ลบบัญชีผู้ใช้งานเรียบร้อยแล้ว' });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// ซิงค์ตารางผู้ใช้งานขึ้น Supabase
+app.post('/api/admin/users/sync-supabase', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const result = await db.syncUsersToSupabaseTable();
+    res.json({ success: true, message: `ซิงค์บัญชีผู้ใช้ขึ้น Supabase สำเร็จ (${result.count} บัญชี)` });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 // ==================== DATABASE / SUPABASE STATUS API ====================
@@ -129,7 +237,7 @@ app.get('/api/database/status', requireAuth, async (req, res) => {
 });
 
 // บันทึกการตั้งค่า Supabase
-app.post('/api/database/config', requireAuth, async (req, res) => {
+app.post('/api/database/config', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { url, key } = req.body;
     const result = await db.setSupabaseConfig(url, key);
@@ -140,7 +248,7 @@ app.post('/api/database/config', requireAuth, async (req, res) => {
 });
 
 // โอนย้ายข้อมูลขึ้น Supabase
-app.post('/api/database/sync', requireAuth, async (req, res) => {
+app.post('/api/database/sync', requireAuth, requireAdmin, async (req, res) => {
   try {
     const result = await db.syncToSupabase();
     res.json(result);
@@ -194,7 +302,7 @@ app.get('/api/assets', requireAuth, async (req, res) => {
 });
 
 // บันทึกครุภัณฑ์ใหม่
-app.post('/api/assets', requireAuth, async (req, res) => {
+app.post('/api/assets', requireAuth, requireAdd, async (req, res) => {
   try {
     const id = await db.createAsset(req.body);
     res.json({ message: 'บันทึกข้อมูลครุภัณฑ์เรียบร้อยแล้ว', id });
@@ -204,7 +312,7 @@ app.post('/api/assets', requireAuth, async (req, res) => {
 });
 
 // แก้ไขครุภัณฑ์
-app.put('/api/assets/:id', requireAuth, async (req, res) => {
+app.put('/api/assets/:id', requireAuth, requireEdit, async (req, res) => {
   try {
     await db.updateAsset(req.params.id, req.body);
     res.json({ message: 'แก้ไขข้อมูลครุภัณฑ์เรียบร้อยแล้ว' });
@@ -214,7 +322,7 @@ app.put('/api/assets/:id', requireAuth, async (req, res) => {
 });
 
 // ลบครุภัณฑ์
-app.delete('/api/assets/:id', requireAuth, async (req, res) => {
+app.delete('/api/assets/:id', requireAuth, requireDelete, async (req, res) => {
   try {
     await db.deleteAsset(req.params.id);
     res.json({ message: 'ลบรายการสำเร็จ' });
@@ -250,7 +358,7 @@ app.get('/api/materials', requireAuth, async (req, res) => {
 });
 
 // บันทึกการรับ-จ่ายวัสดุ
-app.post('/api/materials', requireAuth, async (req, res) => {
+app.post('/api/materials', requireAuth, requireAdd, async (req, res) => {
   try {
     const id = await db.createMaterial(req.body);
     res.json({ message: 'บันทึกรายการวัสดุเรียบร้อยแล้ว', id });
@@ -260,7 +368,7 @@ app.post('/api/materials', requireAuth, async (req, res) => {
 });
 
 // แก้ไขรายการวัสดุ
-app.put('/api/materials/:id', requireAuth, async (req, res) => {
+app.put('/api/materials/:id', requireAuth, requireEdit, async (req, res) => {
   try {
     await db.updateMaterial(req.params.id, req.body);
     res.json({ message: 'แก้ไขข้อมูลวัสดุเรียบร้อยแล้ว' });
@@ -270,7 +378,7 @@ app.put('/api/materials/:id', requireAuth, async (req, res) => {
 });
 
 // ลบรายการวัสดุ
-app.delete('/api/materials/:id', requireAuth, async (req, res) => {
+app.delete('/api/materials/:id', requireAuth, requireDelete, async (req, res) => {
   try {
     await db.deleteMaterial(req.params.id);
     res.json({ message: 'ลบรายการสำเร็จ' });
@@ -292,7 +400,7 @@ app.get('/api/backup', requireAuth, async (req, res) => {
 });
 
 // นำเข้าข้อมูลสำรอง (Restore Data)
-app.post('/api/restore', requireAuth, async (req, res) => {
+app.post('/api/restore', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { assets, materials } = req.body;
     if (!Array.isArray(assets) || !Array.isArray(materials)) {

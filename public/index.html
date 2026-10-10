@@ -152,39 +152,118 @@
   <!-- 0. LOGIN OVERLAY (หน้าต่างรหัสผ่านก่อนเข้าใช้งาน) -->
   <!-- ============================================================== -->
   <div id="login-overlay" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-gradient-to-br from-red-950 via-red-900 to-amber-950 p-4 transition-opacity duration-300">
-    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 sm:p-8 border-2 border-amber-300 text-center relative overflow-hidden">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 sm:p-8 border-2 border-amber-300 text-center relative overflow-hidden max-h-[95vh] overflow-y-auto">
       <div class="absolute -top-12 -right-12 w-32 h-32 bg-amber-200/50 rounded-full blur-2xl pointer-events-none"></div>
       <div class="absolute -bottom-12 -left-12 w-32 h-32 bg-red-200/40 rounded-full blur-2xl pointer-events-none"></div>
 
-      <div class="flex justify-center mb-4">
-        <img src="logo.jpg" alt="ตราโรงเรียนดงกลาง" class="w-20 h-20 object-contain rounded-2xl shadow-lg bg-white p-1 border-2 border-amber-400" onerror="this.outerHTML='<span class=\'p-4 bg-gradient-to-br from-amber-400 to-amber-500 text-red-950 rounded-2xl shadow-lg text-4xl\'>🏫</span>'">
+      <div class="flex justify-center mb-3">
+        <img src="logo.jpg" alt="ตราโรงเรียนดงกลาง" class="w-16 h-16 sm:w-20 sm:h-20 object-contain rounded-2xl shadow-lg bg-white p-1 border-2 border-amber-400" onerror="this.outerHTML='<span class=\'p-3 sm:p-4 bg-gradient-to-br from-amber-400 to-amber-500 text-red-950 rounded-2xl shadow-lg text-3xl sm:text-4xl\'>🏫</span>'">
       </div>
 
-      <h2 class="text-xl font-bold text-red-950 tracking-wide mb-1">
+      <h2 class="text-lg sm:text-xl font-bold text-red-950 tracking-wide mb-0.5">
         ระบบงานพัสดุและครุภัณฑ์
       </h2>
-      <p class="text-xs font-semibold text-amber-800 mb-6">
+      <p class="text-xs font-semibold text-amber-800 mb-4">
         โรงเรียนบ้านดงกลาง (ธนาคารกรุงเทพ ๓๑)
       </p>
 
-      <form id="form-login" onsubmit="handleLogin(event)" class="space-y-4 text-left">
+      <!-- สลับโหมด เข้าสู่ระบบ / ขอสิทธิ์ใช้งาน -->
+      <div class="flex bg-slate-100 p-1 rounded-2xl mb-4 border border-slate-200">
+        <button type="button" id="tab-login-mode-btn" onclick="switchLoginAuthMode('login')" class="flex-1 py-1.5 text-xs font-bold rounded-xl transition bg-white text-red-950 shadow-xs">
+          🔑 เข้าสู่ระบบ
+        </button>
+        <button type="button" id="tab-register-mode-btn" onclick="switchLoginAuthMode('register')" class="flex-1 py-1.5 text-xs font-semibold text-slate-500 hover:text-red-900 rounded-xl transition">
+          📝 ขอสิทธิ์ใช้งาน
+        </button>
+      </div>
+
+      <!-- ฟอร์มเข้าสู่ระบบ (LOGIN) -->
+      <form id="form-login" onsubmit="handleLogin(event)" class="space-y-3.5 text-left">
         <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+          <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
+            <span>👤</span> <span>ชื่อผู้ใช้งาน (Username)</span>
+          </label>
+          <input type="text" id="login-username" autofocus placeholder="เช่น admin หรือชื่อผู้ใช้ของคุณ..." class="w-full border-2 border-slate-300 focus:border-amber-500 p-2.5 rounded-xl text-sm font-medium focus:ring-2 focus:ring-amber-400 outline-none transition">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
             <span>🔒</span> <span>รหัสผ่านเข้าใช้งาน</span>
           </label>
           <div class="relative">
-            <input type="password" id="login-password" required autofocus placeholder="กรอกรหัสผ่าน..." class="w-full border-2 border-slate-300 focus:border-amber-500 p-3 pr-10 rounded-xl text-sm font-medium focus:ring-2 focus:ring-amber-400 outline-none transition">
+            <input type="password" id="login-password" required placeholder="กรอกรหัสผ่าน..." class="w-full border-2 border-slate-300 focus:border-amber-500 p-2.5 pr-10 rounded-xl text-sm font-medium focus:ring-2 focus:ring-amber-400 outline-none transition">
             <button type="button" onclick="togglePasswordVisibility('login-password', 'login-eye-icon')" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none p-1">
               <span id="login-eye-icon">👁️</span>
             </button>
           </div>
         </div>
 
-        <div id="login-error-msg" class="hidden text-xs text-rose-700 bg-rose-50 border border-rose-200 p-2.5 rounded-xl font-medium text-center"></div>
+        <div id="login-error-msg" class="hidden text-xs text-rose-700 bg-rose-50 border border-rose-200 p-2.5 rounded-xl font-medium text-center leading-relaxed"></div>
 
-        <button type="submit" id="btn-login-submit" class="w-full py-3 bg-gradient-to-r from-red-700 via-red-800 to-amber-700 hover:from-red-800 hover:to-amber-800 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition transform active:scale-[0.98] text-sm flex items-center justify-center gap-2 border border-amber-400/40">
+        <button type="submit" id="btn-login-submit" class="w-full py-2.5 sm:py-3 bg-gradient-to-r from-red-700 via-red-800 to-amber-700 hover:from-red-800 hover:to-amber-800 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition transform active:scale-[0.98] text-sm flex items-center justify-center gap-2 border border-amber-400/40 cursor-pointer">
           <span>เข้าสู่ระบบ</span> <span>➔</span>
         </button>
+
+        <div class="text-center pt-1">
+          <button type="button" onclick="switchLoginAuthMode('register')" class="text-xs text-amber-800 hover:text-amber-900 font-medium underline cursor-pointer">
+            คุณครูยังไม่มีบัญชีใช้งาน? คลิกที่นี่เพื่อลงทะเบียนขอสิทธิ์
+          </button>
+        </div>
+      </form>
+
+      <!-- ฟอร์มลงทะเบียนขอสิทธิ์เข้าใช้งาน (REGISTER) -->
+      <form id="form-register" onsubmit="handleRegister(event)" class="hidden space-y-3 text-left">
+        <div class="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-2.5 text-[11px] leading-relaxed">
+          <span>ℹ️ เมื่อลงทะเบียนแล้ว บัญชีจะอยู่ในสถานะ <b>"รออนุมัติ"</b> โดยผู้ดูแลระบบจะเป็นผู้เปิดสิทธิ์การแก้ไขหรือลบข้อมูลให้ครับ</span>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
+            <span>👤</span> <span>ชื่อ-นามสกุลครู</span> <span class="text-rose-500">*</span>
+          </label>
+          <input type="text" id="reg-fullname" required placeholder="เช่น ครูสมหมาย ใจดี" class="w-full border-2 border-slate-300 focus:border-amber-500 p-2 rounded-xl text-xs sm:text-sm font-medium focus:ring-2 focus:ring-amber-400 outline-none transition">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
+            <span>🏷️</span> <span>ตำแหน่ง / กลุ่มสาระ</span>
+          </label>
+          <input type="text" id="reg-position" placeholder="เช่น ครูชำนาญการ, ครูประจำชั้น ป.1" class="w-full border-2 border-slate-300 focus:border-amber-500 p-2 rounded-xl text-xs sm:text-sm font-medium focus:ring-2 focus:ring-amber-400 outline-none transition">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
+            <span>🆔</span> <span>ชื่อผู้ใช้งานที่ต้องการ (Username)</span> <span class="text-rose-500">*</span>
+          </label>
+          <input type="text" id="reg-username" required placeholder="เช่น sommai หรือภาษาอังกฤษ" class="w-full border-2 border-slate-300 focus:border-amber-500 p-2 rounded-xl text-xs sm:text-sm font-medium focus:ring-2 focus:ring-amber-400 outline-none transition">
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
+              <span>🔒</span> <span>รหัสผ่าน</span> <span class="text-rose-500">*</span>
+            </label>
+            <input type="password" id="reg-password" required minlength="4" placeholder="อย่างน้อย 4 ตัว..." class="w-full border-2 border-slate-300 focus:border-amber-500 p-2 rounded-xl text-xs sm:text-sm font-medium focus:ring-2 focus:ring-amber-400 outline-none transition">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
+              <span>🔒</span> <span>ยืนยันรหัสผ่าน</span> <span class="text-rose-500">*</span>
+            </label>
+            <input type="password" id="reg-confirmpassword" required minlength="4" placeholder="ยืนยันอีกครั้ง..." class="w-full border-2 border-slate-300 focus:border-amber-500 p-2 rounded-xl text-xs sm:text-sm font-medium focus:ring-2 focus:ring-amber-400 outline-none transition">
+          </div>
+        </div>
+
+        <div id="reg-msg" class="hidden text-xs p-2.5 rounded-xl font-medium text-center leading-relaxed"></div>
+
+        <button type="submit" id="btn-reg-submit" class="w-full py-2.5 sm:py-3 bg-gradient-to-r from-emerald-700 via-emerald-800 to-teal-800 hover:from-emerald-800 hover:to-teal-900 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition transform active:scale-[0.98] text-sm flex items-center justify-center gap-2 border border-emerald-400/40 cursor-pointer">
+          <span>ส่งคำขอลงทะเบียน</span> <span>➔</span>
+        </button>
+
+        <div class="text-center pt-1">
+          <button type="button" onclick="switchLoginAuthMode('login')" class="text-xs text-slate-600 hover:text-slate-800 font-medium cursor-pointer">
+            ⬅️ กลับไปยังหน้าเข้าสู่ระบบ
+          </button>
+        </div>
       </form>
     </div>
   </div>
@@ -211,6 +290,13 @@
           <button onclick="switchTab('material')" id="tab-material-btn" class="flex-1 sm:flex-initial text-center justify-center px-3 py-2 sm:px-4 sm:py-2 bg-red-950/70 hover:bg-red-800/80 text-amber-100 font-medium rounded-xl border border-amber-400/20 transition text-xs sm:text-sm whitespace-nowrap">
             บัญชีคุมวัสดุ
           </button>
+          <!-- ป้ายแสดงผู้ใช้งานปัจจุบัน -->
+          <div id="nav-user-pill" class="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-1.5 bg-red-950/80 border border-amber-400/30 rounded-xl text-xs text-amber-100 shadow-xs">
+            <span class="text-xs sm:text-sm">👤</span>
+            <span id="nav-user-name" class="font-bold text-white max-w-[100px] sm:max-w-[150px] truncate">ผู้ดูแลระบบ</span>
+            <span id="nav-user-role-badge" class="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-400 text-red-950">แอดมิน</span>
+          </div>
+
           <!-- ป้ายสถานะ Cloud Database (ซ่อนไว้เพื่อให้หน้าจอสะอาดตา ไม่เกะกะ) -->
           <button type="button" onclick="openModal('supabaseModal')" id="db-status-badge" class="hidden" title="สถานะฐานข้อมูล">
             <span id="db-status-dot"></span>
@@ -226,14 +312,25 @@
             </button>
             <div id="system-menu-dropdown" class="hidden absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-amber-200/80 py-1.5 z-50 text-xs divide-y divide-slate-100">
               <div class="py-1">
-                <button type="button" onclick="openModal('orgModal'); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-amber-50 hover:text-red-900 flex items-center gap-2.5 font-medium transition cursor-pointer">
+                <!-- เมนูสำหรับ Admin: จัดการผู้ใช้งานและสิทธิ์ -->
+                <button type="button" id="menu-btn-user-mgmt" onclick="openModal('userManagementModal'); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-amber-50 hover:text-red-900 flex items-center justify-between font-medium transition cursor-pointer">
+                  <div class="flex items-center gap-2.5">
+                    <span class="text-base">👥</span>
+                    <div>
+                      <div class="font-bold text-slate-800">จัดการผู้ใช้งานและสิทธิ์</div>
+                      <div class="text-[10px] text-slate-400">อนุมัติครูผู้ใช้ & สิทธิ์แก้ไข/ลบ</div>
+                    </div>
+                  </div>
+                  <span id="pending-users-badge" class="hidden px-2 py-0.5 bg-rose-500 text-white font-bold rounded-full text-[10px] animate-pulse">0</span>
+                </button>
+                <button type="button" id="menu-btn-org" onclick="openModal('orgModal'); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-amber-50 hover:text-red-900 flex items-center gap-2.5 font-medium transition cursor-pointer">
                   <span class="text-base">⚙️</span>
                   <div>
                     <div class="font-bold text-slate-800">ตั้งค่าหน่วยงาน</div>
                     <div class="text-[10px] text-slate-400">ชื่อส่วนราชการและหน่วยงานพิมพ์</div>
                   </div>
                 </button>
-                <button type="button" onclick="openModal('supabaseModal'); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-amber-50 hover:text-red-900 flex items-center gap-2.5 font-medium transition cursor-pointer">
+                <button type="button" id="menu-btn-supabase" onclick="openModal('supabaseModal'); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-amber-50 hover:text-red-900 flex items-center gap-2.5 font-medium transition cursor-pointer">
                   <span class="text-base">☁️</span>
                   <div>
                     <div class="font-bold text-slate-800">Cloud Database (Supabase)</div>
@@ -241,15 +338,15 @@
                   </div>
                 </button>
               </div>
-              <div class="py-1">
-                <button type="button" onclick="exportBackup(); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-amber-50 hover:text-red-900 flex items-center gap-2.5 font-medium transition cursor-pointer">
+              <div class="py-1" id="menu-section-backup">
+                <button type="button" id="menu-btn-backup" onclick="exportBackup(); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-amber-50 hover:text-red-900 flex items-center gap-2.5 font-medium transition cursor-pointer">
                   <span class="text-base">📥</span>
                   <div>
                     <div class="font-bold text-slate-800">สำรองข้อมูล</div>
                     <div class="text-[10px] text-slate-400">ดาวน์โหลดไฟล์สำรอง (.json)</div>
                   </div>
                 </button>
-                <button type="button" onclick="openModal('restoreModal'); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-amber-50 hover:text-red-900 flex items-center gap-2.5 font-medium transition cursor-pointer">
+                <button type="button" id="menu-btn-restore" onclick="openModal('restoreModal'); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-amber-50 hover:text-red-900 flex items-center gap-2.5 font-medium transition cursor-pointer">
                   <span class="text-base">📤</span>
                   <div>
                     <div class="font-bold text-slate-800">นำเข้าข้อมูล</div>
@@ -298,7 +395,7 @@
             </div>
 
             <!-- ปุ่มหลัก: เพิ่มครุภัณฑ์ใหม่ (เด่นชัด เข้าถึงง่าย) -->
-            <button onclick="openAddAssetModal()" class="w-full sm:w-auto justify-center bg-gradient-to-r from-red-700 via-red-800 to-rose-900 hover:from-red-800 hover:to-rose-950 text-white px-4 py-2 sm:py-2.5 rounded-xl font-bold shadow-md hover:shadow-lg transition transform active:scale-95 flex items-center gap-2 text-xs sm:text-sm border border-red-950/40 whitespace-nowrap cursor-pointer">
+            <button id="btn-add-asset" onclick="openAddAssetModal()" class="w-full sm:w-auto justify-center bg-gradient-to-r from-red-700 via-red-800 to-rose-900 hover:from-red-800 hover:to-rose-950 text-white px-4 py-2 sm:py-2.5 rounded-xl font-bold shadow-md hover:shadow-lg transition transform active:scale-95 flex items-center gap-2 text-xs sm:text-sm border border-red-950/40 whitespace-nowrap cursor-pointer">
               <span class="text-base leading-none font-bold">+</span>
               <span>เพิ่มครุภัณฑ์ใหม่</span>
             </button>
@@ -526,7 +623,7 @@
             <button onclick="openModal('materialMetaModal')" class="flex-1 sm:flex-initial justify-center bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white px-3 py-2 sm:px-3.5 sm:py-2 rounded-xl text-xs font-semibold shadow-xs transition flex items-center gap-1 border border-amber-800/30 whitespace-nowrap">
               📝 <span>หัวบัตรวัสดุ</span>
             </button>
-            <button onclick="openAddMaterialModal()" class="flex-1 sm:flex-initial justify-center bg-gradient-to-r from-red-700 to-red-800 hover:from-red-800 hover:to-red-900 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-xl font-semibold shadow-xs transition text-xs sm:text-sm border border-red-900/30 whitespace-nowrap">
+            <button id="btn-add-material" onclick="openAddMaterialModal()" class="flex-1 sm:flex-initial justify-center bg-gradient-to-r from-red-700 to-red-800 hover:from-red-800 hover:to-red-900 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-xl font-semibold shadow-xs transition text-xs sm:text-sm border border-red-900/30 whitespace-nowrap">
               + <span>รับ-จ่ายวัสดุ</span>
             </button>
             <button onclick="printSelectedMaterials()" id="btn-print-materials" class="flex-1 sm:flex-initial justify-center bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold px-3 py-2 sm:px-4 sm:py-2 rounded-xl shadow-xs transition flex items-center gap-1.5 text-xs sm:text-sm border border-amber-600/30 whitespace-nowrap">
@@ -1141,6 +1238,167 @@
     </div>
   </div>
 
+  <!-- MODAL: จัดการผู้ใช้งานและสิทธิ์เข้าถึง (User Management) -->
+  <div id="userManagementModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs hidden flex items-center justify-center p-2.5 sm:p-4 z-50 no-print">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl p-4 sm:p-6 border-2 border-amber-300 max-h-[92vh] overflow-y-auto touch-scroll">
+      <div class="flex justify-between items-center mb-3 sm:mb-4 border-b border-amber-100 pb-2.5 sm:pb-3">
+        <div class="flex items-center gap-2.5">
+          <span class="p-2 bg-gradient-to-br from-amber-400 to-amber-500 text-red-950 rounded-xl text-lg shadow-sm">👥</span>
+          <div>
+            <h3 class="text-base sm:text-lg font-bold text-red-950 leading-tight">
+              จัดการผู้ใช้งานและสิทธิ์เข้าถึง
+            </h3>
+            <p class="text-[11px] text-slate-500">
+              อนุมัติบัญชีครู กำหนดสิทธิ์แก้ไข/ลบข้อมูล และซิงค์ฐานข้อมูล Supabase
+            </p>
+          </div>
+        </div>
+        <button onclick="closeModal('userManagementModal')" class="text-slate-400 hover:text-slate-600 text-2xl font-bold leading-none p-1 -mr-1 cursor-pointer">&times;</button>
+      </div>
+
+      <!-- สรุปสถิติผู้ใช้งาน -->
+      <div class="grid grid-cols-3 gap-2 sm:gap-3 mb-4">
+        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-2.5 sm:p-3 text-center">
+          <div class="text-[10px] sm:text-xs text-slate-500 font-medium">ครูในระบบทั้งหมด</div>
+          <div id="stat-total-users" class="text-lg sm:text-xl font-bold text-slate-800">0</div>
+        </div>
+        <div class="bg-amber-50 border border-amber-200 rounded-2xl p-2.5 sm:p-3 text-center">
+          <div class="text-[10px] sm:text-xs text-amber-700 font-bold">รอการอนุมัติ</div>
+          <div id="stat-pending-users" class="text-lg sm:text-xl font-bold text-amber-900">0</div>
+        </div>
+        <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-2.5 sm:p-3 text-center">
+          <div class="text-[10px] sm:text-xs text-emerald-700 font-medium">เปิดใช้งานแล้ว</div>
+          <div id="stat-active-users" class="text-lg sm:text-xl font-bold text-emerald-800">0</div>
+        </div>
+      </div>
+
+      <!-- กล่องรายการที่รออนุมัติ (เด่นชัดเมื่อมีผู้ใช้รออยู่) -->
+      <div id="pending-users-container" class="hidden mb-4 bg-amber-50/80 border-2 border-amber-300 rounded-2xl p-3.5 sm:p-4">
+        <div class="flex items-center gap-2 mb-2 font-bold text-xs sm:text-sm text-red-950">
+          <span>🔔</span> <span>คำขอลงทะเบียนที่รอการอนุมัติ (<span id="pending-users-count-text">0</span> รายการ)</span>
+        </div>
+        <div id="pending-users-list" class="space-y-2">
+          <!-- Render pending items dynamically -->
+        </div>
+      </div>
+
+      <!-- ตารางรายชื่อผู้ใช้งานทั้งหมดและกำหนดสิทธิ์ -->
+      <div class="mb-5">
+        <div class="flex justify-between items-center mb-2">
+          <h4 class="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5">
+            <span>📋</span> <span>รายชื่อผู้ใช้งานและสิทธิ์การใช้งานทั้งหมด</span>
+          </h4>
+          <button type="button" onclick="loadUsersManagement()" class="text-xs text-amber-800 hover:text-red-900 font-semibold flex items-center gap-1 cursor-pointer">
+            <span>🔄 รีเฟรช</span>
+          </button>
+        </div>
+
+        <div class="overflow-x-auto border border-slate-200 rounded-2xl shadow-2xs">
+          <table class="w-full text-xs text-left">
+            <thead class="bg-slate-100 text-slate-700 border-b border-slate-200 uppercase font-semibold text-[11px]">
+              <tr>
+                <th class="p-2.5 sm:p-3">ผู้ใช้งาน (ชื่อ-สกุล)</th>
+                <th class="p-2.5 sm:p-3 text-center">บทบาท</th>
+                <th class="p-2.5 sm:p-3 text-center">สถานะ</th>
+                <th class="p-2.5 sm:p-3 text-center">สิทธิ์แก้ไข</th>
+                <th class="p-2.5 sm:p-3 text-center">สิทธิ์ลบ</th>
+                <th class="p-2.5 sm:p-3 text-center">สิทธิ์เพิ่ม</th>
+                <th class="p-2.5 sm:p-3 text-center">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="users-management-tbody" class="divide-y divide-slate-100">
+              <!-- Render users dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ส่วนจัดการ Supabase Database SQL & Sync -->
+      <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3 sm:p-4 text-xs space-y-2.5">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+          <div>
+            <div class="font-bold text-slate-800 flex items-center gap-1.5">
+              <span>☁️</span> <span>ฐานข้อมูลผู้ใช้บน Supabase Cloud</span>
+            </div>
+            <div class="text-[11px] text-slate-500">
+              เก็บข้อมูลบัญชีผู้ใช้งานบน Supabase เพื่อเข้าสู่ระบบได้จากทุกอุปกรณ์
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5 w-full sm:w-auto">
+            <button type="button" onclick="copySupabaseUsersSql()" class="flex-1 sm:flex-initial px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-xl font-medium text-[11px] transition shadow-2xs cursor-pointer">
+              📋 คัดลอก SQL สร้างตาราง
+            </button>
+            <button type="button" onclick="syncUsersToSupabase()" id="btn-sync-users-sb" class="flex-1 sm:flex-initial px-3 py-1.5 bg-gradient-to-r from-red-800 to-amber-700 hover:from-red-900 hover:to-amber-800 text-white rounded-xl font-bold text-[11px] transition shadow-2xs cursor-pointer">
+              🚀 ซิงค์ผู้ใช้ขึ้น Supabase
+            </button>
+          </div>
+        </div>
+
+        <details class="text-[11px] text-slate-600 bg-white p-2.5 rounded-xl border border-slate-200 cursor-pointer">
+          <summary class="font-bold text-slate-700">📖 คำแนะนำการสร้างตาราง app_users บน Supabase (ทำครั้งเดียว)</summary>
+          <div class="pt-2 text-slate-600 leading-relaxed space-y-1.5">
+            <p>1. ไปที่ Supabase Dashboard ของคุณครู แล้วเลือกเมนู <b>SQL Editor</b> (ด้านซ้าย)</p>
+            <p>2. กดปุ่ม <b>+ New Query</b> แล้ววางคำสั่ง SQL ด้านล่างนี้ จากนั้นกดปุ่ม <b>Run</b> (สีเขียว)</p>
+            <div class="relative mt-1">
+              <pre class="bg-slate-900 text-amber-300 p-2.5 rounded-xl text-[10px] overflow-x-auto font-mono select-all">-- สร้างตารางข้อมูลผู้ใช้งานและสิทธิ์ (User & Permissions)
+CREATE TABLE IF NOT EXISTS app_users (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  username TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  full_name TEXT NOT NULL,
+  position TEXT DEFAULT '',
+  role TEXT DEFAULT 'user',
+  can_edit BOOLEAN DEFAULT false,
+  can_delete BOOLEAN DEFAULT false,
+  can_add BOOLEAN DEFAULT true,
+  status TEXT DEFAULT 'pending',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE app_users DISABLE ROW LEVEL SECURITY;</pre>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-1">* หากยังไม่ได้รัน SQL ระบบจะเก็บข้อมูลผู้ใช้ไว้ในเครื่องและสำรองข้อมูลขึ้นคลาวด์ให้อัตโนมัติ ปลอดภัย 100% ครับ</p>
+          </div>
+        </details>
+      </div>
+
+      <div class="flex justify-end pt-3 mt-3 border-t border-slate-100">
+        <button type="button" onclick="closeModal('userManagementModal')" class="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition cursor-pointer">
+          ปิดหน้าต่าง
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: รีเซ็ตรหัสผ่านให้ครู (สำหรับ Admin) -->
+  <div id="adminResetPasswordModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs hidden flex items-center justify-center p-2.5 sm:p-4 z-50 no-print">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-4 sm:p-6 border border-amber-200/60 max-h-[92vh] overflow-y-auto touch-scroll">
+      <div class="flex justify-between items-center mb-3 border-b border-amber-100 pb-2">
+        <h3 class="text-sm sm:text-base font-bold text-red-950 flex items-center gap-1.5">
+          <span>🔑</span> <span>รีเซ็ตรหัสผ่านให้ผู้ใช้งาน</span>
+        </h3>
+        <button onclick="closeModal('adminResetPasswordModal')" class="text-slate-400 hover:text-slate-600 text-2xl font-bold leading-none p-1 -mr-1 cursor-pointer">&times;</button>
+      </div>
+      <form onsubmit="handleAdminResetPassword(event)" class="space-y-3 text-xs">
+        <input type="hidden" id="reset-user-id">
+        <div>
+          <div class="text-[11px] text-slate-500 mb-0.5">ผู้ใช้งาน:</div>
+          <div id="reset-user-display-name" class="font-bold text-slate-800 text-sm">ครู...</div>
+        </div>
+        <div>
+          <label class="font-semibold block mb-1 text-slate-700">รหัสผ่านใหม่ (อย่างน้อย 4 ตัวอักษร)</label>
+          <input type="password" id="reset-new-password" required minlength="4" placeholder="กรอกรหัสผ่านใหม่ให้ครู..." class="w-full border border-slate-300 p-2.5 rounded-xl font-medium focus:ring-2 focus:ring-amber-500 outline-none">
+        </div>
+        <div id="admin-reset-msg" class="hidden text-xs p-2 rounded-xl text-center font-medium"></div>
+        <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+          <button type="button" onclick="closeModal('adminResetPasswordModal')" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 font-medium transition cursor-pointer">ยกเลิก</button>
+          <button type="submit" class="px-4 py-2 bg-gradient-to-r from-red-800 to-amber-700 hover:from-red-900 text-white rounded-xl font-bold shadow-md transition cursor-pointer">บันทึกรหัสผ่านใหม่</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- MODAL: ข้อมูล Cloud Database (Supabase) -->
   <div id="supabaseModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs hidden flex items-center justify-center p-2.5 sm:p-4 z-50 no-print">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-5 sm:p-6 border border-emerald-200/80 max-h-[92vh] overflow-y-auto touch-scroll">
@@ -1521,6 +1779,6 @@
     <option value="นางสาวภัฐธีรา  จุลพันธ์">ธุรการโรงเรียน</option>
   </datalist>
 
-  <script src="app.js?v=9.2"></script>
+  <script src="app.js?v=10.0"></script>
 </body>
 </html>

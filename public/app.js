@@ -75,7 +75,9 @@ window.addEventListener('afterprint', () => {
   setPrintTarget(currentTab === 'asset' ? 'asset' : 'material');
 });
 
-// ==================== ระบบสิทธิ์เข้าใช้งาน & AUTHENTICATION ====================
+// ==================== ระบบสิทธิ์เข้าใช้งาน & AUTHENTICATION (MULTI-USER & RBAC) ====================
+let currentUser = null;
+
 function getAuthToken() {
   return localStorage.getItem('school_auth_token') || sessionStorage.getItem('school_auth_token') || '';
 }
@@ -86,6 +88,8 @@ function setAuthToken(token) {
   } else {
     localStorage.removeItem('school_auth_token');
     sessionStorage.removeItem('school_auth_token');
+    localStorage.removeItem('cached_current_user');
+    currentUser = null;
   }
 }
 
@@ -112,10 +116,10 @@ function showLoginOverlay() {
     overlay.classList.remove('hidden');
     overlay.classList.add('flex');
     overlay.style.display = 'flex';
-    const passInput = document.getElementById('login-password');
-    if (passInput) {
-      passInput.value = '';
-      setTimeout(() => passInput.focus(), 150);
+    switchLoginAuthMode('login');
+    const uInput = document.getElementById('login-username');
+    if (uInput) {
+      setTimeout(() => uInput.focus(), 150);
     }
   }
 }
@@ -127,6 +131,42 @@ function hideLoginOverlay() {
     overlay.classList.add('hidden');
     overlay.classList.remove('flex');
     overlay.style.display = 'none';
+  }
+}
+
+function switchLoginAuthMode(mode) {
+  const formLogin = document.getElementById('form-login');
+  const formRegister = document.getElementById('form-register');
+  const tabLoginBtn = document.getElementById('tab-login-mode-btn');
+  const tabRegBtn = document.getElementById('tab-register-mode-btn');
+  const loginErr = document.getElementById('login-error-msg');
+  const regMsg = document.getElementById('reg-msg');
+
+  if (loginErr) loginErr.classList.add('hidden');
+  if (regMsg) regMsg.classList.add('hidden');
+
+  if (mode === 'register') {
+    if (formLogin) formLogin.classList.add('hidden');
+    if (formRegister) formRegister.classList.remove('hidden');
+    if (tabLoginBtn) {
+      tabLoginBtn.className = 'flex-1 py-1.5 text-xs font-semibold text-slate-500 hover:text-red-900 rounded-xl transition cursor-pointer';
+    }
+    if (tabRegBtn) {
+      tabRegBtn.className = 'flex-1 py-1.5 text-xs font-bold rounded-xl transition bg-white text-emerald-800 shadow-xs cursor-pointer';
+    }
+    const nameInput = document.getElementById('reg-fullname');
+    if (nameInput) setTimeout(() => nameInput.focus(), 100);
+  } else {
+    if (formLogin) formLogin.classList.remove('hidden');
+    if (formRegister) formRegister.classList.add('hidden');
+    if (tabLoginBtn) {
+      tabLoginBtn.className = 'flex-1 py-1.5 text-xs font-bold rounded-xl transition bg-white text-red-950 shadow-xs cursor-pointer';
+    }
+    if (tabRegBtn) {
+      tabRegBtn.className = 'flex-1 py-1.5 text-xs font-semibold text-slate-500 hover:text-red-900 rounded-xl transition cursor-pointer';
+    }
+    const passInput = document.getElementById('login-password');
+    if (passInput) setTimeout(() => passInput.focus(), 100);
   }
 }
 
@@ -145,6 +185,7 @@ function togglePasswordVisibility(inputId, iconId) {
 
 async function handleLogin(e) {
   e.preventDefault();
+  const usernameInput = document.getElementById('login-username');
   const passInput = document.getElementById('login-password');
   const errorDiv = document.getElementById('login-error-msg');
   const btnSubmit = document.getElementById('btn-login-submit');
@@ -154,7 +195,9 @@ async function handleLogin(e) {
     errorDiv.textContent = '';
   }
 
+  const username = (usernameInput ? usernameInput.value : '').trim();
   const password = (passInput ? passInput.value : '').trim();
+
   if (!password) {
     if (errorDiv) {
       errorDiv.textContent = 'กรุณากรอกรหัสผ่าน';
@@ -172,19 +215,28 @@ async function handleLogin(e) {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password })
+      body: JSON.stringify({ username, password })
     });
     const data = await res.json();
 
     if (res.ok && data.success && data.token) {
       setAuthToken(data.token);
+      currentUser = data.user || null;
+      if (currentUser) {
+        localStorage.setItem('cached_current_user', JSON.stringify(currentUser));
+      }
+      updateNavbarUserPill();
+      applyUserPermissionsToUI();
       hideLoginOverlay();
       await loadAssets();
       await loadMaterials();
       await loadDatabaseStatus();
+      if (currentUser && currentUser.role === 'admin') {
+        checkPendingUsersCount();
+      }
     } else {
       if (errorDiv) {
-        errorDiv.textContent = data.error || 'รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง';
+        errorDiv.textContent = data.error || 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง';
         errorDiv.classList.remove('hidden');
       }
       if (passInput) {
@@ -205,6 +257,128 @@ async function handleLogin(e) {
   }
 }
 
+async function handleRegister(e) {
+  e.preventDefault();
+  const fullName = document.getElementById('reg-fullname').value.trim();
+  const position = document.getElementById('reg-position').value.trim();
+  const username = document.getElementById('reg-username').value.trim();
+  const password = document.getElementById('reg-password').value.trim();
+  const confirmPassword = document.getElementById('reg-confirmpassword').value.trim();
+  const msgEl = document.getElementById('reg-msg');
+  const btn = document.getElementById('btn-reg-submit');
+
+  if (password !== confirmPassword) {
+    msgEl.className = 'text-xs p-2.5 rounded-xl font-medium text-center bg-rose-50 text-rose-700 border border-rose-200';
+    msgEl.textContent = '❌ รหัสผ่านทั้งสองช่องไม่ตรงกัน กรุณาตรวจสอบอีกครั้ง';
+    msgEl.classList.remove('hidden');
+    return;
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span>กำลังส่งข้อมูล...</span>';
+  }
+
+  try {
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fullName, position, username, password })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      msgEl.className = 'text-xs p-3 rounded-xl font-medium text-center bg-emerald-50 text-emerald-800 border border-emerald-300 leading-relaxed';
+      msgEl.innerHTML = `✅ <b>ลงทะเบียนสำเร็จ!</b><br>${data.message}`;
+      msgEl.classList.remove('hidden');
+      document.getElementById('form-register').reset();
+      setTimeout(() => {
+        switchLoginAuthMode('login');
+        const loginErr = document.getElementById('login-error-msg');
+        if (loginErr) {
+          loginErr.className = 'text-xs p-3 rounded-xl font-medium text-center bg-emerald-50 text-emerald-800 border border-emerald-300';
+          loginErr.innerHTML = '✅ ลงทะเบียนเรียบร้อยแล้ว กรุณาแจ้งผู้ดูแลระบบเพื่อเปิดสิทธิ์การใช้งาน';
+          loginErr.classList.remove('hidden');
+        }
+      }, 3500);
+    } else {
+      msgEl.className = 'text-xs p-2.5 rounded-xl font-medium text-center bg-rose-50 text-rose-700 border border-rose-200';
+      msgEl.textContent = '❌ ' + (data.error || 'เกิดข้อผิดพลาดในการลงทะเบียน');
+      msgEl.classList.remove('hidden');
+    }
+  } catch (err) {
+    msgEl.className = 'text-xs p-2.5 rounded-xl font-medium text-center bg-rose-50 text-rose-700 border border-rose-200';
+    msgEl.textContent = '❌ เกิดข้อผิดพลาด: ' + err.message;
+    msgEl.classList.remove('hidden');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<span>ส่งคำขอลงทะเบียน</span> <span>➔</span>';
+    }
+  }
+}
+
+function updateNavbarUserPill() {
+  const pill = document.getElementById('nav-user-pill');
+  const nameEl = document.getElementById('nav-user-name');
+  const roleEl = document.getElementById('nav-user-role-badge');
+  if (!pill) return;
+
+  if (!currentUser) {
+    pill.classList.add('hidden');
+    return;
+  }
+
+  pill.classList.remove('hidden');
+  pill.classList.add('flex');
+
+  if (nameEl) {
+    nameEl.textContent = currentUser.fullName || currentUser.username || 'ผู้ใช้งาน';
+  }
+
+  if (roleEl) {
+    if (currentUser.role === 'admin') {
+      roleEl.className = 'px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-400 text-red-950 shadow-2xs';
+      roleEl.textContent = '👑 แอดมิน';
+    } else if (currentUser.canEdit && currentUser.canDelete) {
+      roleEl.className = 'px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-400 text-emerald-950 shadow-2xs';
+      roleEl.textContent = '✏️ เจ้าหน้าที่';
+    } else if (currentUser.canEdit) {
+      roleEl.className = 'px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-300 text-sky-950 shadow-2xs';
+      roleEl.textContent = '✏️ แก้ไขได้';
+    } else {
+      roleEl.className = 'px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-800 shadow-2xs';
+      roleEl.textContent = '👁️ ดูข้อมูล';
+    }
+  }
+}
+
+function applyUserPermissionsToUI() {
+  const isAdmin = currentUser && currentUser.role === 'admin';
+  const canAdd = isAdmin || (currentUser && currentUser.canAdd);
+
+  // ควบคุมเมนู Admin
+  const btnUserMgmt = document.getElementById('menu-btn-user-mgmt');
+  const btnOrg = document.getElementById('menu-btn-org');
+  const btnSupabase = document.getElementById('menu-btn-supabase');
+  const sectionBackup = document.getElementById('menu-section-backup');
+
+  if (btnUserMgmt) btnUserMgmt.style.display = isAdmin ? 'flex' : 'none';
+  if (btnOrg) btnOrg.style.display = isAdmin ? 'flex' : 'none';
+  if (btnSupabase) btnSupabase.style.display = isAdmin ? 'flex' : 'none';
+  if (sectionBackup) sectionBackup.style.display = isAdmin ? 'block' : 'none';
+
+  // ควบคุมปุ่มเพิ่มรายการ
+  const btnAddAsset = document.getElementById('btn-add-asset');
+  const btnAddMaterial = document.getElementById('btn-add-material');
+
+  if (btnAddAsset) btnAddAsset.style.display = canAdd ? 'inline-flex' : 'none';
+  if (btnAddMaterial) btnAddMaterial.style.display = canAdd ? 'inline-flex' : 'none';
+
+  // รีเรนเดอร์ตารางเพื่อให้ปุ่มแก้ไข/ลบแสดงตามสิทธิ์จริง
+  if (assetList && assetList.length > 0) renderAssetTable();
+  if (materialList && materialList.length > 0) renderMaterialTable();
+}
+
 async function logout() {
   if (!confirm('ต้องการออกจากระบบใช่หรือไม่?')) return;
   try {
@@ -215,14 +389,21 @@ async function logout() {
 }
 
 async function checkAuthAndInitialize() {
+  const cachedUser = localStorage.getItem('cached_current_user');
+  if (cachedUser) {
+    try {
+      currentUser = JSON.parse(cachedUser);
+      updateNavbarUserPill();
+      applyUserPermissionsToUI();
+    } catch (e) {}
+  }
+
   const token = getAuthToken();
   if (!token) {
     showLoginOverlay();
     return;
   }
 
-  // หากผู้ใช้มี Token อยู่แล้ว หน้าแรกจะเปิดขึ้นมาทันทีโดยไม่กะพริบหน้าต่างล็อกอิน
-  // และโหลดข้อมูลครุภัณฑ์, วัสดุ, และสถานะ ควบคู่กับการตรวจสอบ Token แบบขนาน (Parallel) เพื่อความรวดเร็วสูงสุด
   try {
     const [verifyRes] = await Promise.all([
       fetch('/api/auth/verify', { headers: { 'Authorization': `Bearer ${token}` } }),
@@ -231,15 +412,21 @@ async function checkAuthAndInitialize() {
       loadDatabaseStatus()
     ]);
     const data = await verifyRes.json();
-    if (!verifyRes.ok || !data.authenticated) {
+    if (!verifyRes.ok || !data.authenticated || !data.user) {
       setAuthToken('');
       showLoginOverlay();
     } else {
+      currentUser = data.user;
+      localStorage.setItem('cached_current_user', JSON.stringify(currentUser));
+      updateNavbarUserPill();
+      applyUserPermissionsToUI();
       hideLoginOverlay();
+      if (currentUser.role === 'admin') {
+        checkPendingUsersCount();
+      }
     }
   } catch (err) {
     console.warn('Auth verify check failed:', err);
-    // หากเครือข่ายขัดข้องชั่วคราวแต่มีข้อมูลแคช ให้ใช้งานหน้าแรกต่อได้
   }
 }
 
@@ -291,6 +478,418 @@ async function handleChangePassword(e) {
     msgEl.textContent = '❌ เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + err.message;
     msgEl.className = 'text-xs p-2.5 rounded-xl text-center font-medium bg-rose-50 text-rose-800 border border-rose-200';
   }
+}
+
+// ==================== จัดการผู้ใช้งานและสิทธิ์ (USER MANAGEMENT CONTROLLER) ====================
+let adminUsersList = [];
+
+async function checkPendingUsersCount() {
+  if (!currentUser || currentUser.role !== 'admin') return;
+  try {
+    const res = await authFetch('/api/admin/users');
+    if (res.ok) {
+      const users = await res.json();
+      if (Array.isArray(users)) {
+        adminUsersList = users;
+        const pendingCount = users.filter(u => u.status === 'pending').length;
+        const badge = document.getElementById('pending-users-badge');
+        if (badge) {
+          if (pendingCount > 0) {
+            badge.textContent = `${pendingCount} รออนุมัติ`;
+            badge.classList.remove('hidden');
+          } else {
+            badge.classList.add('hidden');
+          }
+        }
+      }
+    }
+  } catch (e) {}
+}
+
+async function loadUsersManagement() {
+  if (!currentUser || currentUser.role !== 'admin') {
+    alert('เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถจัดการผู้ใช้งานได้');
+    return;
+  }
+
+  const tbody = document.getElementById('users-management-tbody');
+  if (tbody) {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4 text-slate-500">กำลังโหลดรายชื่อผู้ใช้งาน...</td></tr>';
+  }
+
+  try {
+    const res = await authFetch('/api/admin/users');
+    if (res.ok) {
+      const users = await res.json();
+      if (Array.isArray(users)) {
+        adminUsersList = users;
+        renderUsersManagement(users);
+      }
+    } else {
+      throw new Error('Server returned ' + res.status);
+    }
+  } catch (err) {
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-rose-600">❌ เกิดข้อผิดพลาด: ${err.message}</td></tr>`;
+    }
+  }
+}
+
+function renderUsersManagement(users) {
+  const tbody = document.getElementById('users-management-tbody');
+  const statTotal = document.getElementById('stat-total-users');
+  const statPending = document.getElementById('stat-pending-users');
+  const statActive = document.getElementById('stat-active-users');
+  const pendingContainer = document.getElementById('pending-users-container');
+  const pendingList = document.getElementById('pending-users-list');
+  const pendingCountText = document.getElementById('pending-users-count-text');
+
+  const total = users.length;
+  const pendingUsers = users.filter(u => u.status === 'pending');
+  const activeCount = users.filter(u => u.status === 'active').length;
+
+  if (statTotal) statTotal.textContent = total;
+  if (statPending) statPending.textContent = pendingUsers.length;
+  if (statActive) statActive.textContent = activeCount;
+
+  // แสดงส่วนคำขอรออนุมัติ
+  if (pendingUsers.length > 0) {
+    if (pendingContainer) pendingContainer.classList.remove('hidden');
+    if (pendingCountText) pendingCountText.textContent = pendingUsers.length;
+    if (pendingList) {
+      pendingList.innerHTML = pendingUsers.map(u => `
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-3 rounded-xl border border-amber-300 shadow-2xs gap-2">
+          <div>
+            <div class="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5">
+              <span>👤 ${escapeHtml(u.full_name)}</span>
+              <span class="text-[11px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">@${escapeHtml(u.username)}</span>
+            </div>
+            <div class="text-[11px] text-slate-500">ตำแหน่ง: ${escapeHtml(u.position || 'ครูผู้ขอใช้งาน')} | วันที่ขอ: ${u.created_at || '-'}</div>
+          </div>
+          <div class="flex items-center gap-1.5 w-full sm:w-auto">
+            <button type="button" onclick="quickApproveUser(${u.id})" class="flex-1 sm:flex-initial px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition shadow-2xs cursor-pointer">
+              ✅ อนุมัติใช้งาน
+            </button>
+            <button type="button" onclick="quickRejectUser(${u.id})" class="flex-1 sm:flex-initial px-3 py-1.5 bg-slate-100 hover:bg-rose-100 hover:text-rose-700 text-slate-600 font-semibold rounded-xl text-xs transition cursor-pointer">
+              ❌ ไม่อนุมัติ
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+  } else {
+    if (pendingContainer) pendingContainer.classList.add('hidden');
+  }
+
+  // อัปเดต badge บนเมนูหลัก
+  const badge = document.getElementById('pending-users-badge');
+  if (badge) {
+    if (pendingUsers.length > 0) {
+      badge.textContent = `${pendingUsers.length} รออนุมัติ`;
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+  }
+
+  // Render Table
+  if (!tbody) return;
+  if (users.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center p-4 text-slate-400">ยังไม่มีข้อมูลผู้ใช้งาน</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = users.map((u) => {
+    const isAdmin = u.role === 'admin' || u.username === 'admin';
+    const isMe = currentUser && currentUser.id === u.id;
+
+    const statusBadge = u.status === 'active' 
+      ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">🟢 ใช้งานได้</span>'
+      : (u.status === 'pending'
+        ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 animate-pulse">🟡 รออนุมัติ</span>'
+        : '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">🔴 ระงับ</span>');
+
+    return `
+      <tr class="hover:bg-amber-50/40 transition border-b border-slate-100">
+        <td class="p-2.5 sm:p-3">
+          <div class="font-bold text-slate-900 flex items-center gap-1">
+            <span>${escapeHtml(u.full_name)}</span>
+            ${isAdmin ? '<span class="text-amber-500" title="ผู้ดูแลระบบหลัก">👑</span>' : ''}
+            ${isMe ? '<span class="text-[9px] bg-red-100 text-red-800 font-bold px-1 rounded">ฉัน</span>' : ''}
+          </div>
+          <div class="text-[11px] text-slate-500 font-mono">@${escapeHtml(u.username)} ${u.position ? `• ${escapeHtml(u.position)}` : ''}</div>
+        </td>
+        <td class="p-2.5 sm:p-3 text-center">
+          ${isAdmin ? `
+            <span class="font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-md text-[11px]">ผู้ดูแลระบบ</span>
+          ` : `
+            <select onchange="updateUserRoleDirect(${u.id}, this.value)" class="border border-slate-300 rounded-lg p-1 text-[11px] bg-white">
+              <option value="user" ${u.role === 'user' ? 'selected' : ''}>ครูผู้ใช้งาน</option>
+              <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>ผู้ดูแลระบบ</option>
+            </select>
+          `}
+        </td>
+        <td class="p-2.5 sm:p-3 text-center">
+          ${isAdmin ? statusBadge : `
+            <select onchange="updateUserStatusDirect(${u.id}, this.value)" class="border border-slate-300 rounded-lg p-1 text-[11px] bg-white">
+              <option value="active" ${u.status === 'active' ? 'selected' : ''}>🟢 ใช้งานได้</option>
+              <option value="pending" ${u.status === 'pending' ? 'selected' : ''}>🟡 รออนุมัติ</option>
+              <option value="rejected" ${u.status === 'rejected' ? 'selected' : ''}>🔴 ระงับ</option>
+            </select>
+          `}
+        </td>
+        <td class="p-2.5 sm:p-3 text-center">
+          <input type="checkbox" ${isAdmin ? 'checked disabled' : (u.can_edit ? 'checked' : '')} 
+            onchange="toggleUserPermissionDirect(${u.id}, 'canEdit', this.checked)" 
+            class="w-4 h-4 accent-amber-600 rounded cursor-pointer ${isAdmin ? 'opacity-60 cursor-not-allowed' : ''}" 
+            title="${isAdmin ? 'แอดมินมีสิทธิ์แก้ไขเสมอ' : 'เปิด/ปิดสิทธิ์แก้ไข'}">
+        </td>
+        <td class="p-2.5 sm:p-3 text-center">
+          <input type="checkbox" ${isAdmin ? 'checked disabled' : (u.can_delete ? 'checked' : '')} 
+            onchange="toggleUserPermissionDirect(${u.id}, 'canDelete', this.checked)" 
+            class="w-4 h-4 accent-rose-600 rounded cursor-pointer ${isAdmin ? 'opacity-60 cursor-not-allowed' : ''}" 
+            title="${isAdmin ? 'แอดมินมีสิทธิ์ลบเสมอ' : 'เปิด/ปิดสิทธิ์ลบ'}">
+        </td>
+        <td class="p-2.5 sm:p-3 text-center">
+          <input type="checkbox" ${isAdmin ? 'checked disabled' : (u.can_add ? 'checked' : '')} 
+            onchange="toggleUserPermissionDirect(${u.id}, 'canAdd', this.checked)" 
+            class="w-4 h-4 accent-emerald-600 rounded cursor-pointer ${isAdmin ? 'opacity-60 cursor-not-allowed' : ''}" 
+            title="${isAdmin ? 'แอดมินมีสิทธิ์เพิ่มข้อมูลเสมอ' : 'เปิด/ปิดสิทธิ์เพิ่มข้อมูล'}">
+        </td>
+        <td class="p-2.5 sm:p-3 text-center whitespace-nowrap space-x-1">
+          <button type="button" onclick="openAdminResetPassword(${u.id}, '${escapeHtml(u.full_name)}')" class="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 rounded-lg font-semibold text-[11px] transition cursor-pointer" title="ตั้งรหัสผ่านใหม่ให้ครู">
+            🔑 รหัส
+          </button>
+          ${!isAdmin ? `
+            <button type="button" onclick="deleteUserAccount(${u.id}, '${escapeHtml(u.full_name)}')" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg font-semibold text-[11px] transition cursor-pointer" title="ลบบัญชีนี้">
+              🗑️ ลบ
+            </button>
+          ` : ''}
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+async function quickApproveUser(userId) {
+  try {
+    const res = await authFetch(`/api/admin/users/${userId}/permissions`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'active', canAdd: 1, canEdit: 0, canDelete: 0 })
+    });
+    if (res.ok) {
+      alert('อนุมัติการใช้งานเรียบร้อยแล้ว คุณครูสามารถเข้าสู่ระบบได้ทันที');
+      await loadUsersManagement();
+    } else {
+      const err = await res.json();
+      alert('เกิดข้อผิดพลาด: ' + (err.error || 'ไม่สามารถอนุมัติได้'));
+    }
+  } catch (e) {
+    alert('เกิดข้อผิดพลาด: ' + e.message);
+  }
+}
+
+async function quickRejectUser(userId) {
+  if (!confirm('ต้องการไม่อนุมัติคำขอนี้ใช่หรือไม่?')) return;
+  try {
+    const res = await authFetch(`/api/admin/users/${userId}/permissions`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'rejected' })
+    });
+    if (res.ok) {
+      await loadUsersManagement();
+    }
+  } catch (e) {
+    alert('เกิดข้อผิดพลาด: ' + e.message);
+  }
+}
+
+async function toggleUserPermissionDirect(userId, permField, isChecked) {
+  const user = adminUsersList.find(u => u.id === userId);
+  if (!user) return;
+  const payload = {
+    canEdit: permField === 'canEdit' ? isChecked : user.can_edit,
+    canDelete: permField === 'canDelete' ? isChecked : user.can_delete,
+    canAdd: permField === 'canAdd' ? isChecked : user.can_add,
+    role: user.role,
+    status: user.status
+  };
+  try {
+    const res = await authFetch(`/api/admin/users/${userId}/permissions`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      user[permField === 'canEdit' ? 'can_edit' : (permField === 'canDelete' ? 'can_delete' : 'can_add')] = isChecked ? 1 : 0;
+      if (currentUser && currentUser.id === userId) {
+        currentUser.canEdit = payload.canEdit;
+        currentUser.canDelete = payload.canDelete;
+        currentUser.canAdd = payload.canAdd;
+        applyUserPermissionsToUI();
+      }
+    } else {
+      const err = await res.json();
+      alert('ไม่สามารถบันทึกสิทธิ์ได้: ' + (err.error || ''));
+      loadUsersManagement();
+    }
+  } catch (e) {
+    alert('เกิดข้อผิดพลาด: ' + e.message);
+    loadUsersManagement();
+  }
+}
+
+async function updateUserRoleDirect(userId, newRole) {
+  const user = adminUsersList.find(u => u.id === userId);
+  if (!user) return;
+  try {
+    const res = await authFetch(`/api/admin/users/${userId}/permissions`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: newRole })
+    });
+    if (res.ok) {
+      user.role = newRole;
+      if (newRole === 'admin') {
+        user.can_edit = 1;
+        user.can_delete = 1;
+        user.can_add = 1;
+      }
+      renderUsersManagement(adminUsersList);
+    }
+  } catch (e) {
+    alert('เกิดข้อผิดพลาด: ' + e.message);
+  }
+}
+
+async function updateUserStatusDirect(userId, newStatus) {
+  const user = adminUsersList.find(u => u.id === userId);
+  if (!user) return;
+  try {
+    const res = await authFetch(`/api/admin/users/${userId}/permissions`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus })
+    });
+    if (res.ok) {
+      user.status = newStatus;
+      renderUsersManagement(adminUsersList);
+    }
+  } catch (e) {
+    alert('เกิดข้อผิดพลาด: ' + e.message);
+  }
+}
+
+function openAdminResetPassword(userId, userName) {
+  document.getElementById('reset-user-id').value = userId;
+  document.getElementById('reset-user-display-name').textContent = userName;
+  document.getElementById('reset-new-password').value = '';
+  const msgEl = document.getElementById('admin-reset-msg');
+  if (msgEl) msgEl.classList.add('hidden');
+  openModal('adminResetPasswordModal');
+}
+
+async function handleAdminResetPassword(e) {
+  e.preventDefault();
+  const userId = document.getElementById('reset-user-id').value;
+  const newPassword = document.getElementById('reset-new-password').value.trim();
+  const msgEl = document.getElementById('admin-reset-msg');
+
+  if (!newPassword || newPassword.length < 4) {
+    msgEl.className = 'text-xs p-2 rounded-xl text-center font-medium bg-rose-50 text-rose-700';
+    msgEl.textContent = '❌ รหัสผ่านต้องมีความยาวอย่างน้อย 4 ตัวอักษร';
+    msgEl.classList.remove('hidden');
+    return;
+  }
+
+  try {
+    const res = await authFetch(`/api/admin/users/${userId}/reset-password`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newPassword })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      alert('รีเซ็ตรหัสผ่านสำเร็จเรียบร้อยแล้ว');
+      closeModal('adminResetPasswordModal');
+    } else {
+      msgEl.className = 'text-xs p-2 rounded-xl text-center font-medium bg-rose-50 text-rose-700';
+      msgEl.textContent = '❌ ' + (data.error || 'เกิดข้อผิดพลาด');
+      msgEl.classList.remove('hidden');
+    }
+  } catch (err) {
+    msgEl.className = 'text-xs p-2 rounded-xl text-center font-medium bg-rose-50 text-rose-700';
+    msgEl.textContent = '❌ ' + err.message;
+    msgEl.classList.remove('hidden');
+  }
+}
+
+async function deleteUserAccount(userId, userName) {
+  if (!confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบบัญชีของ "${userName}" ออกจากระบบ?`)) return;
+  try {
+    const res = await authFetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
+    if (res.ok) {
+      alert('ลบบัญชีผู้ใช้งานเรียบร้อยแล้ว');
+      await loadUsersManagement();
+    } else {
+      const err = await res.json();
+      alert('เกิดข้อผิดพลาด: ' + (err.error || 'ไม่สามารถลบได้'));
+    }
+  } catch (e) {
+    alert('เกิดข้อผิดพลาด: ' + e.message);
+  }
+}
+
+async function syncUsersToSupabase() {
+  const btn = document.getElementById('btn-sync-users-sb');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '⏳ กำลังซิงค์...';
+  }
+  try {
+    const res = await authFetch('/api/admin/users/sync-supabase', { method: 'POST' });
+    const data = await res.json();
+    if (res.ok) {
+      alert(data.message || 'ซิงค์ข้อมูลผู้ใช้ขึ้น Supabase สำเร็จเรียบร้อยแล้ว');
+    } else {
+      alert('❌ ' + (data.error || 'ไม่สามารถซิงค์ได้'));
+    }
+  } catch (e) {
+    alert('เกิดข้อผิดพลาด: ' + e.message);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '🚀 ซิงค์ผู้ใช้ขึ้น Supabase';
+    }
+  }
+}
+
+function copySupabaseUsersSql() {
+  const sql = `-- สร้างตารางข้อมูลผู้ใช้งานและสิทธิ์ (User & Permissions)
+CREATE TABLE IF NOT EXISTS app_users (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  username TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  full_name TEXT NOT NULL,
+  position TEXT DEFAULT '',
+  role TEXT DEFAULT 'user',
+  can_edit BOOLEAN DEFAULT false,
+  can_delete BOOLEAN DEFAULT false,
+  can_add BOOLEAN DEFAULT true,
+  status TEXT DEFAULT 'pending',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE app_users DISABLE ROW LEVEL SECURITY;`;
+
+  navigator.clipboard.writeText(sql).then(() => {
+    alert('คัดลอกคำสั่ง SQL เรียบร้อยแล้ว! สามารถนำไปวางใน Supabase SQL Editor ได้เลยครับ');
+  }).catch(() => {
+    prompt('คัดลอกคำสั่ง SQL ด้านล่างนี้:', sql);
+  });
 }
 
 // ==================== CLOUD DATABASE (SUPABASE) MANAGEMENT ====================
@@ -1153,8 +1752,8 @@ function renderAssetTable() {
       <td class="p-2 border border-slate-200 text-center whitespace-nowrap space-x-1" onclick="event.stopPropagation()">
         <button onclick="printSingleQrSticker(${item.id})" class="text-emerald-700 hover:text-emerald-900 p-1.5 font-semibold rounded-lg hover:bg-emerald-100 transition shadow-2xs cursor-pointer" title="พิมพ์สติกเกอร์ QR Code ติดตัวครุภัณฑ์">🏷️</button>
         <button onclick="printSingleAsset(${item.id})" class="text-amber-600 hover:text-amber-800 p-1.5 font-semibold rounded-lg hover:bg-amber-100 transition shadow-2xs cursor-pointer" title="พิมพ์บัตรรายการนี้เฉพาะใบเดียว">🖨️</button>
-        <button onclick="editAsset(${item.id})" class="text-red-700 hover:text-red-900 p-1.5 font-semibold rounded-lg hover:bg-red-100 transition shadow-2xs cursor-pointer" title="แก้ไขรายการนี้">✏️</button>
-        <button onclick="deleteAsset(${item.id})" class="text-slate-400 hover:text-rose-600 p-1.5 font-semibold rounded-lg hover:bg-rose-50 transition shadow-2xs cursor-pointer" title="ลบรายการ">🗑️</button>
+        ${(currentUser && (currentUser.canEdit || currentUser.role === 'admin')) ? `<button onclick="editAsset(${item.id})" class="text-red-700 hover:text-red-900 p-1.5 font-semibold rounded-lg hover:bg-red-100 transition shadow-2xs cursor-pointer" title="แก้ไขรายการนี้">✏️</button>` : ''}
+        ${(currentUser && (currentUser.canDelete || currentUser.role === 'admin')) ? `<button onclick="deleteAsset(${item.id})" class="text-slate-400 hover:text-rose-600 p-1.5 font-semibold rounded-lg hover:bg-rose-50 transition shadow-2xs cursor-pointer" title="ลบรายการ">🗑️</button>` : ''}
       </td>
     `;
     screenTbody.appendChild(tr);
@@ -2004,8 +2603,8 @@ function renderMaterialTable() {
       <td class="p-2 border border-slate-200 text-right font-bold text-amber-900">${Number(item.total_amount).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
       <td class="p-2 border border-slate-200 text-slate-500">${item.remark || ''}</td>
       <td class="p-2 border border-slate-200 text-center whitespace-nowrap space-x-1" onclick="event.stopPropagation()">
-        <button onclick="editMaterial(${item.id})" class="text-red-700 hover:text-red-900 p-1.5 font-semibold rounded-lg hover:bg-red-100 transition shadow-2xs" title="แก้ไขรายการนี้">✏️</button>
-        <button onclick="deleteMaterial(${item.id})" class="text-slate-400 hover:text-rose-600 p-1.5 font-semibold rounded-lg hover:bg-rose-50 transition shadow-2xs" title="ลบรายการ">🗑️</button>
+        ${(currentUser && (currentUser.canEdit || currentUser.role === 'admin')) ? `<button onclick="editMaterial(${item.id})" class="text-red-700 hover:text-red-900 p-1.5 font-semibold rounded-lg hover:bg-red-100 transition shadow-2xs cursor-pointer" title="แก้ไขรายการนี้">✏️</button>` : ''}
+        ${(currentUser && (currentUser.canDelete || currentUser.role === 'admin')) ? `<button onclick="deleteMaterial(${item.id})" class="text-slate-400 hover:text-rose-600 p-1.5 font-semibold rounded-lg hover:bg-rose-50 transition shadow-2xs cursor-pointer" title="ลบรายการ">🗑️</button>` : ''}
       </td>
     `;
     screenTbody.appendChild(tr);
@@ -2328,6 +2927,9 @@ async function importBackup() {
 function openModal(id) {
   const el = document.getElementById(id);
   if (el) el.classList.remove('hidden');
+  if (id === 'userManagementModal') {
+    loadUsersManagement();
+  }
 }
 
 function closeModal(id) {
