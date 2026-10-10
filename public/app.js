@@ -799,6 +799,16 @@ function onAssetFilterChange() {
   updateAssetSelectionUI();
 }
 
+function filterByKpiStatus(statusKey) {
+  const statusSelect = document.getElementById('asset-status-select');
+  if (statusSelect) {
+    statusSelect.value = statusKey;
+    assetStatusFilter = statusKey;
+    renderAssetTable();
+    updateAssetSelectionUI();
+  }
+}
+
 function onMaterialFilterChange() {
   const fySelect = document.getElementById('material-fiscal-year-select');
   const mSelect = document.getElementById('material-month-select');
@@ -967,11 +977,109 @@ async function loadAssets() {
   renderAssetPrint();
 }
 
+// ==================== การ์ดสรุปสถิติภาพรวม (KPI STAT CARDS) ====================
+function updateAssetKpiCards() {
+  const totalAssets = assetList.length;
+  let totalCost = 0;
+  let goodCount = 0;
+  let repairCount = 0;
+  let disposalCount = 0;
+  let disposedCount = 0;
+
+  assetList.forEach(item => {
+    totalCost += Number(item.cost || 0);
+    const s = (item.status || '').trim();
+    if (s === 'ใช้งานได้ดี' || !s) {
+      goodCount++;
+    } else if (s.includes('ซ่อม')) {
+      repairCount++;
+    } else if (s.includes('ขอจำหน่าย')) {
+      disposalCount++;
+    } else if (s.includes('จำหน่ายแล้ว') || s.includes('แทงจำหน่าย')) {
+      disposedCount++;
+    } else {
+      goodCount++;
+    }
+  });
+
+  const totalDisposedGroup = disposalCount + disposedCount;
+  const goodPercent = totalAssets > 0 ? ((goodCount / totalAssets) * 100).toFixed(1) : '0';
+
+  const elTotal = document.getElementById('kpi-total-assets');
+  const elCost = document.getElementById('kpi-total-cost');
+  const elGood = document.getElementById('kpi-good-assets');
+  const elGoodPct = document.getElementById('kpi-good-percent');
+  const elRepair = document.getElementById('kpi-repair-assets');
+  const elDisposal = document.getElementById('kpi-disposal-assets');
+  const elDisposedCount = document.getElementById('kpi-disposed-count');
+
+  if (elTotal) elTotal.textContent = totalAssets.toLocaleString('th-TH');
+  if (elCost) elCost.textContent = `มูลค่ารวม ${totalCost.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท`;
+  if (elGood) elGood.textContent = goodCount.toLocaleString('th-TH');
+  if (elGoodPct) elGoodPct.textContent = `พร้อมใช้งาน ${goodPercent}%`;
+  if (elRepair) elRepair.textContent = repairCount.toLocaleString('th-TH');
+  if (elDisposal) elDisposal.textContent = totalDisposedGroup.toLocaleString('th-TH');
+  if (elDisposedCount) elDisposedCount.textContent = `ขอจำหน่าย ${disposalCount} | จำหน่ายแล้ว ${disposedCount}`;
+
+  // ไฮไลต์ขอบการ์ด KPI ที่ถูกเลือกกรองอยู่
+  const kpiCards = {
+    'all': document.getElementById('kpi-card-all'),
+    'good': document.getElementById('kpi-card-good'),
+    'repair': document.getElementById('kpi-card-repair'),
+    'disposal': document.getElementById('kpi-card-disposal')
+  };
+  Object.entries(kpiCards).forEach(([key, card]) => {
+    if (!card) return;
+    card.classList.remove('ring-2', 'ring-offset-1', 'ring-amber-500', 'ring-emerald-500', 'ring-orange-500', 'ring-rose-500');
+    if (assetStatusFilter === key) {
+      card.classList.add('ring-2', 'ring-offset-1');
+      if (key === 'all') card.classList.add('ring-amber-500');
+      else if (key === 'good') card.classList.add('ring-emerald-500');
+      else if (key === 'repair') card.classList.add('ring-orange-500');
+      else if (key === 'disposal') card.classList.add('ring-rose-500');
+    }
+  });
+}
+
+function updateMaterialKpiCards() {
+  const totalEntries = materialList.length;
+  let totalInflowPrice = 0;
+  let totalIssues = 0;
+  const distinctNames = new Set();
+  const balanceMap = {};
+
+  materialList.forEach(m => {
+    const name = (m.material_name || '').trim();
+    if (name) distinctNames.add(name);
+    totalInflowPrice += Number(m.receive_price || 0);
+    if (Number(m.issue_qty || 0) > 0) totalIssues++;
+    if (name) {
+      balanceMap[name] = Number(m.balance_qty || 0);
+    }
+  });
+
+  const activeWithStock = Object.values(balanceMap).filter(qty => qty > 0).length;
+
+  const elEntries = document.getElementById('kpi-mat-total-entries');
+  const elTypes = document.getElementById('kpi-mat-types-count');
+  const elInflow = document.getElementById('kpi-mat-inflow-cost');
+  const elIssues = document.getElementById('kpi-mat-issue-count');
+  const elActive = document.getElementById('kpi-mat-active-items');
+
+  if (elEntries) elEntries.textContent = totalEntries.toLocaleString('th-TH');
+  if (elTypes) elTypes.textContent = `ทั้งหมด ${distinctNames.size} ชนิดวัสดุ`;
+  if (elInflow) elInflow.textContent = totalInflowPrice.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  if (elIssues) elIssues.textContent = `${totalIssues} ครั้ง`;
+  if (elActive) elActive.textContent = `${activeWithStock} ชนิด`;
+}
+
 // เรนเดอร์ตารางบนหน้าจอเว็บ (กรองตามปีงบประมาณ, เดือน, และคำค้นหาอัตโนมัติ)
 function renderAssetTable() {
   const screenTbody = document.getElementById('screen-asset-table-body');
   if (!screenTbody) return;
   screenTbody.innerHTML = '';
+
+  updateAssetKpiCards();
 
   const list = getFilteredAssets();
   const clearBtn = document.getElementById('asset-search-clear-btn');
@@ -1828,6 +1936,8 @@ function renderMaterialTable() {
   const screenTbody = document.getElementById('screen-material-table-body');
   if (!screenTbody) return;
   screenTbody.innerHTML = '';
+
+  updateMaterialKpiCards();
 
   const list = getFilteredMaterials();
   const clearBtn = document.getElementById('material-search-clear-btn');
