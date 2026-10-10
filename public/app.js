@@ -3089,12 +3089,38 @@ function openAnnualInspectionModal() {
   if (inpOrder) inpOrder.value = orderNo;
   if (inpDoc) inpDoc.value = docNo;
 
+  setSelectIfMatch('ai-chair-select', chair);
+  setSelectIfMatch('ai-member1-select', mem1);
+  setSelectIfMatch('ai-member2-select', mem2);
+  setSelectIfMatch('ai-director-select', director);
+
   const today = new Date().toISOString().split('T')[0];
   if (inpOrderDate && !inpOrderDate.value) inpOrderDate.value = today;
   if (inpInspectDate && !inpInspectDate.value) inpInspectDate.value = today;
 
   updateAnnualInspectionPreview();
   openModal('annualInspectionModal');
+}
+
+function syncStaffField(selectEl, inputId) {
+  if (!selectEl) return;
+  const inp = document.getElementById(inputId);
+  if (inp && selectEl.value) {
+    inp.value = selectEl.value;
+  }
+}
+
+function setSelectIfMatch(selectId, val) {
+  const el = document.getElementById(selectId);
+  if (!el || !val) return;
+  const clean = String(val).replace(/\s+/g, ' ').trim();
+  for (let i = 0; i < el.options.length; i++) {
+    const opt = el.options[i];
+    if (opt.value && opt.value.replace(/\s+/g, ' ').trim() === clean) {
+      el.selectedIndex = i;
+      return;
+    }
+  }
 }
 
 function updateAnnualInspectionPreview() {
@@ -3445,6 +3471,10 @@ function openDisposalReportModal() {
   if (inpHd) inpHd.value = head;
   if (inpDir) inpDir.value = director;
   if (inpDoc) inpDoc.value = docNo;
+
+  setSelectIfMatch('dr-officer-select', officer);
+  setSelectIfMatch('dr-head-select', head);
+  setSelectIfMatch('dr-director-select', director);
 
   const today = new Date().toISOString().split('T')[0];
   if (inpRepDate && !inpRepDate.value) inpRepDate.value = today;

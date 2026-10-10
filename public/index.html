@@ -1522,24 +1522,105 @@
           <div class="font-bold text-xs text-slate-800 mb-2">👥 คณะกรรมการตรวจสอบพัสดุประจำปี:</div>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             <div>
-              <label class="font-medium block mb-0.5 text-slate-600">1. ประธานกรรมการ</label>
-              <input type="text" id="ai-chair-name" list="school-staff-datalist" placeholder="นาย/นาง/นางสาว..." class="w-full border border-slate-300 p-2 rounded-xl">
+              <label class="font-medium block mb-1 text-slate-600 text-xs">1. ประธานกรรมการ</label>
+              <select id="ai-chair-select" onchange="syncStaffField(this, 'ai-chair-name')" class="w-full border border-slate-300 p-2 rounded-xl text-xs bg-white font-medium text-slate-800 mb-1.5 focus:ring-2 focus:ring-blue-500 shadow-2xs cursor-pointer">
+                <option value="">-- เลือกคุณครู (17 ท่าน) --</option>
+                <option value="นางชูชื่น บุตรฉิม">1. นางชูชื่น บุตรฉิม (ครูชำนาญการพิเศษ)</option>
+                <option value="นางสาวใบเฟิร์น รัตนสร้อย">2. นางสาวใบเฟิร์น รัตนสร้อย (ครูชำนาญการพิเศษ)</option>
+                <option value="นางสาวนพรัตน์ วิสพันธ์">3. นางสาวนพรัตน์ วิสพันธ์ (ครูชำนาญการ)</option>
+                <option value="นางสาวสิริมน จันทสาร">4. นางสาวสิริมน จันทสาร (ครูชำนาญการ)</option>
+                <option value="นางสาวชัญญา กลิ่นกำเนิด">5. นางสาวชัญญา กลิ่นกำเนิด (ครูชำนาญการ)</option>
+                <option value="นางสาวฐิติวรดา สายพานิช">6. นางสาวฐิติวรดา สายพานิช (ครูชำนาญการ)</option>
+                <option value="นางสาวญาณินท์ มนัสสนิท">7. นางสาวญาณินท์ มนัสสนิท (ครูชำนาญการ)</option>
+                <option value="นางสาวสมัญญา บูรณศิล">8. นางสาวสมัญญา บูรณศิล (ครูชำนาญการ)</option>
+                <option value="นางธีรกานต์ กุมภะ">9. นางธีรกานต์ กุมภะ (ครูชำนาญการ)</option>
+                <option value="นางสาวทวีพร ทองสาย">10. นางสาวทวีพร ทองสาย (ครูชำนาญการ)</option>
+                <option value="นางสาวบุญยาวี รัตนวิจิตร">11. นางสาวบุญยาวี รัตนวิจิตร (ครู)</option>
+                <option value="นายวิชิตชัย นุชโสภณ">12. นายวิชิตชัย นุชโสภณ (ครู)</option>
+                <option value="นางสาวบุหงา กองสุข">13. นางสาวบุหงา กองสุข (ครู)</option>
+                <option value="นางสาวณิชาภัทร หัดรัดชัย">14. นางสาวณิชาภัทร หัดรัดชัย (ครูผู้ช่วย)</option>
+                <option value="นางสาวเอวรินทร์ ชาวดอนคา">15. นางสาวเอวรินทร์ ชาวดอนคา (ครูอัตราจ้าง)</option>
+                <option value="นางสาวภัฐธีรา จุลพันธ์">16. นางสาวภัฐธีรา จุลพันธ์ (ธุรการโรงเรียน)</option>
+                <option value="นางสายสายใจ  วิลัยทอง">17. นางสายสายใจ วิลัยทอง (ผู้อำนวยการโรงเรียน)</option>
+              </select>
+              <input type="text" id="ai-chair-name" placeholder="หรือพิมพ์ชื่อ-สกุลเอง..." class="w-full border border-slate-200 bg-slate-50/60 p-2 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500">
             </div>
             <div>
-              <label class="font-medium block mb-0.5 text-slate-600">2. กรรมการ</label>
-              <input type="text" id="ai-member1-name" list="school-staff-datalist" placeholder="นาย/นาง/นางสาว..." class="w-full border border-slate-300 p-2 rounded-xl">
+              <label class="font-medium block mb-1 text-slate-600 text-xs">2. กรรมการ</label>
+              <select id="ai-member1-select" onchange="syncStaffField(this, 'ai-member1-name')" class="w-full border border-slate-300 p-2 rounded-xl text-xs bg-white font-medium text-slate-800 mb-1.5 focus:ring-2 focus:ring-blue-500 shadow-2xs cursor-pointer">
+                <option value="">-- เลือกคุณครู (17 ท่าน) --</option>
+                <option value="นางชูชื่น บุตรฉิม">1. นางชูชื่น บุตรฉิม (ครูชำนาญการพิเศษ)</option>
+                <option value="นางสาวใบเฟิร์น รัตนสร้อย">2. นางสาวใบเฟิร์น รัตนสร้อย (ครูชำนาญการพิเศษ)</option>
+                <option value="นางสาวนพรัตน์ วิสพันธ์">3. นางสาวนพรัตน์ วิสพันธ์ (ครูชำนาญการ)</option>
+                <option value="นางสาวสิริมน จันทสาร">4. นางสาวสิริมน จันทสาร (ครูชำนาญการ)</option>
+                <option value="นางสาวชัญญา กลิ่นกำเนิด">5. นางสาวชัญญา กลิ่นกำเนิด (ครูชำนาญการ)</option>
+                <option value="นางสาวฐิติวรดา สายพานิช">6. นางสาวฐิติวรดา สายพานิช (ครูชำนาญการ)</option>
+                <option value="นางสาวญาณินท์ มนัสสนิท">7. นางสาวญาณินท์ มนัสสนิท (ครูชำนาญการ)</option>
+                <option value="นางสาวสมัญญา บูรณศิล">8. นางสาวสมัญญา บูรณศิล (ครูชำนาญการ)</option>
+                <option value="นางธีรกานต์ กุมภะ">9. นางธีรกานต์ กุมภะ (ครูชำนาญการ)</option>
+                <option value="นางสาวทวีพร ทองสาย">10. นางสาวทวีพร ทองสาย (ครูชำนาญการ)</option>
+                <option value="นางสาวบุญยาวี รัตนวิจิตร">11. นางสาวบุญยาวี รัตนวิจิตร (ครู)</option>
+                <option value="นายวิชิตชัย นุชโสภณ">12. นายวิชิตชัย นุชโสภณ (ครู)</option>
+                <option value="นางสาวบุหงา กองสุข">13. นางสาวบุหงา กองสุข (ครู)</option>
+                <option value="นางสาวณิชาภัทร หัดรัดชัย">14. นางสาวณิชาภัทร หัดรัดชัย (ครูผู้ช่วย)</option>
+                <option value="นางสาวเอวรินทร์ ชาวดอนคา">15. นางสาวเอวรินทร์ ชาวดอนคา (ครูอัตราจ้าง)</option>
+                <option value="นางสาวภัฐธีรา จุลพันธ์">16. นางสาวภัฐธีรา จุลพันธ์ (ธุรการโรงเรียน)</option>
+                <option value="นางสายสายใจ  วิลัยทอง">17. นางสายสายใจ วิลัยทอง (ผู้อำนวยการโรงเรียน)</option>
+              </select>
+              <input type="text" id="ai-member1-name" placeholder="หรือพิมพ์ชื่อ-สกุลเอง..." class="w-full border border-slate-200 bg-slate-50/60 p-2 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500">
             </div>
             <div>
-              <label class="font-medium block mb-0.5 text-slate-600">3. กรรมการและเลขานุการ</label>
-              <input type="text" id="ai-member2-name" list="school-staff-datalist" placeholder="นาย/นาง/นางสาว..." class="w-full border border-slate-300 p-2 rounded-xl">
+              <label class="font-medium block mb-1 text-slate-600 text-xs">3. กรรมการและเลขานุการ</label>
+              <select id="ai-member2-select" onchange="syncStaffField(this, 'ai-member2-name')" class="w-full border border-slate-300 p-2 rounded-xl text-xs bg-white font-medium text-slate-800 mb-1.5 focus:ring-2 focus:ring-blue-500 shadow-2xs cursor-pointer">
+                <option value="">-- เลือกคุณครู (17 ท่าน) --</option>
+                <option value="นางชูชื่น บุตรฉิม">1. นางชูชื่น บุตรฉิม (ครูชำนาญการพิเศษ)</option>
+                <option value="นางสาวใบเฟิร์น รัตนสร้อย">2. นางสาวใบเฟิร์น รัตนสร้อย (ครูชำนาญการพิเศษ)</option>
+                <option value="นางสาวนพรัตน์ วิสพันธ์">3. นางสาวนพรัตน์ วิสพันธ์ (ครูชำนาญการ)</option>
+                <option value="นางสาวสิริมน จันทสาร">4. นางสาวสิริมน จันทสาร (ครูชำนาญการ)</option>
+                <option value="นางสาวชัญญา กลิ่นกำเนิด">5. นางสาวชัญญา กลิ่นกำเนิด (ครูชำนาญการ)</option>
+                <option value="นางสาวฐิติวรดา สายพานิช">6. นางสาวฐิติวรดา สายพานิช (ครูชำนาญการ)</option>
+                <option value="นางสาวญาณินท์ มนัสสนิท">7. นางสาวญาณินท์ มนัสสนิท (ครูชำนาญการ)</option>
+                <option value="นางสาวสมัญญา บูรณศิล">8. นางสาวสมัญญา บูรณศิล (ครูชำนาญการ)</option>
+                <option value="นางธีรกานต์ กุมภะ">9. นางธีรกานต์ กุมภะ (ครูชำนาญการ)</option>
+                <option value="นางสาวทวีพร ทองสาย">10. นางสาวทวีพร ทองสาย (ครูชำนาญการ)</option>
+                <option value="นางสาวบุญยาวี รัตนวิจิตร">11. นางสาวบุญยาวี รัตนวิจิตร (ครู)</option>
+                <option value="นายวิชิตชัย นุชโสภณ">12. นายวิชิตชัย นุชโสภณ (ครู)</option>
+                <option value="นางสาวบุหงา กองสุข">13. นางสาวบุหงา กองสุข (ครู)</option>
+                <option value="นางสาวณิชาภัทร หัดรัดชัย">14. นางสาวณิชาภัทร หัดรัดชัย (ครูผู้ช่วย)</option>
+                <option value="นางสาวเอวรินทร์ ชาวดอนคา">15. นางสาวเอวรินทร์ ชาวดอนคา (ครูอัตราจ้าง)</option>
+                <option value="นางสาวภัฐธีรา จุลพันธ์">16. นางสาวภัฐธีรา จุลพันธ์ (ธุรการโรงเรียน)</option>
+                <option value="นางสายสายใจ  วิลัยทอง">17. นางสายสายใจ วิลัยทอง (ผู้อำนวยการโรงเรียน)</option>
+              </select>
+              <input type="text" id="ai-member2-name" placeholder="หรือพิมพ์ชื่อ-สกุลเอง..." class="w-full border border-slate-200 bg-slate-50/60 p-2 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500">
             </div>
           </div>
         </div>
 
         <div class="border-t border-slate-100 pt-2.5">
           <div>
-            <label class="font-bold block mb-1 text-slate-800">ผู้อำนวยการโรงเรียน (ผู้สั่งการ/อนุมัติ):</label>
-            <input type="text" id="ai-director-name" list="school-staff-datalist" placeholder="นางสายสายใจ  วิลัยทอง ผู้อำนวยการโรงเรียนบ้านดงกลาง" class="w-full border border-slate-300 p-2 rounded-xl font-medium text-slate-800">
+            <label class="font-bold block mb-1 text-slate-800 text-xs">ผู้อำนวยการโรงเรียน (ผู้สั่งการ/อนุมัติ):</label>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <select id="ai-director-select" onchange="syncStaffField(this, 'ai-director-name')" class="w-full border border-slate-300 p-2 rounded-xl text-xs bg-white font-medium text-slate-800 focus:ring-2 focus:ring-blue-500 shadow-2xs cursor-pointer">
+                <option value="นางสายสายใจ  วิลัยทอง">17. นางสายสายใจ วิลัยทอง (ผู้อำนวยการโรงเรียน)</option>
+                <option value="นางชูชื่น บุตรฉิม">1. นางชูชื่น บุตรฉิม (ครูชำนาญการพิเศษ)</option>
+                <option value="นางสาวใบเฟิร์น รัตนสร้อย">2. นางสาวใบเฟิร์น รัตนสร้อย (ครูชำนาญการพิเศษ)</option>
+                <option value="นางสาวนพรัตน์ วิสพันธ์">3. นางสาวนพรัตน์ วิสพันธ์ (ครูชำนาญการ)</option>
+                <option value="นางสาวสิริมน จันทสาร">4. นางสาวสิริมน จันทสาร (ครูชำนาญการ)</option>
+                <option value="นางสาวชัญญา กลิ่นกำเนิด">5. นางสาวชัญญา กลิ่นกำเนิด (ครูชำนาญการ)</option>
+                <option value="นางสาวฐิติวรดา สายพานิช">6. นางสาวฐิติวรดา สายพานิช (ครูชำนาญการ)</option>
+                <option value="นางสาวญาณินท์ มนัสสนิท">7. นางสาวญาณินท์ มนัสสนิท (ครูชำนาญการ)</option>
+                <option value="นางสาวสมัญญา บูรณศิล">8. นางสาวสมัญญา บูรณศิล (ครูชำนาญการ)</option>
+                <option value="นางธีรกานต์ กุมภะ">9. นางธีรกานต์ กุมภะ (ครูชำนาญการ)</option>
+                <option value="นางสาวทวีพร ทองสาย">10. นางสาวทวีพร ทองสาย (ครูชำนาญการ)</option>
+                <option value="นางสาวบุญยาวี รัตนวิจิตร">11. นางสาวบุญยาวี รัตนวิจิตร (ครู)</option>
+                <option value="นายวิชิตชัย นุชโสภณ">12. นายวิชิตชัย นุชโสภณ (ครู)</option>
+                <option value="นางสาวบุหงา กองสุข">13. นางสาวบุหงา กองสุข (ครู)</option>
+                <option value="นางสาวณิชาภัทร หัดรัดชัย">14. นางสาวณิชาภัทร หัดรัดชัย (ครูผู้ช่วย)</option>
+                <option value="นางสาวเอวรินทร์ ชาวดอนคา">15. นางสาวเอวรินทร์ ชาวดอนคา (ครูอัตราจ้าง)</option>
+                <option value="นางสาวภัฐธีรา จุลพันธ์">16. นางสาวภัฐธีรา จุลพันธ์ (ธุรการโรงเรียน)</option>
+              </select>
+              <input type="text" id="ai-director-name" placeholder="นางสายสายใจ  วิลัยทอง ผู้อำนวยการโรงเรียนบ้านดงกลาง" class="w-full border border-slate-200 bg-slate-50/60 p-2 rounded-xl font-medium text-slate-800 text-xs focus:bg-white focus:ring-2 focus:ring-blue-500">
+            </div>
           </div>
         </div>
 
@@ -1597,16 +1678,75 @@
           <div class="font-bold text-xs text-slate-800 mb-2">✍️ ผู้เสนอและผู้อนุมัติจำหน่าย:</div>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             <div>
-              <label class="font-medium block mb-0.5 text-slate-600">เจ้าหน้าที่พัสดุ</label>
-              <input type="text" id="dr-officer-name" list="school-staff-datalist" placeholder="นาย/นาง/นางสาว..." class="w-full border border-slate-300 p-2 rounded-xl">
+              <label class="font-medium block mb-1 text-slate-600 text-xs">เจ้าหน้าที่พัสดุ</label>
+              <select id="dr-officer-select" onchange="syncStaffField(this, 'dr-officer-name')" class="w-full border border-slate-300 p-2 rounded-xl text-xs bg-white font-medium text-slate-800 mb-1.5 focus:ring-2 focus:ring-rose-500 shadow-2xs cursor-pointer">
+                <option value="">-- เลือกคุณครู (17 ท่าน) --</option>
+                <option value="นางชูชื่น บุตรฉิม">1. นางชูชื่น บุตรฉิม (ครูชำนาญการพิเศษ)</option>
+                <option value="นางสาวใบเฟิร์น รัตนสร้อย">2. นางสาวใบเฟิร์น รัตนสร้อย (ครูชำนาญการพิเศษ)</option>
+                <option value="นางสาวนพรัตน์ วิสพันธ์">3. นางสาวนพรัตน์ วิสพันธ์ (ครูชำนาญการ)</option>
+                <option value="นางสาวสิริมน จันทสาร">4. นางสาวสิริมน จันทสาร (ครูชำนาญการ)</option>
+                <option value="นางสาวชัญญา กลิ่นกำเนิด">5. นางสาวชัญญา กลิ่นกำเนิด (ครูชำนาญการ)</option>
+                <option value="นางสาวฐิติวรดา สายพานิช">6. นางสาวฐิติวรดา สายพานิช (ครูชำนาญการ)</option>
+                <option value="นางสาวญาณินท์ มนัสสนิท">7. นางสาวญาณินท์ มนัสสนิท (ครูชำนาญการ)</option>
+                <option value="นางสาวสมัญญา บูรณศิล">8. นางสาวสมัญญา บูรณศิล (ครูชำนาญการ)</option>
+                <option value="นางธีรกานต์ กุมภะ">9. นางธีรกานต์ กุมภะ (ครูชำนาญการ)</option>
+                <option value="นางสาวทวีพร ทองสาย">10. นางสาวทวีพร ทองสาย (ครูชำนาญการ)</option>
+                <option value="นางสาวบุญยาวี รัตนวิจิตร">11. นางสาวบุญยาวี รัตนวิจิตร (ครู)</option>
+                <option value="นายวิชิตชัย นุชโสภณ">12. นายวิชิตชัย นุชโสภณ (ครู)</option>
+                <option value="นางสาวบุหงา กองสุข">13. นางสาวบุหงา กองสุข (ครู)</option>
+                <option value="นางสาวณิชาภัทร หัดรัดชัย">14. นางสาวณิชาภัทร หัดรัดชัย (ครูผู้ช่วย)</option>
+                <option value="นางสาวเอวรินทร์ ชาวดอนคา">15. นางสาวเอวรินทร์ ชาวดอนคา (ครูอัตราจ้าง)</option>
+                <option value="นางสาวภัฐธีรา จุลพันธ์">16. นางสาวภัฐธีรา จุลพันธ์ (ธุรการโรงเรียน)</option>
+                <option value="นางสายสายใจ  วิลัยทอง">17. นางสายสายใจ วิลัยทอง (ผู้อำนวยการโรงเรียน)</option>
+              </select>
+              <input type="text" id="dr-officer-name" placeholder="หรือพิมพ์ชื่อ-สกุลเอง..." class="w-full border border-slate-200 bg-slate-50/60 p-2 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-rose-500">
             </div>
             <div>
-              <label class="font-medium block mb-0.5 text-slate-600">หัวหน้าเจ้าหน้าที่พัสดุ</label>
-              <input type="text" id="dr-head-name" list="school-staff-datalist" placeholder="นาย/นาง/นางสาว..." class="w-full border border-slate-300 p-2 rounded-xl">
+              <label class="font-medium block mb-1 text-slate-600 text-xs">หัวหน้าเจ้าหน้าที่พัสดุ</label>
+              <select id="dr-head-select" onchange="syncStaffField(this, 'dr-head-name')" class="w-full border border-slate-300 p-2 rounded-xl text-xs bg-white font-medium text-slate-800 mb-1.5 focus:ring-2 focus:ring-rose-500 shadow-2xs cursor-pointer">
+                <option value="">-- เลือกคุณครู (17 ท่าน) --</option>
+                <option value="นางชูชื่น บุตรฉิม">1. นางชูชื่น บุตรฉิม (ครูชำนาญการพิเศษ)</option>
+                <option value="นางสาวใบเฟิร์น รัตนสร้อย">2. นางสาวใบเฟิร์น รัตนสร้อย (ครูชำนาญการพิเศษ)</option>
+                <option value="นางสาวนพรัตน์ วิสพันธ์">3. นางสาวนพรัตน์ วิสพันธ์ (ครูชำนาญการ)</option>
+                <option value="นางสาวสิริมน จันทสาร">4. นางสาวสิริมน จันทสาร (ครูชำนาญการ)</option>
+                <option value="นางสาวชัญญา กลิ่นกำเนิด">5. นางสาวชัญญา กลิ่นกำเนิด (ครูชำนาญการ)</option>
+                <option value="นางสาวฐิติวรดา สายพานิช">6. นางสาวฐิติวรดา สายพานิช (ครูชำนาญการ)</option>
+                <option value="นางสาวญาณินท์ มนัสสนิท">7. นางสาวญาณินท์ มนัสสนิท (ครูชำนาญการ)</option>
+                <option value="นางสาวสมัญญา บูรณศิล">8. นางสาวสมัญญา บูรณศิล (ครูชำนาญการ)</option>
+                <option value="นางธีรกานต์ กุมภะ">9. นางธีรกานต์ กุมภะ (ครูชำนาญการ)</option>
+                <option value="นางสาวทวีพร ทองสาย">10. นางสาวทวีพร ทองสาย (ครูชำนาญการ)</option>
+                <option value="นางสาวบุญยาวี รัตนวิจิตร">11. นางสาวบุญยาวี รัตนวิจิตร (ครู)</option>
+                <option value="นายวิชิตชัย นุชโสภณ">12. นายวิชิตชัย นุชโสภณ (ครู)</option>
+                <option value="นางสาวบุหงา กองสุข">13. นางสาวบุหงา กองสุข (ครู)</option>
+                <option value="นางสาวณิชาภัทร หัดรัดชัย">14. นางสาวณิชาภัทร หัดรัดชัย (ครูผู้ช่วย)</option>
+                <option value="นางสาวเอวรินทร์ ชาวดอนคา">15. นางสาวเอวรินทร์ ชาวดอนคา (ครูอัตราจ้าง)</option>
+                <option value="นางสาวภัฐธีรา จุลพันธ์">16. นางสาวภัฐธีรา จุลพันธ์ (ธุรการโรงเรียน)</option>
+                <option value="นางสายสายใจ  วิลัยทอง">17. นางสายสายใจ วิลัยทอง (ผู้อำนวยการโรงเรียน)</option>
+              </select>
+              <input type="text" id="dr-head-name" placeholder="หรือพิมพ์ชื่อ-สกุลเอง..." class="w-full border border-slate-200 bg-slate-50/60 p-2 rounded-xl text-xs font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-rose-500">
             </div>
             <div>
-              <label class="font-medium block mb-0.5 text-slate-600">ผู้อำนวยการโรงเรียน (ผู้อนุมัติ)</label>
-              <input type="text" id="dr-director-name" list="school-staff-datalist" placeholder="นางสายสายใจ  วิลัยทอง ผู้อำนวยการโรงเรียนบ้านดงกลาง" class="w-full border border-slate-300 p-2 rounded-xl font-medium text-slate-800">
+              <label class="font-medium block mb-1 text-slate-600 text-xs">ผู้อำนวยการโรงเรียน (ผู้อนุมัติ)</label>
+              <select id="dr-director-select" onchange="syncStaffField(this, 'dr-director-name')" class="w-full border border-slate-300 p-2 rounded-xl text-xs bg-white font-medium text-slate-800 mb-1.5 focus:ring-2 focus:ring-rose-500 shadow-2xs cursor-pointer">
+                <option value="นางสายสายใจ  วิลัยทอง">17. นางสายสายใจ วิลัยทอง (ผู้อำนวยการโรงเรียน)</option>
+                <option value="นางชูชื่น บุตรฉิม">1. นางชูชื่น บุตรฉิม (ครูชำนาญการพิเศษ)</option>
+                <option value="นางสาวใบเฟิร์น รัตนสร้อย">2. นางสาวใบเฟิร์น รัตนสร้อย (ครูชำนาญการพิเศษ)</option>
+                <option value="นางสาวนพรัตน์ วิสพันธ์">3. นางสาวนพรัตน์ วิสพันธ์ (ครูชำนาญการ)</option>
+                <option value="นางสาวสิริมน จันทสาร">4. นางสาวสิริมน จันทสาร (ครูชำนาญการ)</option>
+                <option value="นางสาวชัญญา กลิ่นกำเนิด">5. นางสาวชัญญา กลิ่นกำเนิด (ครูชำนาญการ)</option>
+                <option value="นางสาวฐิติวรดา สายพานิช">6. นางสาวฐิติวรดา สายพานิช (ครูชำนาญการ)</option>
+                <option value="นางสาวญาณินท์ มนัสสนิท">7. นางสาวญาณินท์ มนัสสนิท (ครูชำนาญการ)</option>
+                <option value="นางสาวสมัญญา บูรณศิล">8. นางสาวสมัญญา บูรณศิล (ครูชำนาญการ)</option>
+                <option value="นางธีรกานต์ กุมภะ">9. นางธีรกานต์ กุมภะ (ครูชำนาญการ)</option>
+                <option value="นางสาวทวีพร ทองสาย">10. นางสาวทวีพร ทองสาย (ครูชำนาญการ)</option>
+                <option value="นางสาวบุญยาวี รัตนวิจิตร">11. นางสาวบุญยาวี รัตนวิจิตร (ครู)</option>
+                <option value="นายวิชิตชัย นุชโสภณ">12. นายวิชิตชัย นุชโสภณ (ครู)</option>
+                <option value="นางสาวบุหงา กองสุข">13. นางสาวบุหงา กองสุข (ครู)</option>
+                <option value="นางสาวณิชาภัทร หัดรัดชัย">14. นางสาวณิชาภัทร หัดรัดชัย (ครูผู้ช่วย)</option>
+                <option value="นางสาวเอวรินทร์ ชาวดอนคา">15. นางสาวเอวรินทร์ ชาวดอนคา (ครูอัตราจ้าง)</option>
+                <option value="นางสาวภัฐธีรา จุลพันธ์">16. นางสาวภัฐธีรา จุลพันธ์ (ธุรการโรงเรียน)</option>
+              </select>
+              <input type="text" id="dr-director-name" placeholder="นางสายสายใจ  วิลัยทอง ผู้อำนวยการโรงเรียนบ้านดงกลาง" class="w-full border border-slate-200 bg-slate-50/60 p-2 rounded-xl font-medium text-slate-800 text-xs focus:bg-white focus:ring-2 focus:ring-rose-500">
             </div>
           </div>
         </div>
