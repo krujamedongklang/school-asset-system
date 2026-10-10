@@ -1014,29 +1014,25 @@ function updateAssetKpiCards() {
   const elDisposedCount = document.getElementById('kpi-disposed-count');
 
   if (elTotal) elTotal.textContent = totalAssets.toLocaleString('th-TH');
-  if (elCost) elCost.textContent = `มูลค่ารวม ${totalCost.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท`;
+  if (elCost) elCost.textContent = `฿${totalCost.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
   if (elGood) elGood.textContent = goodCount.toLocaleString('th-TH');
-  if (elGoodPct) elGoodPct.textContent = `พร้อมใช้งาน ${goodPercent}%`;
+  if (elGoodPct) elGoodPct.textContent = `พร้อมใช้ ${goodPercent}%`;
   if (elRepair) elRepair.textContent = repairCount.toLocaleString('th-TH');
   if (elDisposal) elDisposal.textContent = totalDisposedGroup.toLocaleString('th-TH');
-  if (elDisposedCount) elDisposedCount.textContent = `ขอจำหน่าย ${disposalCount} | จำหน่ายแล้ว ${disposedCount}`;
+  if (elDisposedCount) elDisposedCount.textContent = `รอจำหน่าย ${disposalCount}`;
 
-  // ไฮไลต์ขอบการ์ด KPI ที่ถูกเลือกกรองอยู่
+  // ไฮไลต์ขอบการ์ด KPI มินิมอลที่ถูกเลือกกรองอยู่
   const kpiCards = {
-    'all': document.getElementById('kpi-card-all'),
-    'good': document.getElementById('kpi-card-good'),
-    'repair': document.getElementById('kpi-card-repair'),
-    'disposal': document.getElementById('kpi-card-disposal')
+    'all': { el: document.getElementById('kpi-card-all'), border: 'border-amber-400', bg: 'bg-amber-50/50' },
+    'good': { el: document.getElementById('kpi-card-good'), border: 'border-emerald-400', bg: 'bg-emerald-50/50' },
+    'repair': { el: document.getElementById('kpi-card-repair'), border: 'border-amber-400', bg: 'bg-amber-50/50' },
+    'disposal': { el: document.getElementById('kpi-card-disposal'), border: 'border-rose-400', bg: 'bg-rose-50/50' }
   };
-  Object.entries(kpiCards).forEach(([key, card]) => {
-    if (!card) return;
-    card.classList.remove('ring-2', 'ring-offset-1', 'ring-amber-500', 'ring-emerald-500', 'ring-orange-500', 'ring-rose-500');
+  Object.entries(kpiCards).forEach(([key, config]) => {
+    if (!config.el) return;
+    config.el.classList.remove('border-amber-400', 'border-emerald-400', 'border-rose-400', 'bg-amber-50/50', 'bg-emerald-50/50', 'bg-rose-50/50', 'shadow-xs');
     if (assetStatusFilter === key) {
-      card.classList.add('ring-2', 'ring-offset-1');
-      if (key === 'all') card.classList.add('ring-amber-500');
-      else if (key === 'good') card.classList.add('ring-emerald-500');
-      else if (key === 'repair') card.classList.add('ring-orange-500');
-      else if (key === 'disposal') card.classList.add('ring-rose-500');
+      config.el.classList.add(config.border, config.bg, 'shadow-xs');
     }
   });
 }
@@ -1067,7 +1063,7 @@ function updateMaterialKpiCards() {
   const elActive = document.getElementById('kpi-mat-active-items');
 
   if (elEntries) elEntries.textContent = totalEntries.toLocaleString('th-TH');
-  if (elTypes) elTypes.textContent = `ทั้งหมด ${distinctNames.size} ชนิดวัสดุ`;
+  if (elTypes) elTypes.textContent = `${distinctNames.size} ชนิด`;
   if (elInflow) elInflow.textContent = totalInflowPrice.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
   if (elIssues) elIssues.textContent = `${totalIssues} ครั้ง`;
   if (elActive) elActive.textContent = `${activeWithStock} ชนิด`;
