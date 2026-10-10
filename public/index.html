@@ -287,42 +287,78 @@
 
       <!-- === TAB 1 SCREEN: ทะเบียนคุมทรัพย์สิน (ครุภัณฑ์) === -->
       <div id="tab-asset-screen" class="block">
-        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2.5 sm:gap-3 mb-3 sm:mb-4 no-print">
-          <div>
-            <div class="flex items-center gap-2 sm:gap-3">
+        <!-- === ส่วนหัวเรื่องและชุดเครื่องมือ (Header & Actions Toolbar) === -->
+        <div class="mb-3 sm:mb-4 no-print space-y-2.5">
+          <!-- แถวที่ 1: หัวเรื่องทะเบียนคุมทรัพย์สิน + ป้ายจำนวนที่เลือก + ปุ่มเพิ่มครุภัณฑ์ใหม่ -->
+          <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2.5">
+            <div class="flex items-center gap-2.5 sm:gap-3 flex-wrap">
               <h2 class="text-xl sm:text-2xl font-bold text-red-950 flex items-center gap-2">
                 <span class="w-2.5 h-6 sm:h-7 bg-gradient-to-b from-red-700 via-rose-600 to-amber-500 rounded-full inline-block shadow-xs"></span>
                 <span>ทะเบียนคุมทรัพย์สิน (ครุภัณฑ์)</span>
               </h2>
-              <span id="asset-selected-badge" class="hidden text-[11px] sm:text-xs bg-amber-100 text-amber-900 font-bold px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full border border-amber-300 shadow-xs">
-                เลือกแล้ว <span id="asset-selected-count">0</span> รายการ
+              <span id="asset-selected-badge" class="hidden text-[11px] sm:text-xs bg-amber-100 text-amber-900 font-bold px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full border border-amber-300 shadow-xs flex items-center gap-1">
+                <span>✓</span> <span>เลือกแล้ว <span id="asset-selected-count">0</span> รายการ</span>
               </span>
             </div>
+
+            <!-- ปุ่มหลัก: เพิ่มครุภัณฑ์ใหม่ (เด่นชัด เข้าถึงง่าย) -->
+            <button onclick="openAddAssetModal()" class="w-full sm:w-auto justify-center bg-gradient-to-r from-red-700 via-red-800 to-rose-900 hover:from-red-800 hover:to-rose-950 text-white px-4 py-2 sm:py-2.5 rounded-xl font-bold shadow-md hover:shadow-lg transition transform active:scale-95 flex items-center gap-2 text-xs sm:text-sm border border-red-950/40 whitespace-nowrap cursor-pointer">
+              <span class="text-base leading-none font-bold">+</span>
+              <span>เพิ่มครุภัณฑ์ใหม่</span>
+            </button>
           </div>
-          <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
-            <!-- ตัวเลือกรูปแบบการพิมพ์ -->
-            <select id="asset-print-mode" onchange="onAssetPrintModeChange()" class="flex-1 sm:flex-initial text-xs border border-amber-200 rounded-xl px-2.5 py-2 sm:px-3 sm:py-2 bg-white font-semibold text-slate-700 shadow-xs cursor-pointer focus:ring-2 focus:ring-amber-500">
-              <option value="single-pages">📄 แยกพิมพ์แผ่นละ 1 รายการ</option>
-              <option value="combined-table">📑 รวมพิมพ์ในตารางเดียว</option>
-            </select>
 
-            <button onclick="openAddAssetModal()" class="flex-1 sm:flex-initial justify-center bg-gradient-to-r from-red-700 to-red-800 hover:from-red-800 hover:to-red-900 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-xl font-semibold shadow-xs transition flex items-center gap-1.5 text-xs sm:text-sm border border-red-900/30 whitespace-nowrap">
-              <span>+</span> <span>เพิ่มครุภัณฑ์ใหม่</span>
-            </button>
-            <button onclick="printSelectedAssets()" id="btn-print-assets" class="flex-1 sm:flex-initial justify-center bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold px-3 py-2 sm:px-4 sm:py-2 rounded-xl shadow-xs transition flex items-center gap-1.5 text-xs sm:text-sm border border-amber-600/30 whitespace-nowrap">
-              <span>🖨️</span> <span id="btn-print-text">พิมพ์รายการที่เลือก</span>
-            </button>
-            <button onclick="openQrStickerModal()" class="flex-1 sm:flex-initial justify-center bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold px-3 py-2 sm:px-4 sm:py-2 rounded-xl shadow-xs transition flex items-center gap-1.5 text-xs whitespace-nowrap border border-emerald-700/30 cursor-pointer" title="พิมพ์สติกเกอร์ QR Code / Barcode ติดตัวครุภัณฑ์">
-              <span>🏷️</span> <span>พิมพ์สติกเกอร์ QR Code</span>
-            </button>
+          <!-- แถวที่ 2: แถบเครื่องมือสั่งพิมพ์และรายงานราชการ (Toolbar Strip จัดกลุ่มสวยงามเป็นระเบียบ) -->
+          <div class="bg-white/95 backdrop-blur-xs p-2 sm:p-2.5 rounded-2xl border border-amber-200/90 shadow-2xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5">
+            <!-- กลุ่มที่ 1: การพิมพ์ทะเบียน & พิมพ์สติกเกอร์ QR Code -->
+            <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <span class="text-[11px] font-bold text-amber-950/70 hidden sm:inline-flex items-center gap-1 pl-1">
+                <span>🖨️</span> <span>งานพิมพ์:</span>
+              </span>
 
-            <!-- ปุ่มรายงานตรวจสอบพัสดุประจำปี และ รายงานขอจำหน่าย -->
-            <button onclick="openAnnualInspectionModal()" class="flex-1 sm:flex-initial justify-center bg-gradient-to-r from-blue-700 to-indigo-800 hover:from-blue-800 hover:to-indigo-900 text-white px-3 py-2 rounded-xl font-bold shadow-xs transition flex items-center gap-1.5 text-xs whitespace-nowrap border border-blue-900/30" title="สร้างและพิมพ์รายงานผลการตรวจสอบพัสดุประจำปีงบประมาณ">
-              <span>📋</span> <span>รายงานตรวจสอบประจำปี</span>
-            </button>
-            <button onclick="openDisposalReportModal()" class="flex-1 sm:flex-initial justify-center bg-gradient-to-r from-rose-700 to-red-800 hover:from-rose-800 hover:to-red-900 text-white px-3 py-2 rounded-xl font-bold shadow-xs transition flex items-center gap-1.5 text-xs whitespace-nowrap border border-rose-900/30" title="สร้างและพิมพ์รายงานขออนุมัติจำหน่ายครุภัณฑ์ชำรุด/เสื่อมสภาพ">
-              <span>🗑️</span> <span>รายงานขอจำหน่าย</span>
-            </button>
+              <!-- ตัวเลือกรูปแบบการพิมพ์ -->
+              <div class="relative inline-flex items-center flex-1 sm:flex-initial">
+                <select id="asset-print-mode" onchange="onAssetPrintModeChange()" class="w-full sm:w-auto text-xs border border-amber-200 bg-amber-50/50 hover:bg-amber-100/50 rounded-xl px-2.5 py-2 font-semibold text-slate-800 shadow-2xs cursor-pointer focus:ring-2 focus:ring-amber-500 focus:outline-none transition pr-7 appearance-none">
+                  <option value="single-pages">📄 แยกพิมพ์แผ่นละ 1 รายการ</option>
+                  <option value="combined-table">📑 รวมพิมพ์ในตารางเดียว</option>
+                </select>
+                <span class="pointer-events-none absolute right-2 text-amber-800/60 text-[10px]">▼</span>
+              </div>
+
+              <!-- ปุ่มพิมพ์ทะเบียนที่เลือก -->
+              <button onclick="printSelectedAssets()" id="btn-print-assets" class="flex-1 sm:flex-initial justify-center bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold px-3.5 py-2 rounded-xl shadow-xs hover:shadow transition flex items-center gap-1.5 text-xs border border-amber-600/30 whitespace-nowrap cursor-pointer transform active:scale-95">
+                <span>🖨️</span>
+                <span id="btn-print-text">พิมพ์รายการที่เลือก</span>
+              </button>
+
+              <!-- ปุ่มพิมพ์สติกเกอร์ QR Code -->
+              <button onclick="openQrStickerModal()" class="flex-1 sm:flex-initial justify-center bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold px-3.5 py-2 rounded-xl shadow-xs hover:shadow transition flex items-center gap-1.5 text-xs whitespace-nowrap border border-emerald-700/30 cursor-pointer transform active:scale-95" title="พิมพ์สติกเกอร์ QR Code / Barcode ติดตัวครุภัณฑ์">
+                <span>🏷️</span>
+                <span>พิมพ์สติกเกอร์ QR Code</span>
+              </button>
+            </div>
+
+            <!-- เส้นคั่นแบ่งกลุ่มสายตาบนหน้าจอขนาดใหญ่ -->
+            <div class="hidden lg:block h-6 w-px bg-amber-200/70 self-center"></div>
+
+            <!-- กลุ่มที่ 2: รายงานทางราชการ (ตรวจสอบประจำปี & ขอจำหน่าย อยู่ด้วยกันเสมอ ไม่แยกแถวเดี่ยว) -->
+            <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <span class="text-[11px] font-bold text-amber-950/70 hidden sm:inline-flex items-center gap-1 pl-1">
+                <span>📋</span> <span>รายงานราชการ:</span>
+              </span>
+
+              <!-- รายงานตรวจสอบประจำปี -->
+              <button onclick="openAnnualInspectionModal()" class="flex-1 sm:flex-initial justify-center bg-gradient-to-r from-blue-700 to-indigo-800 hover:from-blue-800 hover:to-indigo-900 text-white px-3.5 py-2 rounded-xl font-bold shadow-xs hover:shadow transition flex items-center gap-1.5 text-xs whitespace-nowrap border border-blue-900/30 cursor-pointer transform active:scale-95" title="สร้างและพิมพ์รายงานผลการตรวจสอบพัสดุประจำปีงบประมาณ">
+                <span>📋</span>
+                <span>รายงานตรวจสอบประจำปี</span>
+              </button>
+
+              <!-- รายงานขอจำหน่าย -->
+              <button onclick="openDisposalReportModal()" class="flex-1 sm:flex-initial justify-center bg-gradient-to-r from-rose-700 to-red-800 hover:from-rose-800 hover:to-red-900 text-white px-3.5 py-2 rounded-xl font-bold shadow-xs hover:shadow transition flex items-center gap-1.5 text-xs whitespace-nowrap border border-rose-900/30 cursor-pointer transform active:scale-95" title="สร้างและพิมพ์รายงานขออนุมัติจำหน่ายครุภัณฑ์ชำรุด/เสื่อมสภาพ">
+                <span>🗑️</span>
+                <span>รายงานขอจำหน่าย</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1387,6 +1423,6 @@
     <option value="นางสาวภัฐธีรา  จุลพันธ์">ธุรการโรงเรียน</option>
   </datalist>
 
-  <script src="app.js?v=8.1"></script>
+  <script src="app.js?v=8.2"></script>
 </body>
 </html>
