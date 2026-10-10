@@ -321,6 +321,7 @@ function updateNavbarUserPill() {
   const pill = document.getElementById('nav-user-pill');
   const nameEl = document.getElementById('nav-user-name');
   const roleEl = document.getElementById('nav-user-role-badge');
+  const menuUserEl = document.getElementById('menu-dropdown-user-name');
   if (!pill) return;
 
   if (!currentUser) {
@@ -331,23 +332,32 @@ function updateNavbarUserPill() {
   pill.classList.remove('hidden');
   pill.classList.add('flex');
 
+  const rawName = currentUser.fullName || currentUser.username || 'ผู้ใช้งาน';
+  // ตัดข้อความซ้ำซ้อน เช่น "(แอดมิน)" หรือ "(admin)" ออกจากชื่อแสดงผล
+  const cleanName = rawName.replace(/\s*\((?:แอดมิน|admin)\)/gi, '').trim();
+
   if (nameEl) {
-    nameEl.textContent = currentUser.fullName || currentUser.username || 'ผู้ใช้งาน';
+    nameEl.textContent = cleanName;
+    nameEl.title = rawName;
+  }
+
+  if (menuUserEl) {
+    menuUserEl.textContent = rawName;
   }
 
   if (roleEl) {
     if (currentUser.role === 'admin') {
-      roleEl.className = 'px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-400 text-red-950 shadow-2xs';
+      roleEl.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-400 text-red-950 shadow-2xs whitespace-nowrap';
       roleEl.textContent = '👑 แอดมิน';
     } else if (currentUser.canEdit && currentUser.canDelete) {
-      roleEl.className = 'px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-400 text-emerald-950 shadow-2xs';
+      roleEl.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-400 text-emerald-950 shadow-2xs whitespace-nowrap';
       roleEl.textContent = '✏️ เจ้าหน้าที่';
     } else if (currentUser.canEdit) {
-      roleEl.className = 'px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-300 text-sky-950 shadow-2xs';
+      roleEl.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-300 text-sky-950 shadow-2xs whitespace-nowrap';
       roleEl.textContent = '✏️ แก้ไขได้';
     } else {
-      roleEl.className = 'px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-800 shadow-2xs';
-      roleEl.textContent = '👁️ ดูข้อมูล';
+      roleEl.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-800 shadow-2xs whitespace-nowrap';
+      roleEl.textContent = '👁️ ทั่วไป';
     }
   }
 }
@@ -1124,15 +1134,15 @@ function switchTab(tab) {
     screenMaterial.classList.add('hidden');
     setPrintTarget('asset');
 
-    btnAsset.className = 'flex-1 sm:flex-initial text-center justify-center px-3 py-2 sm:px-4 sm:py-2 bg-gradient-to-r from-amber-400 via-amber-400 to-amber-500 text-red-950 font-bold rounded-xl shadow-md hover:from-amber-300 hover:to-amber-400 transition text-xs sm:text-sm whitespace-nowrap';
-    btnMaterial.className = 'flex-1 sm:flex-initial text-center justify-center px-3 py-2 sm:px-4 sm:py-2 bg-red-950/70 hover:bg-red-800/80 text-amber-100 font-medium rounded-xl border border-amber-400/20 transition text-xs sm:text-sm whitespace-nowrap';
+    btnAsset.className = 'px-3 py-1.5 sm:px-3.5 sm:py-1.5 bg-gradient-to-r from-amber-400 via-amber-400 to-amber-500 text-red-950 font-bold rounded-xl shadow-md transition text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5 cursor-pointer';
+    btnMaterial.className = 'px-3 py-1.5 sm:px-3.5 sm:py-1.5 text-amber-200/90 hover:text-white hover:bg-white/10 font-semibold rounded-xl transition text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5 cursor-pointer';
   } else {
     screenAsset.classList.add('hidden');
     screenMaterial.classList.remove('hidden');
     setPrintTarget('material');
 
-    btnAsset.className = 'flex-1 sm:flex-initial text-center justify-center px-3 py-2 sm:px-4 sm:py-2 bg-red-950/70 hover:bg-red-800/80 text-amber-100 font-medium rounded-xl border border-amber-400/20 transition text-xs sm:text-sm whitespace-nowrap';
-    btnMaterial.className = 'flex-1 sm:flex-initial text-center justify-center px-3 py-2 sm:px-4 sm:py-2 bg-gradient-to-r from-amber-400 via-amber-400 to-amber-500 text-red-950 font-bold rounded-xl shadow-md hover:from-amber-300 hover:to-amber-400 transition text-xs sm:text-sm whitespace-nowrap';
+    btnAsset.className = 'px-3 py-1.5 sm:px-3.5 sm:py-1.5 text-amber-200/90 hover:text-white hover:bg-white/10 font-semibold rounded-xl transition text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5 cursor-pointer';
+    btnMaterial.className = 'px-3 py-1.5 sm:px-3.5 sm:py-1.5 bg-gradient-to-r from-amber-400 via-amber-400 to-amber-500 text-red-950 font-bold rounded-xl shadow-md transition text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5 cursor-pointer';
   }
 }
 

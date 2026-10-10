@@ -295,34 +295,53 @@
             <span class="text-amber-300/90 text-[11px] sm:text-xs font-medium tracking-wide">โรงเรียนบ้านดงกลาง (ธนาคารกรุงเทพ ๓๑)</span>
           </div>
         </h1>
-        <div class="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto justify-between sm:justify-start flex-wrap">
-          <button onclick="switchTab('asset')" id="tab-asset-btn" class="flex-1 sm:flex-initial text-center justify-center px-3 py-2 sm:px-4 sm:py-2 bg-gradient-to-r from-amber-400 via-amber-400 to-amber-500 text-red-950 font-bold rounded-xl shadow-md hover:from-amber-300 hover:to-amber-400 transition text-xs sm:text-sm whitespace-nowrap">
-            ทะเบียนคุมครุภัณฑ์
-          </button>
-          <button onclick="switchTab('material')" id="tab-material-btn" class="flex-1 sm:flex-initial text-center justify-center px-3 py-2 sm:px-4 sm:py-2 bg-red-950/70 hover:bg-red-800/80 text-amber-100 font-medium rounded-xl border border-amber-400/20 transition text-xs sm:text-sm whitespace-nowrap">
-            บัญชีคุมวัสดุ
-          </button>
-          <!-- ป้ายแสดงผู้ใช้งานปัจจุบัน -->
-          <div id="nav-user-pill" class="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-1.5 bg-red-950/80 border border-amber-400/30 rounded-xl text-xs text-amber-100 shadow-xs">
-            <span class="text-xs sm:text-sm">👤</span>
-            <span id="nav-user-name" class="font-bold text-white max-w-[100px] sm:max-w-[150px] truncate">ผู้ดูแลระบบ</span>
-            <span id="nav-user-role-badge" class="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-400 text-red-950">แอดมิน</span>
+        <div class="flex items-center gap-2 sm:gap-3 w-full md:w-auto justify-between md:justify-end flex-wrap sm:flex-nowrap">
+          <!-- กลุ่มแท็บสลับหน้าหลัก (Segmented Switcher) -->
+          <div class="bg-black/35 backdrop-blur-xs p-1 rounded-2xl border border-amber-400/30 flex items-center gap-1 shadow-inner shrink-0">
+            <button type="button" onclick="switchTab('asset')" id="tab-asset-btn" class="px-3 py-1.5 sm:px-3.5 sm:py-1.5 bg-gradient-to-r from-amber-400 via-amber-400 to-amber-500 text-red-950 font-bold rounded-xl shadow-md transition text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5 cursor-pointer">
+              <span>📦</span> <span>ทะเบียนคุมครุภัณฑ์</span>
+            </button>
+            <button type="button" onclick="switchTab('material')" id="tab-material-btn" class="px-3 py-1.5 sm:px-3.5 sm:py-1.5 text-amber-200/90 hover:text-white hover:bg-white/10 font-semibold rounded-xl transition text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5 cursor-pointer">
+              <span>📋</span> <span>บัญชีคุมวัสดุ</span>
+            </button>
           </div>
 
-          <!-- ป้ายสถานะ Cloud Database (ซ่อนไว้เพื่อให้หน้าจอสะอาดตา ไม่เกะกะ) -->
-          <button type="button" onclick="openModal('supabaseModal')" id="db-status-badge" class="hidden" title="สถานะฐานข้อมูล">
-            <span id="db-status-dot"></span>
-            <span id="db-status-text"></span>
-          </button>
-          <!-- เมนูจัดการระบบ (ซ่อนรวม: ตั้งค่าหน่วยงาน, สำรองข้อมูล, นำเข้าข้อมูล, Supabase, เปลี่ยนรหัสผ่าน, ออกจากระบบ) -->
-          <div class="relative inline-block text-left shrink-0" id="system-menu-container">
-            <button type="button" onclick="toggleSystemMenu()" id="system-menu-btn" class="px-2.5 py-2 sm:px-3.5 sm:py-2 bg-red-950/70 hover:bg-red-800/80 rounded-xl text-xs font-semibold transition border border-amber-400/30 text-amber-200 flex items-center gap-1 shadow-xs cursor-pointer focus:outline-none whitespace-nowrap">
-              <span>⚙️ จัดการระบบ</span>
-              <svg id="system-menu-arrow" class="w-3.5 h-3.5 text-amber-300 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
-              </svg>
+          <!-- เส้นคั่นแบ่งหมวดหมู่ -->
+          <div class="hidden lg:block h-6 w-px bg-amber-400/25 shrink-0"></div>
+
+          <!-- กลุ่มข้อมูลผู้ใช้และจัดการระบบ -->
+          <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <!-- ป้ายแสดงผู้ใช้งานปัจจุบัน -->
+            <div id="nav-user-pill" class="flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-3 sm:py-1.5 bg-black/30 backdrop-blur-xs border border-amber-400/30 rounded-2xl text-xs text-amber-100 shadow-inner">
+              <span class="w-5 h-5 rounded-full bg-amber-400/20 text-amber-300 flex items-center justify-center text-xs shrink-0">👤</span>
+              <span id="nav-user-name" class="font-bold text-white max-w-[90px] sm:max-w-[130px] truncate text-xs">ผู้ดูแลระบบ</span>
+              <span id="nav-user-role-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-400 text-red-950 shadow-2xs whitespace-nowrap">👑 แอดมิน</span>
+            </div>
+
+            <!-- ป้ายสถานะ Cloud Database (ซ่อนไว้เพื่อให้หน้าจอสะอาดตา ไม่เกะกะ) -->
+            <button type="button" onclick="openModal('supabaseModal')" id="db-status-badge" class="hidden" title="สถานะฐานข้อมูล">
+              <span id="db-status-dot"></span>
+              <span id="db-status-text"></span>
             </button>
-            <div id="system-menu-dropdown" class="hidden absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-amber-200/80 py-1.5 z-50 text-xs divide-y divide-slate-100">
+
+            <!-- เมนูจัดการระบบ (ซ่อนรวม: ตั้งค่าหน่วยงาน, สำรองข้อมูล, นำเข้าข้อมูล, Supabase, เปลี่ยนรหัสผ่าน, ออกจากระบบ) -->
+            <div class="relative inline-block text-left shrink-0" id="system-menu-container">
+              <button type="button" onclick="toggleSystemMenu()" id="system-menu-btn" class="px-2.5 py-1.5 sm:px-3.5 sm:py-1.5 bg-gradient-to-r from-amber-500/20 to-red-950/60 hover:from-amber-400/30 hover:to-red-900 border border-amber-400/40 rounded-2xl text-xs font-bold transition text-amber-200 hover:text-white flex items-center gap-1.5 shadow-sm cursor-pointer focus:outline-none whitespace-nowrap">
+                <span class="text-xs sm:text-sm">⚙️</span>
+                <span>จัดการระบบ</span>
+                <svg id="system-menu-arrow" class="w-3.5 h-3.5 text-amber-300 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+                </svg>
+              </button>
+              <div id="system-menu-dropdown" class="hidden absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-amber-200/80 py-1.5 z-50 text-xs divide-y divide-slate-100">
+                <!-- ส่วนหัวของเมนูดรอปดาวน์ แสดงผู้ใช้ที่ล็อกอินอยู่ -->
+                <div class="px-3.5 py-2 bg-gradient-to-r from-amber-50 to-orange-50/50 border-b border-amber-100/80 rounded-t-xl mb-1">
+                  <div class="text-[10px] text-amber-800 font-semibold">ผู้ใช้งานที่เข้าสู่ระบบ:</div>
+                  <div class="font-bold text-slate-800 text-xs truncate mt-0.5 flex items-center gap-1.5">
+                    <span>👤</span>
+                    <span id="menu-dropdown-user-name">ผู้ดูแลระบบ</span>
+                  </div>
+                </div>
               <div class="py-1">
                 <!-- เมนูสำหรับ Admin: จัดการผู้ใช้งานและสิทธิ์ -->
                 <button type="button" id="menu-btn-user-mgmt" onclick="openModal('userManagementModal'); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-amber-50 hover:text-red-900 flex items-center justify-between font-medium transition cursor-pointer">
@@ -1919,6 +1938,6 @@
     <option value="นางสาวภัฐธีรา  จุลพันธ์">ธุรการโรงเรียน</option>
   </datalist>
 
-  <script src="app.js?v=10.2"></script>
+  <script src="app.js?v=10.3"></script>
 </body>
 </html>
