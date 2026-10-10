@@ -4,6 +4,8 @@ on:
   schedule:
     # Run every 10 minutes to prevent Render free instance spin down
     - cron: '*/10 * * * *'
+  push:
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -12,4 +14,4 @@ jobs:
     steps:
       - name: Ping School Asset Server
         run: |
-          curl -s -f "https://school-asset-system.onrender.com/api/health" || echo "Ping failed or server sleeping"
+          curl -s -f "https://school-asset-system.onrender.com/api/ping" || echo "Ping failed or server sleeping"
