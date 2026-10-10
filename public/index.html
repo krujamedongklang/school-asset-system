@@ -1288,9 +1288,14 @@
           <h4 class="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5">
             <span>📋</span> <span>รายชื่อผู้ใช้งานและสิทธิ์การใช้งานทั้งหมด</span>
           </h4>
-          <button type="button" onclick="loadUsersManagement()" class="text-xs text-amber-800 hover:text-red-900 font-semibold flex items-center gap-1 cursor-pointer">
-            <span>🔄 รีเฟรช</span>
-          </button>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="syncUsersToSupabase()" id="btn-sync-users-sb" class="px-2.5 py-1 bg-gradient-to-r from-red-800 to-amber-700 hover:from-red-900 text-white rounded-xl font-bold text-[11px] transition shadow-2xs flex items-center gap-1 cursor-pointer" title="ซิงค์ข้อมูลผู้ใช้ขึ้น Supabase Cloud">
+              <span>☁️ ซิงค์ Supabase</span>
+            </button>
+            <button type="button" onclick="loadUsersManagement()" class="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/80 rounded-xl font-semibold text-[11px] transition shadow-2xs flex items-center gap-1 cursor-pointer">
+              <span>🔄 รีเฟรช</span>
+            </button>
+          </div>
         </div>
 
         <div class="overflow-x-auto border border-slate-200 rounded-2xl shadow-2xs">
@@ -1314,8 +1319,8 @@
         </div>
       </div>
 
-      <!-- ส่วนจัดการ Supabase Database SQL & Sync -->
-      <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3 sm:p-4 text-xs space-y-2.5">
+      <!-- ซ่อนกล่องคำแนะนำ Supabase SQL ไว้ในเมนูซ่อนเพื่อความสะอาดตา -->
+      <div id="supabase-sql-guide-box" class="hidden bg-slate-50 border border-slate-200 rounded-2xl p-3 sm:p-4 text-xs space-y-2.5 mb-3">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
           <div>
             <div class="font-bold text-slate-800 flex items-center gap-1.5">
@@ -1325,49 +1330,20 @@
               เก็บข้อมูลบัญชีผู้ใช้งานบน Supabase เพื่อเข้าสู่ระบบได้จากทุกอุปกรณ์
             </div>
           </div>
-          <div class="flex items-center gap-1.5 w-full sm:w-auto">
-            <button type="button" onclick="copySupabaseUsersSql()" class="flex-1 sm:flex-initial px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-xl font-medium text-[11px] transition shadow-2xs cursor-pointer">
-              📋 คัดลอก SQL สร้างตาราง
-            </button>
-            <button type="button" onclick="syncUsersToSupabase()" id="btn-sync-users-sb" class="flex-1 sm:flex-initial px-3 py-1.5 bg-gradient-to-r from-red-800 to-amber-700 hover:from-red-900 hover:to-amber-800 text-white rounded-xl font-bold text-[11px] transition shadow-2xs cursor-pointer">
-              🚀 ซิงค์ผู้ใช้ขึ้น Supabase
-            </button>
-          </div>
+          <button type="button" onclick="copySupabaseUsersSQL()" class="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-xl font-medium text-[11px] transition shadow-2xs cursor-pointer">
+            📋 คัดลอก SQL สร้างตาราง
+          </button>
         </div>
-
-        <details class="text-[11px] text-slate-600 bg-white p-2.5 rounded-xl border border-slate-200 cursor-pointer">
-          <summary class="font-bold text-slate-700">📖 คำแนะนำการสร้างตาราง app_users บน Supabase (ทำครั้งเดียว)</summary>
-          <div class="pt-2 text-slate-600 leading-relaxed space-y-1.5">
-            <p>1. ไปที่ Supabase Dashboard ของคุณครู แล้วเลือกเมนู <b>SQL Editor</b> (ด้านซ้าย)</p>
-            <p>2. กดปุ่ม <b>+ New Query</b> แล้ววางคำสั่ง SQL ด้านล่างนี้ จากนั้นกดปุ่ม <b>Run</b> (สีเขียว)</p>
-            <div class="relative mt-1">
-              <pre class="bg-slate-900 text-amber-300 p-2.5 rounded-xl text-[10px] overflow-x-auto font-mono select-all">-- สร้างตารางข้อมูลผู้ใช้งานและสิทธิ์ (User & Permissions)
-CREATE TABLE IF NOT EXISTS app_users (
-  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  username TEXT UNIQUE NOT NULL,
-  password_hash TEXT NOT NULL,
-  full_name TEXT NOT NULL,
-  position TEXT DEFAULT '',
-  role TEXT DEFAULT 'user',
-  can_edit BOOLEAN DEFAULT false,
-  can_delete BOOLEAN DEFAULT false,
-  can_add BOOLEAN DEFAULT true,
-  status TEXT DEFAULT 'pending',
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER TABLE app_users DISABLE ROW LEVEL SECURITY;</pre>
-            </div>
-            <p class="text-[10px] text-slate-400 mt-1">* หากยังไม่ได้รัน SQL ระบบจะเก็บข้อมูลผู้ใช้ไว้ในเครื่องและสำรองข้อมูลขึ้นคลาวด์ให้อัตโนมัติ ปลอดภัย 100% ครับ</p>
-          </div>
-        </details>
       </div>
 
-      <div class="flex justify-end pt-3 mt-3 border-t border-slate-100">
+      <div class="flex justify-between items-center pt-3 mt-3 border-t border-slate-100">
+        <button type="button" onclick="document.getElementById('supabase-sql-guide-box').classList.toggle('hidden')" class="text-[11px] text-slate-400 hover:text-slate-600 transition cursor-pointer">
+          ⚙️ คำแนะนำ Supabase SQL
+        </button>
         <button type="button" onclick="closeModal('userManagementModal')" class="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition cursor-pointer">
           ปิดหน้าต่าง
         </button>
+      </div>
       </div>
     </div>
   </div>
