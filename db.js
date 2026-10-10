@@ -473,8 +473,8 @@ const dbService = {
     const hash = hashPassword(newPass);
 
     await new Promise((resolve, reject) => {
-      sqliteDb.run(`UPDATE app_users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-        [hash, id],
+      sqliteDb.run(`UPDATE app_users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? OR username = ?`,
+        [hash, id, user.username],
         (err) => err ? reject(err) : resolve(true)
       );
     });
@@ -607,7 +607,9 @@ const dbService = {
     }
 
     const inputHash = hashPassword(pass);
-    if (user.password_hash !== inputHash) {
+    const isPlainMatch = (user.password_hash === pass);
+
+    if (user.password_hash !== inputHash && !isPlainMatch) {
       if (user.username === 'admin') {
         const isLegacyValid = await this.checkPassword(pass);
         if (isLegacyValid) {
@@ -618,6 +620,11 @@ const dbService = {
       } else {
         return { success: false, error: 'รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง' };
       }
+    } else if (isPlainMatch && user.password_hash !== inputHash) {
+      // หากมีการพิมพ์รหัสผ่านเป็นข้อความธรรมดาใน Supabase ให้แปลงเป็น Salted Hash อัตโนมัติ
+      try {
+        await this.updateUserPassword(user.id, pass);
+      } catch (e) {}
     }
 
     if (user.status === 'pending') {

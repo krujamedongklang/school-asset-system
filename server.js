@@ -151,7 +151,8 @@ app.post('/api/auth/change-password', requireAuth, async (req, res) => {
   const user = await db.getUserById(req.user.id);
   if (!user) return res.status(404).json({ error: 'ไม่พบบัญชีผู้ใช้งาน' });
 
-  if (user.password_hash !== db.hashPassword(currentPassword)) {
+  const isCurrentValid = (user.password_hash === db.hashPassword(currentPassword)) || (user.password_hash === currentPassword);
+  if (!isCurrentValid) {
     return res.status(401).json({ error: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' });
   }
 
