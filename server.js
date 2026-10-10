@@ -126,6 +126,11 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
+// Health check & Keep-alive endpoint (สำหรับบริการ Ping ป้องกันเซิร์ฟเวอร์หลับ)
+app.get(['/api/health', '/api/ping', '/healthz'], (req, res) => {
+  res.status(200).json({ status: 'ok', uptime: Math.round(process.uptime()), timestamp: new Date().toISOString() });
+});
+
 // ตรวจสอบสถานะการล็อกอินและสิทธิ์
 app.get('/api/auth/verify', async (req, res) => {
   const authHeader = req.headers.authorization;
