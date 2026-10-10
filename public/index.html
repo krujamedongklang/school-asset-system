@@ -43,6 +43,17 @@
       scrollbar-width: none !important;
     }
 
+    /* อนิเมชัน Toast แจ้งเตือนแบบ iOS / Tailwind */
+    @keyframes toastSlideIn {
+      from { transform: translateY(-16px) scale(0.96); opacity: 0; }
+      to { transform: translateY(0) scale(1); opacity: 1; }
+    }
+    .toast-animate {
+      animation: toastSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
     body {
       font-family: 'Sarabun', sans-serif;
       word-break: normal;
@@ -280,6 +291,9 @@
     </div>
   </div>
 
+  <!-- แจ้งเตือนลอยแบบ Floating Toast (iOS / Tailwind Style) -->
+  <div id="toast-container" class="fixed top-4 right-4 sm:top-5 sm:right-5 z-[10000] flex flex-col gap-2 pointer-events-none no-print max-w-sm w-full px-3 sm:px-0"></div>
+
   <!-- ============================================================== -->
   <!-- 1. SCREEN VIEW (หน้าจอหลักในเว็บ โทนแดง-เหลือง หรูหราทันสมัย) -->
   <!-- ============================================================== -->
@@ -486,59 +500,79 @@
           </div>
         </div>
 
-        <!-- === แถบการ์ดสรุปสถิติภาพรวมครุภัณฑ์ (Asset KPI Stat Cards - Minimal) === -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-2.5 mb-2.5 sm:mb-3 no-print">
+        <!-- === แถบการ์ดสรุปสถิติภาพรวมครุภัณฑ์ (Asset KPI Stat Cards - Executive Glass Style) === -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5 mb-3 sm:mb-4 no-print">
           <!-- Card 1: ครุภัณฑ์ทั้งหมด -->
-          <div id="kpi-card-all" onclick="filterByKpiStatus('all')" class="bg-white hover:bg-slate-50 p-2 sm:px-3 sm:py-2 rounded-xl border border-slate-200/90 shadow-2xs hover:border-amber-300 transition-all cursor-pointer" title="คลิกเพื่อแสดงครุภัณฑ์ทุกสถานะ">
-            <div class="flex items-center justify-between text-[11px] font-semibold text-slate-500">
-              <span class="flex items-center gap-1"><span>📦</span> <span>ครุภัณฑ์ทั้งหมด</span></span>
-              <span class="text-[10px] text-slate-400 font-mono truncate max-w-[110px]" id="kpi-total-cost">฿0.00</span>
+          <div id="kpi-card-all" onclick="filterByKpiStatus('all')" class="bg-gradient-to-br from-white via-white to-amber-50/50 hover:to-amber-100/60 p-3 sm:p-4 rounded-2xl border border-slate-200/90 hover:border-amber-400 shadow-2xs hover:shadow-md transition-all duration-200 cursor-pointer relative overflow-hidden group select-none" title="คลิกเพื่อแสดงครุภัณฑ์ทุกสถานะ">
+            <div class="h-1 w-full bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 absolute top-0 left-0"></div>
+            <div class="absolute -right-1 -bottom-2 text-4xl sm:text-5xl opacity-[0.08] group-hover:opacity-[0.16] group-hover:scale-110 transition-all select-none pointer-events-none">📦</div>
+            <div class="flex items-center justify-between text-xs font-bold text-slate-600">
+              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500"></span>ครุภัณฑ์ทั้งหมด</span>
+              <span class="text-[10px] text-amber-700 font-bold bg-amber-100/80 px-2 py-0.5 rounded-full">ทั้งหมด</span>
             </div>
-            <div class="flex items-baseline gap-1 mt-0.5">
-              <span class="text-base sm:text-lg font-bold text-red-950 font-mono leading-tight" id="kpi-total-assets">0</span>
-              <span class="text-[10px] text-slate-400 font-medium">รายการ</span>
+            <div class="flex items-baseline gap-1.5 mt-1.5">
+              <span class="text-2xl sm:text-3xl font-extrabold text-red-950 font-mono leading-tight" id="kpi-total-assets">0</span>
+              <span class="text-xs text-slate-400 font-medium">รายการ</span>
+            </div>
+            <div class="text-[11px] text-slate-500 font-medium mt-1 truncate flex items-center gap-1">
+              <span>มูลค่ารวม:</span> <span class="font-bold font-mono text-red-900" id="kpi-total-cost">฿0.00</span>
             </div>
           </div>
 
           <!-- Card 2: ใช้งานได้ดี -->
-          <div id="kpi-card-good" onclick="filterByKpiStatus('good')" class="bg-white hover:bg-slate-50 p-2 sm:px-3 sm:py-2 rounded-xl border border-slate-200/90 shadow-2xs hover:border-emerald-300 transition-all cursor-pointer" title="คลิกเพื่อกรองเฉพาะรายการที่ใช้งานได้ดี">
-            <div class="flex items-center justify-between text-[11px] font-semibold text-slate-500">
-              <span class="flex items-center gap-1"><span class="text-[9px]">🟢</span> <span>ใช้งานได้ดี</span></span>
-              <span class="text-[10px] text-emerald-700 font-medium truncate" id="kpi-good-percent">100%</span>
+          <div id="kpi-card-good" onclick="filterByKpiStatus('good')" class="bg-gradient-to-br from-white via-white to-emerald-50/50 hover:to-emerald-100/60 p-3 sm:p-4 rounded-2xl border border-slate-200/90 hover:border-emerald-400 shadow-2xs hover:shadow-md transition-all duration-200 cursor-pointer relative overflow-hidden group select-none" title="คลิกเพื่อกรองเฉพาะรายการที่ใช้งานได้ดี">
+            <div class="h-1 w-full bg-gradient-to-r from-emerald-400 via-teal-500 to-emerald-600 absolute top-0 left-0"></div>
+            <div class="absolute -right-1 -bottom-2 text-4xl sm:text-5xl opacity-[0.08] group-hover:opacity-[0.16] group-hover:scale-110 transition-all select-none pointer-events-none">✅</div>
+            <div class="flex items-center justify-between text-xs font-bold text-slate-600">
+              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>ใช้งานได้ดี</span>
+              <span class="text-[10px] text-emerald-800 font-bold bg-emerald-100 px-2 py-0.5 rounded-full" id="kpi-good-percent">100%</span>
             </div>
-            <div class="flex items-baseline gap-1 mt-0.5">
-              <span class="text-base sm:text-lg font-bold text-emerald-700 font-mono leading-tight" id="kpi-good-assets">0</span>
-              <span class="text-[10px] text-slate-400 font-medium">รายการ</span>
+            <div class="flex items-baseline gap-1.5 mt-1.5">
+              <span class="text-2xl sm:text-3xl font-extrabold text-emerald-700 font-mono leading-tight" id="kpi-good-assets">0</span>
+              <span class="text-xs text-slate-400 font-medium">รายการ</span>
+            </div>
+            <div class="text-[11px] text-emerald-800 font-medium mt-1 truncate">
+              <span>สภาพสมบูรณ์ พร้อมใช้งาน</span>
             </div>
           </div>
 
           <!-- Card 3: ชำรุด (ซ่อมได้) -->
-          <div id="kpi-card-repair" onclick="filterByKpiStatus('repair')" class="bg-white hover:bg-slate-50 p-2 sm:px-3 sm:py-2 rounded-xl border border-slate-200/90 shadow-2xs hover:border-amber-300 transition-all cursor-pointer" title="คลิกเพื่อกรองเฉพาะรายการที่ชำรุดรอซ่อม">
-            <div class="flex items-center justify-between text-[11px] font-semibold text-slate-500">
-              <span class="flex items-center gap-1"><span class="text-[9px]">🟠</span> <span>ชำรุด (ซ่อมได้)</span></span>
-              <span class="text-[10px] text-amber-700 font-medium truncate">รอส่งซ่อม</span>
+          <div id="kpi-card-repair" onclick="filterByKpiStatus('repair')" class="bg-gradient-to-br from-white via-white to-amber-50/50 hover:to-orange-100/60 p-3 sm:p-4 rounded-2xl border border-slate-200/90 hover:border-amber-400 shadow-2xs hover:shadow-md transition-all duration-200 cursor-pointer relative overflow-hidden group select-none" title="คลิกเพื่อกรองเฉพาะรายการที่ชำรุดรอซ่อม">
+            <div class="h-1 w-full bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 absolute top-0 left-0"></div>
+            <div class="absolute -right-1 -bottom-2 text-4xl sm:text-5xl opacity-[0.08] group-hover:opacity-[0.16] group-hover:scale-110 transition-all select-none pointer-events-none">🔧</div>
+            <div class="flex items-center justify-between text-xs font-bold text-slate-600">
+              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500"></span>ชำรุด (ซ่อมได้)</span>
+              <span class="text-[10px] text-amber-800 font-bold bg-amber-100 px-2 py-0.5 rounded-full">รอซ่อม</span>
             </div>
-            <div class="flex items-baseline gap-1 mt-0.5">
-              <span class="text-base sm:text-lg font-bold text-amber-800 font-mono leading-tight" id="kpi-repair-assets">0</span>
-              <span class="text-[10px] text-slate-400 font-medium">รายการ</span>
+            <div class="flex items-baseline gap-1.5 mt-1.5">
+              <span class="text-2xl sm:text-3xl font-extrabold text-amber-700 font-mono leading-tight" id="kpi-repair-assets">0</span>
+              <span class="text-xs text-slate-400 font-medium">รายการ</span>
+            </div>
+            <div class="text-[11px] text-amber-800 font-medium mt-1 truncate">
+              <span>ต้องซ่อมแซมก่อนใช้งาน</span>
             </div>
           </div>
 
           <!-- Card 4: ชำรุดรอจำหน่าย -->
-          <div id="kpi-card-disposal" onclick="filterByKpiStatus('disposal')" class="bg-white hover:bg-slate-50 p-2 sm:px-3 sm:py-2 rounded-xl border border-slate-200/90 shadow-2xs hover:border-rose-300 transition-all cursor-pointer" title="คลิกเพื่อกรองเฉพาะรายการที่ขอจำหน่าย/จำหน่ายแล้ว">
-            <div class="flex items-center justify-between text-[11px] font-semibold text-slate-500">
-              <span class="flex items-center gap-1"><span class="text-[9px]">🔴</span> <span>ชำรุดรอจำหน่าย</span></span>
-              <span class="text-[10px] text-rose-700 font-medium truncate" id="kpi-disposed-count">รอจำหน่าย 0</span>
+          <div id="kpi-card-disposal" onclick="filterByKpiStatus('disposal')" class="bg-gradient-to-br from-white via-white to-rose-50/50 hover:to-rose-100/60 p-3 sm:p-4 rounded-2xl border border-slate-200/90 hover:border-rose-400 shadow-2xs hover:shadow-md transition-all duration-200 cursor-pointer relative overflow-hidden group select-none" title="คลิกเพื่อกรองเฉพาะรายการที่ขอจำหน่าย/จำหน่ายแล้ว">
+            <div class="h-1 w-full bg-gradient-to-r from-rose-500 via-red-600 to-rose-700 absolute top-0 left-0"></div>
+            <div class="absolute -right-1 -bottom-2 text-4xl sm:text-5xl opacity-[0.08] group-hover:opacity-[0.16] group-hover:scale-110 transition-all select-none pointer-events-none">🗑️</div>
+            <div class="flex items-center justify-between text-xs font-bold text-slate-600">
+              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-rose-500"></span>ชำรุดรอจำหน่าย</span>
+              <span class="text-[10px] text-rose-800 font-bold bg-rose-100 px-2 py-0.5 rounded-full" id="kpi-disposed-count">รอจำหน่าย 0</span>
             </div>
-            <div class="flex items-baseline gap-1 mt-0.5">
-              <span class="text-base sm:text-lg font-bold text-rose-800 font-mono leading-tight" id="kpi-disposal-assets">0</span>
-              <span class="text-[10px] text-slate-400 font-medium">รายการ</span>
+            <div class="flex items-baseline gap-1.5 mt-1.5">
+              <span class="text-2xl sm:text-3xl font-extrabold text-rose-800 font-mono leading-tight" id="kpi-disposal-assets">0</span>
+              <span class="text-xs text-slate-400 font-medium">รายการ</span>
+            </div>
+            <div class="text-[11px] text-rose-700 font-medium mt-1 truncate">
+              <span>เสื่อมสภาพ / จำหน่ายแล้ว</span>
             </div>
           </div>
         </div>
 
         <!-- แถบกรองปีงบประมาณ / เดือน / สถานะ / ค้นหาครุภัณฑ์ -->
-        <div class="mb-3 sm:mb-4 bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-xs border border-amber-200/80 no-print space-y-2.5 sm:space-y-3">
+        <div class="mb-3 sm:mb-4 bg-white p-3.5 sm:p-4 rounded-2xl shadow-xs border border-amber-200/80 no-print space-y-3">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
             <div class="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-3 w-full sm:w-auto flex-wrap">
               <div class="col-span-1 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-1.5">
@@ -591,19 +625,54 @@
             <div class="text-[11px] sm:text-xs text-slate-500 font-medium self-end sm:self-auto" id="asset-search-result-count"></div>
           </div>
 
-          <!-- แถบค้นหาข้อความ Real-time -->
+          <!-- แถบปุ่มลัดตัวกรองด่วน (Quick Filter Chips) + สลับมุมมอง ตาราง vs การ์ด -->
+          <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 flex-wrap">
+            <div class="flex items-center gap-1.5 overflow-x-auto touch-scroll py-0.5 no-scrollbar flex-1">
+              <span class="text-[11px] font-bold text-slate-500 whitespace-nowrap mr-0.5 flex items-center gap-1">
+                <span>⚡</span> <span>กรองด่วน:</span>
+              </span>
+              <button type="button" onclick="setQuickStatusFilter('all')" id="chip-status-all" class="quick-filter-chip active px-3 py-1 rounded-full text-xs font-bold transition whitespace-nowrap bg-amber-500 text-white shadow-2xs cursor-pointer">
+                ทั้งหมด
+              </button>
+              <button type="button" onclick="setQuickStatusFilter('good')" id="chip-status-good" class="quick-filter-chip px-3 py-1 rounded-full text-xs font-semibold transition whitespace-nowrap bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer">
+                🟢 ใช้งานได้ดี
+              </button>
+              <button type="button" onclick="setQuickStatusFilter('repair')" id="chip-status-repair" class="quick-filter-chip px-3 py-1 rounded-full text-xs font-semibold transition whitespace-nowrap bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer">
+                🟠 ชำรุด (ซ่อมได้)
+              </button>
+              <button type="button" onclick="setQuickStatusFilter('disposal')" id="chip-status-disposal" class="quick-filter-chip px-3 py-1 rounded-full text-xs font-semibold transition whitespace-nowrap bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer">
+                🔴 ขอจำหน่าย
+              </button>
+              <button type="button" onclick="setQuickStatusFilter('disposed')" id="chip-status-disposed" class="quick-filter-chip px-3 py-1 rounded-full text-xs font-semibold transition whitespace-nowrap bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer">
+                ⚫ จำหน่ายแล้ว
+              </button>
+            </div>
+
+            <!-- สลับมุมมอง ตาราง vs การ์ดรูปภาพ (View Mode Switcher) -->
+            <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/80 shrink-0">
+              <button type="button" onclick="setAssetViewMode('table')" id="view-mode-table-btn" class="px-2.5 py-1 text-xs font-bold rounded-lg transition bg-white text-red-950 shadow-2xs flex items-center gap-1 cursor-pointer">
+                <span>📋</span> <span>ตาราง</span>
+              </button>
+              <button type="button" onclick="setAssetViewMode('grid')" id="view-mode-grid-btn" class="px-2.5 py-1 text-xs font-semibold text-slate-600 hover:text-red-900 rounded-lg transition flex items-center gap-1 cursor-pointer">
+                <span>🖼️</span> <span>การ์ดรูปภาพ</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- แถบค้นหาข้อความ Real-time (Modern Search Box) -->
           <div class="relative w-full">
-            <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-amber-600/70">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-amber-600/70">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
               </svg>
             </span>
-            <input type="text" id="asset-search-input" oninput="onAssetSearch(this.value)" placeholder="ค้นหาครุภัณฑ์ (ชื่อ, รหัส, สถานที่, ผู้รับผิดชอบ...)" class="w-full pl-9 pr-8 py-2 bg-slate-50/60 hover:bg-white focus:bg-white border border-slate-200 focus:border-amber-400 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 shadow-2xs placeholder-slate-400 text-slate-800 transition">
-            <button type="button" id="asset-search-clear-btn" onclick="clearAssetSearch()" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 text-sm cursor-pointer" title="ล้างการค้นหา">&times;</button>
+            <input type="text" id="asset-search-input" oninput="onAssetSearch(this.value)" placeholder="ค้นหาครุภัณฑ์ตามชื่อ, รหัสครุภัณฑ์, สถานที่ตั้ง, หรือชื่อครูผู้รับผิดชอบ..." class="w-full pl-10 pr-9 py-2.5 bg-slate-50/70 hover:bg-white focus:bg-white border-2 border-slate-200 focus:border-amber-400 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-amber-400/30 shadow-2xs placeholder-slate-400 text-slate-800 transition outline-none">
+            <button type="button" id="asset-search-clear-btn" onclick="clearAssetSearch()" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 text-base cursor-pointer" title="ล้างการค้นหา">&times;</button>
           </div>
         </div>
 
-        <div class="bg-white p-3 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl shadow-xs border border-amber-100 overflow-x-auto touch-scroll">
+        <!-- 1) VIEW MODE: TABLE VIEW (มุมมองตารางมาตรฐานราชการ) -->
+        <div id="screen-asset-table-container" class="bg-white p-3 sm:p-5 md:p-6 rounded-2xl shadow-xs border border-amber-100 overflow-x-auto touch-scroll">
           <div class="block sm:hidden text-[10px] text-amber-800/80 mb-2 font-medium text-right">
             👉 เลื่อนตารางไปทางขวาเพื่อดูข้อมูลทั้งหมด
           </div>
@@ -633,6 +702,13 @@
               <!-- Populated by JS -->
             </tbody>
           </table>
+        </div>
+
+        <!-- 2) VIEW MODE: CARD / GRID VIEW (มุมมองการ์ดรูปภาพ สไตล์ Gallery) -->
+        <div id="screen-asset-grid-container" class="hidden">
+          <div id="screen-asset-grid-cards" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5">
+            <!-- Populated by JS -->
+          </div>
         </div>
       </div>
 
@@ -1938,6 +2014,6 @@
     <option value="นางสาวภัฐธีรา  จุลพันธ์">ธุรการโรงเรียน</option>
   </datalist>
 
-  <script src="app.js?v=10.3"></script>
+  <script src="app.js?v=10.4"></script>
 </body>
 </html>

@@ -26,6 +26,53 @@ let assetPrintMode = 'single-pages';
 // กำหนดเป้าหมายการพิมพ์ (asset, material, annualInspection, disposalReport, qrSticker)
 let currentPrintTarget = 'asset';
 
+// ==================== ระบบแจ้งเตือนลอย (Floating Toast Notification) ====================
+function showToast(message, type = 'info', duration = 3200) {
+  const container = document.getElementById('toast-container');
+  if (!container) {
+    console.log(`[Toast ${type}]`, message);
+    return;
+  }
+
+  const toast = document.createElement('div');
+  toast.className = 'toast-animate pointer-events-auto flex items-center gap-2.5 px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl shadow-xl backdrop-blur-md border text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer';
+
+  let icon = 'ℹ️';
+  let themeClass = 'bg-slate-900/95 text-white border-slate-700/70 shadow-slate-950/20';
+  if (type === 'success') {
+    icon = '✅';
+    themeClass = 'bg-emerald-950/95 text-emerald-100 border-emerald-500/50 shadow-emerald-950/30';
+  } else if (type === 'error' || type === 'danger') {
+    icon = '❌';
+    themeClass = 'bg-rose-950/95 text-rose-100 border-rose-500/50 shadow-rose-950/30';
+  } else if (type === 'warning') {
+    icon = '⚠️';
+    themeClass = 'bg-amber-950/95 text-amber-100 border-amber-500/50 shadow-amber-950/30';
+  }
+
+  toast.className += ` ${themeClass}`;
+  toast.innerHTML = `
+    <span class="text-base shrink-0">${icon}</span>
+    <span class="flex-1 leading-snug">${escapeHtml(message)}</span>
+    <button type="button" class="text-white/60 hover:text-white ml-1 text-sm font-bold shrink-0">&times;</button>
+  `;
+
+  const closeToast = () => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(-8px) scale(0.96)';
+    setTimeout(() => {
+      if (toast.parentNode) toast.remove();
+    }, 200);
+  };
+
+  toast.onclick = closeToast;
+  container.appendChild(toast);
+
+  if (duration > 0) {
+    setTimeout(closeToast, duration);
+  }
+}
+
 function applyStickerPrintPageStyle() {
   let styleEl = document.getElementById('sticker-print-style');
   if (!styleEl) {
@@ -824,12 +871,12 @@ function copyUserPassword(userId) {
   if (!span) return;
   const pwd = span.getAttribute('data-password');
   if (!pwd) {
-    alert('ไม่พบข้อมูลรหัสผ่านข้อความธรรมดา (คุณครูสามารถกดปุ่ม "🔑 รหัส" เพื่อตั้งรหัสผ่านใหม่ให้ครูท่านนี้ได้ทันทีครับ)');
+    showToast('ไม่พบข้อมูลรหัสผ่านข้อความธรรมดา (กดปุ่ม 🔑 เพื่อตั้งรหัสผ่านใหม่ได้ทันที)', 'warning');
     return;
   }
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(pwd).then(() => {
-      alert(`📋 คัดลอกรหัสผ่าน "${pwd}" เรียบร้อยแล้ว`);
+      showToast(`คัดลอกรหัสผ่าน "${pwd}" เรียบร้อยแล้ว`, 'success');
     }).catch(() => {
       prompt('คัดลอกรหัสผ่าน:', pwd);
     });
@@ -952,7 +999,7 @@ ALTER TABLE app_users DISABLE ROW LEVEL SECURITY;`;
 
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(sql).then(() => {
-      alert('📋 คัดลอกคำสั่ง SQL เรียบร้อยแล้ว! นำไปวางใน Supabase SQL Editor แล้วกด Run ได้เลยครับ');
+      showToast('คัดลอกคำสั่ง SQL เรียบร้อยแล้ว! นำไปวางใน Supabase SQL Editor ได้เลยครับ', 'success');
     }).catch(() => {
       prompt('คัดลอกคำสั่ง SQL ด้านล่างนี้:', sql);
     });
@@ -1113,6 +1160,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ตรวจสอบการเข้าสู่ระบบ
   await checkAuthAndInitialize();
 
+  // เริ่มต้นสถานะมุมมองตารางหรือการ์ด
+  setAssetViewMode(assetViewMode);
+
   // ตรวจสอบว่ามีการสแกน QR Code ดูข้อมูลครุภัณฑ์หรือไม่
   const urlParams = new URLSearchParams(window.location.search);
   const viewAssetId = urlParams.get('view_asset');
@@ -1261,6 +1311,7 @@ const START_FISCAL_YEAR = 2570; // เริ่มต้นที่ปีงบ
 let assetFiscalYear = '2570';
 let assetMonth = 'all';
 let assetStatusFilter = 'all';
+let assetViewMode = localStorage.getItem('asset_view_mode') || 'table';
 let materialFiscalYear = '2570';
 let materialMonth = 'all';
 
@@ -1347,17 +1398,17 @@ function onAssetStatusChange(status) {
 function getAssetStatusBadge(status) {
   const s = status || 'ใช้งานได้ดี';
   if (s === 'ใช้งานได้ดี') {
-    return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs whitespace-nowrap">🟢 ใช้งานได้ดี</span>`;
+    return `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/90 shadow-2xs whitespace-nowrap"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>ใช้งานได้ดี</span>`;
   } else if (s.includes('ซ่อม')) {
-    return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs whitespace-nowrap">🟠 ชำรุด (ซ่อมได้)</span>`;
+    return `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200/90 shadow-2xs whitespace-nowrap"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>ชำรุด (ซ่อมได้)</span>`;
   } else if (s.includes('ขอจำหน่าย')) {
-    return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-300 shadow-2xs whitespace-nowrap animate-pulse">🔴 ขอจำหน่าย</span>`;
+    return `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200/90 shadow-2xs whitespace-nowrap animate-pulse"><span class="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"></span>ขอจำหน่าย</span>`;
   } else if (s.includes('จำหน่ายแล้ว') || s.includes('แทงจำหน่าย')) {
-    return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-200 text-slate-800 border border-slate-400 shadow-2xs whitespace-nowrap">⚫ จำหน่ายแล้ว</span>`;
+    return `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-300 shadow-2xs whitespace-nowrap"><span class="w-1.5 h-1.5 rounded-full bg-slate-500 shrink-0"></span>จำหน่ายแล้ว</span>`;
   } else if (s.includes('สูญหาย')) {
-    return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-purple-100 text-purple-800 border border-purple-300 shadow-2xs whitespace-nowrap">⚪ สูญหาย</span>`;
+    return `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200 shadow-2xs whitespace-nowrap"><span class="w-1.5 h-1.5 rounded-full bg-purple-500 shrink-0"></span>สูญหาย</span>`;
   }
-  return `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs whitespace-nowrap">${escapeHtml(s)}</span>`;
+  return `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs whitespace-nowrap"><span class="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0"></span>${escapeHtml(s)}</span>`;
 }
 
 function getCurrentFiscalYear() {
@@ -1457,6 +1508,34 @@ function populateFiscalYearOptions(tab) {
   }
 }
 
+function syncQuickFilterChips(statusKey) {
+  const chipKeys = ['all', 'good', 'repair', 'disposal', 'disposed'];
+  chipKeys.forEach(k => {
+    const chip = document.getElementById(`chip-status-${k}`);
+    if (!chip) return;
+    if (k === statusKey) {
+      chip.className = 'quick-filter-chip active px-3 py-1 rounded-full text-xs font-bold transition whitespace-nowrap bg-amber-500 text-white shadow-2xs cursor-pointer';
+    } else {
+      chip.className = 'quick-filter-chip px-3 py-1 rounded-full text-xs font-semibold transition whitespace-nowrap bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer';
+    }
+  });
+}
+
+function setQuickStatusFilter(statusKey) {
+  assetStatusFilter = statusKey;
+  const statusSelect = document.getElementById('asset-status-select');
+  if (statusSelect) {
+    statusSelect.value = statusKey;
+  }
+  syncQuickFilterChips(statusKey);
+  renderAssetTable();
+  updateAssetSelectionUI();
+}
+
+function filterByKpiStatus(statusKey) {
+  setQuickStatusFilter(statusKey);
+}
+
 function onAssetFilterChange() {
   const fySelect = document.getElementById('asset-fiscal-year-select');
   const mSelect = document.getElementById('asset-month-select');
@@ -1464,18 +1543,9 @@ function onAssetFilterChange() {
   if (fySelect) assetFiscalYear = fySelect.value;
   if (mSelect) assetMonth = mSelect.value;
   if (statusSelect) assetStatusFilter = statusSelect.value;
+  syncQuickFilterChips(assetStatusFilter);
   renderAssetTable();
   updateAssetSelectionUI();
-}
-
-function filterByKpiStatus(statusKey) {
-  const statusSelect = document.getElementById('asset-status-select');
-  if (statusSelect) {
-    statusSelect.value = statusKey;
-    assetStatusFilter = statusKey;
-    renderAssetTable();
-    updateAssetSelectionUI();
-  }
 }
 
 function onMaterialFilterChange() {
@@ -1764,6 +1834,8 @@ function renderAssetTable() {
     }
   }
 
+  renderAssetGridCards(list);
+
   if (list.length === 0) {
     const tr = document.createElement('tr');
     let msg = '🔍 ไม่พบรายการครุภัณฑ์ในเงื่อนไขที่เลือก';
@@ -1773,6 +1845,10 @@ function renderAssetTable() {
     if (assetMonth !== 'all') {
       const monthNames = {'10':'ต.ค.','11':'พ.ย.','12':'ธ.ค.','1':'ม.ค.','2':'ก.พ.','3':'มี.ค.','4':'เม.ย.','5':'พ.ค.','6':'มิ.ย.','7':'ก.ค.','8':'ส.ค.','9':'ก.ย.'};
       msg += ` ประจำเดือน ${monthNames[assetMonth] || assetMonth}`;
+    }
+    if (assetStatusFilter !== 'all') {
+      const statusLabels = { 'good': 'ใช้งานได้ดี', 'repair': 'ชำรุด', 'disposal': 'ขอจำหน่าย', 'disposed': 'จำหน่ายแล้ว' };
+      msg += ` สถานะ "${statusLabels[assetStatusFilter] || assetStatusFilter}"`;
     }
     if (assetSearchQuery.trim()) {
       msg += ` คำค้น "${escapeHtml(assetSearchQuery)}"`;
@@ -1789,7 +1865,7 @@ function renderAssetTable() {
   list.forEach((item, index) => {
     const isSelected = selectedAssetIds.has(item.id);
     const tr = document.createElement('tr');
-    tr.className = `hover:bg-amber-50/60 border-b border-amber-100/70 cursor-pointer transition ${isSelected ? 'bg-amber-50/40' : ''}`;
+    tr.className = `hover:bg-amber-50/70 border-b border-amber-100/70 cursor-pointer transition-colors duration-150 ${isSelected ? 'bg-amber-50/50' : ''}`;
     
     // คลิกแถวเพื่อเปิด/ปิดการติ๊กเลือก
     tr.onclick = (e) => {
@@ -1804,21 +1880,29 @@ function renderAssetTable() {
           ${isSelected ? 'checked' : ''} 
           onchange="toggleAssetItemSelection(${item.id}, this.checked)">
       </td>
-      <td class="p-2 border border-slate-200 text-center font-medium">${index + 1}</td>
-      <td class="p-2 border border-slate-200">${item.received_date || ''}</td>
-      <td class="p-2 border border-slate-200 font-bold text-red-950">${item.asset_code || ''}</td>
-      <td class="p-2 border border-slate-200 font-medium">${item.asset_name || ''}</td>
-      <td class="p-2 border border-slate-200 text-slate-600">${item.spec || ''}</td>
-      <td class="p-2 border border-slate-200">${item.doc_no || ''}</td>
-      <td class="p-2 border border-slate-200 text-right font-medium">${Number(item.cost).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-      <td class="p-2 border border-slate-200 text-center">${item.useful_life}</td>
-      <td class="p-2 border border-slate-200 text-right text-slate-500">${Number(item.depr_per_year).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-      <td class="p-2 border border-slate-200 text-right font-bold text-red-900">${Number(item.net_book_value).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-      <td class="p-2 border border-slate-200">${item.location || ''}</td>
-      <td class="p-2 border border-slate-200 text-center">
+      <td class="p-2 border border-slate-200 text-center font-medium text-slate-500 text-xs">${index + 1}</td>
+      <td class="p-2 border border-slate-200 text-xs text-slate-700 whitespace-nowrap">${item.received_date || ''}</td>
+      <td class="p-2 border border-slate-200 font-bold text-red-950 font-mono text-xs whitespace-nowrap">
+        <div class="flex items-center gap-1.5">
+          <span class="w-6 h-6 rounded-md bg-amber-50 border border-amber-200/70 flex items-center justify-center text-xs shrink-0 shadow-2xs">📦</span>
+          <span>${item.asset_code || ''}</span>
+        </div>
+      </td>
+      <td class="p-2 border border-slate-200 font-semibold text-slate-800 text-xs">
+        <div>${escapeHtml(item.asset_name || '')}</div>
+        ${item.category ? `<div class="text-[10px] text-amber-800/80 font-normal mt-0.5">${escapeHtml(item.category)}</div>` : ''}
+      </td>
+      <td class="p-2 border border-slate-200 text-slate-600 text-xs max-w-[160px] truncate" title="${escapeHtml(item.spec || '')}">${escapeHtml(item.spec || '')}</td>
+      <td class="p-2 border border-slate-200 text-xs text-slate-700">${escapeHtml(item.doc_no || '')}</td>
+      <td class="p-2 border border-slate-200 text-right font-medium text-xs whitespace-nowrap">${Number(item.cost).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+      <td class="p-2 border border-slate-200 text-center text-xs">${item.useful_life}</td>
+      <td class="p-2 border border-slate-200 text-right text-slate-500 text-xs whitespace-nowrap">${Number(item.depr_per_year).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+      <td class="p-2 border border-slate-200 text-right font-bold text-red-900 text-xs whitespace-nowrap">${Number(item.net_book_value).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+      <td class="p-2 border border-slate-200 text-xs text-slate-700 whitespace-nowrap">${escapeHtml(item.location || '')}</td>
+      <td class="p-2 border border-slate-200 text-center whitespace-nowrap">
         ${getAssetStatusBadge(item.status)}
       </td>
-      <td class="p-2 border border-slate-200">${item.responsible_person || ''}</td>
+      <td class="p-2 border border-slate-200 text-xs font-medium text-slate-800 whitespace-nowrap">${escapeHtml(item.responsible_person || '')}</td>
       <td class="p-2 border border-slate-200 text-center whitespace-nowrap space-x-1" onclick="event.stopPropagation()">
         <button onclick="printSingleQrSticker(${item.id})" class="text-emerald-700 hover:text-emerald-900 p-1.5 font-semibold rounded-lg hover:bg-emerald-100 transition shadow-2xs cursor-pointer" title="พิมพ์สติกเกอร์ QR Code ติดตัวครุภัณฑ์">🏷️</button>
         <button onclick="printSingleAsset(${item.id})" class="text-amber-600 hover:text-amber-800 p-1.5 font-semibold rounded-lg hover:bg-amber-100 transition shadow-2xs cursor-pointer" title="พิมพ์บัตรรายการนี้เฉพาะใบเดียว">🖨️</button>
@@ -1827,6 +1911,160 @@ function renderAssetTable() {
       </td>
     `;
     screenTbody.appendChild(tr);
+  });
+}
+
+// ==================== สลับมุมมอง ตาราง vs การ์ดรูปภาพ (TABLE / GALLERY VIEW) ====================
+function setAssetViewMode(mode) {
+  assetViewMode = mode;
+  try {
+    localStorage.setItem('asset_view_mode', mode);
+  } catch (e) {}
+
+  const tableContainer = document.getElementById('screen-asset-table-container');
+  const gridContainer = document.getElementById('screen-asset-grid-container');
+  const tableBtn = document.getElementById('view-mode-table-btn');
+  const gridBtn = document.getElementById('view-mode-grid-btn');
+
+  if (mode === 'grid') {
+    if (tableContainer) tableContainer.classList.add('hidden');
+    if (gridContainer) gridContainer.classList.remove('hidden');
+    if (tableBtn) {
+      tableBtn.className = 'px-2.5 py-1 text-xs font-semibold text-slate-600 hover:text-red-900 rounded-lg transition flex items-center gap-1 cursor-pointer';
+    }
+    if (gridBtn) {
+      gridBtn.className = 'px-2.5 py-1 text-xs font-bold rounded-lg transition bg-white text-red-950 shadow-2xs flex items-center gap-1 cursor-pointer';
+    }
+    renderAssetGridCards();
+  } else {
+    if (tableContainer) tableContainer.classList.remove('hidden');
+    if (gridContainer) gridContainer.classList.add('hidden');
+    if (tableBtn) {
+      tableBtn.className = 'px-2.5 py-1 text-xs font-bold rounded-lg transition bg-white text-red-950 shadow-2xs flex items-center gap-1 cursor-pointer';
+    }
+    if (gridBtn) {
+      gridBtn.className = 'px-2.5 py-1 text-xs font-semibold text-slate-600 hover:text-red-900 rounded-lg transition flex items-center gap-1 cursor-pointer';
+    }
+  }
+}
+
+function renderAssetGridCards(list = null) {
+  const gridContainer = document.getElementById('screen-asset-grid-cards');
+  if (!gridContainer) return;
+  gridContainer.innerHTML = '';
+
+  const items = list !== null ? list : getFilteredAssets();
+
+  if (items.length === 0) {
+    gridContainer.innerHTML = `
+      <div class="col-span-full py-12 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
+        <span class="text-4xl block mb-2">🔍</span>
+        <p class="text-sm font-medium">ไม่พบรายการครุภัณฑ์ในเงื่อนไขที่เลือก</p>
+      </div>
+    `;
+    return;
+  }
+
+  const canEdit = currentUser && (currentUser.canEdit || currentUser.role === 'admin');
+  const canDelete = currentUser && (currentUser.canDelete || currentUser.role === 'admin');
+
+  items.forEach(item => {
+    const isSelected = selectedAssetIds.has(item.id);
+    const card = document.createElement('div');
+    card.className = `bg-white rounded-2xl border ${isSelected ? 'border-amber-400 ring-2 ring-amber-400/40 bg-amber-50/20' : 'border-slate-200/80 hover:border-amber-300'} p-3.5 sm:p-4 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between group relative cursor-pointer`;
+
+    card.onclick = (e) => {
+      if (!e.target.closest('button, input, a')) {
+        toggleAssetItemSelection(item.id);
+      }
+    };
+
+    const costFormatted = Number(item.cost || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 });
+    const netValueFormatted = Number(item.net_book_value || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 });
+
+    card.innerHTML = `
+      <div>
+        <!-- Top Bar: Checkbox, Code, Status Badge -->
+        <div class="flex items-center justify-between gap-1.5 mb-2.5">
+          <div class="flex items-center gap-2 overflow-hidden" onclick="event.stopPropagation()">
+            <input type="checkbox" class="w-4 h-4 accent-amber-500 rounded cursor-pointer" 
+              ${isSelected ? 'checked' : ''} 
+              onchange="toggleAssetItemSelection(${item.id}, this.checked)">
+            <span class="font-mono text-xs font-bold text-red-950 bg-red-50 border border-red-200/70 px-2 py-0.5 rounded-md truncate max-w-[130px] sm:max-w-[150px]" title="${escapeHtml(item.asset_code || '')}">
+              ${escapeHtml(item.asset_code || 'ไม่มีรหัส')}
+            </span>
+          </div>
+          <div class="shrink-0">
+            ${getAssetStatusBadge(item.status)}
+          </div>
+        </div>
+
+        <!-- Thumbnail / Category Badge Box -->
+        <div class="h-24 sm:h-28 rounded-xl bg-gradient-to-br from-amber-50/80 via-slate-50 to-amber-100/30 border border-amber-100/70 flex flex-col items-center justify-center mb-3 relative overflow-hidden group-hover:scale-[1.01] transition-transform">
+          <span class="text-3xl sm:text-4xl filter drop-shadow-xs">📦</span>
+          <span class="text-[10px] font-semibold text-amber-800/80 mt-1 px-2 py-0.5 bg-white/80 rounded-full border border-amber-200/50 backdrop-blur-xs truncate max-w-[90%]">
+            ${escapeHtml(item.category || 'ครุภัณฑ์การศึกษา')}
+          </span>
+          <span class="absolute top-1.5 right-1.5 text-[9px] font-mono text-slate-400 bg-white/70 px-1 rounded">
+            ID:${item.id}
+          </span>
+        </div>
+
+        <!-- Title & Spec -->
+        <h4 class="font-bold text-slate-800 text-sm leading-snug line-clamp-2 group-hover:text-red-950 transition mb-1" title="${escapeHtml(item.asset_name || '')}">
+          ${escapeHtml(item.asset_name || 'ไม่ระบุชื่อ')}
+        </h4>
+        <p class="text-xs text-slate-500 line-clamp-1 mb-3" title="${escapeHtml(item.spec || '')}">
+          ${escapeHtml(item.spec || 'ไม่มีรายละเอียดคุณลักษณะ')}
+        </p>
+
+        <!-- Metadata Info Grid -->
+        <div class="grid grid-cols-2 gap-1.5 text-xs bg-slate-50/80 p-2.5 rounded-xl border border-slate-100 mb-3">
+          <div class="overflow-hidden">
+            <span class="text-[10px] text-slate-400 block font-medium">📍 สถานที่ตั้ง</span>
+            <span class="text-slate-700 font-semibold truncate block" title="${escapeHtml(item.location || '-')}">${escapeHtml(item.location || '-')}</span>
+          </div>
+          <div class="overflow-hidden">
+            <span class="text-[10px] text-slate-400 block font-medium">👤 ผู้รับผิดชอบ</span>
+            <span class="text-slate-700 font-semibold truncate block" title="${escapeHtml(item.responsible_person || '-')}">${escapeHtml(item.responsible_person || '-')}</span>
+          </div>
+          <div>
+            <span class="text-[10px] text-slate-400 block font-medium">💰 ราคาทุน</span>
+            <span class="text-slate-800 font-bold">฿${costFormatted}</span>
+          </div>
+          <div>
+            <span class="text-[10px] text-slate-400 block font-medium">📉 มูลค่าสุทธิ</span>
+            <span class="text-red-900 font-bold">฿${netValueFormatted}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer Action Buttons -->
+      <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-1" onclick="event.stopPropagation()">
+        <div class="flex items-center gap-1">
+          <button type="button" onclick="printSingleQrSticker(${item.id})" class="text-xs font-semibold px-2 py-1 text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition flex items-center gap-1 cursor-pointer" title="พิมพ์สติกเกอร์ QR">
+            <span>🏷️</span> <span>QR</span>
+          </button>
+          <button type="button" onclick="printSingleAsset(${item.id})" class="text-xs font-semibold px-2 py-1 text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-lg border border-amber-200 transition flex items-center gap-1 cursor-pointer" title="พิมพ์บัตรครุภัณฑ์">
+            <span>🖨️</span> <span>บัตร</span>
+          </button>
+        </div>
+        <div class="flex items-center gap-1">
+          ${canEdit ? `
+            <button type="button" onclick="editAsset(${item.id})" class="p-1 text-amber-700 hover:text-amber-900 hover:bg-amber-100 rounded-lg transition cursor-pointer" title="แก้ไข">
+              ✏️
+            </button>
+          ` : ''}
+          ${canDelete ? `
+            <button type="button" onclick="deleteAsset(${item.id})" class="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer" title="ลบ">
+              🗑️
+            </button>
+          ` : ''}
+        </div>
+      </div>
+    `;
+
+    gridContainer.appendChild(card);
   });
 }
 
@@ -2502,10 +2740,11 @@ async function saveAsset(e) {
 
   if (res.ok) {
     closeModal('assetModal');
+    showToast(editId ? 'แก้ไขข้อมูลครุภัณฑ์เรียบร้อยแล้ว' : 'บันทึกข้อมูลครุภัณฑ์เรียบร้อยแล้ว', 'success');
     loadAssets();
   } else {
     const err = await res.json().catch(() => ({}));
-    alert('เกิดข้อผิดพลาด: ' + (err.error || 'ไม่สามารถบันทึกได้'));
+    showToast('เกิดข้อผิดพลาด: ' + (err.error || 'ไม่สามารถบันทึกได้'), 'error');
   }
 }
 
@@ -2523,6 +2762,7 @@ async function deleteAsset(id) {
   localStorage.setItem('cached_assets', JSON.stringify(assetList));
   selectedAssetIds.delete(Number(id));
   selectedAssetIds.delete(id);
+  showToast(`ลบรายการ "${itemName}" เรียบร้อยแล้ว`, 'info');
 
   // 2. อัปเดตหน้าจอทันที
   populateFiscalYearOptions('asset');
@@ -2875,10 +3115,11 @@ async function saveMaterial(e) {
 
   if (res.ok) {
     closeModal('materialModal');
+    showToast(editId ? 'แก้ไขข้อมูลวัสดุเรียบร้อยแล้ว' : 'บันทึกรายการวัสดุเรียบร้อยแล้ว', 'success');
     loadMaterials();
   } else {
     const err = await res.json().catch(() => ({}));
-    alert('เกิดข้อผิดพลาด: ' + (err.error || 'ไม่สามารถบันทึกได้'));
+    showToast('เกิดข้อผิดพลาด: ' + (err.error || 'ไม่สามารถบันทึกได้'), 'error');
   }
 }
 
@@ -2895,6 +3136,7 @@ async function deleteMaterial(id) {
   localStorage.setItem('cached_materials', JSON.stringify(materialList));
   selectedMaterialIds.delete(Number(id));
   selectedMaterialIds.delete(id);
+  showToast(`ลบรายการ "${itemName}" เรียบร้อยแล้ว`, 'info');
 
   populateFiscalYearOptions('material');
   renderMaterialTable();
