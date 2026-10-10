@@ -106,10 +106,12 @@ async function authFetch(url, options = {}) {
 }
 
 function showLoginOverlay() {
+  document.documentElement.classList.add('needs-login');
   const overlay = document.getElementById('login-overlay');
   if (overlay) {
     overlay.classList.remove('hidden');
     overlay.classList.add('flex');
+    overlay.style.display = 'flex';
     const passInput = document.getElementById('login-password');
     if (passInput) {
       passInput.value = '';
@@ -119,10 +121,12 @@ function showLoginOverlay() {
 }
 
 function hideLoginOverlay() {
+  document.documentElement.classList.remove('needs-login');
   const overlay = document.getElementById('login-overlay');
   if (overlay) {
     overlay.classList.add('hidden');
     overlay.classList.remove('flex');
+    overlay.style.display = 'none';
   }
 }
 
@@ -217,23 +221,25 @@ async function checkAuthAndInitialize() {
     return;
   }
 
+  // หากผู้ใช้มี Token อยู่แล้ว หน้าแรกจะเปิดขึ้นมาทันทีโดยไม่กะพริบหน้าต่างล็อกอิน
+  // และโหลดข้อมูลครุภัณฑ์, วัสดุ, และสถานะ ควบคู่กับการตรวจสอบ Token แบบขนาน (Parallel) เพื่อความรวดเร็วสูงสุด
   try {
-    const res = await fetch('/api/auth/verify', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const data = await res.json();
-    if (res.ok && data.authenticated) {
-      hideLoginOverlay();
-      await loadAssets();
-      await loadMaterials();
-      await loadDatabaseStatus();
-    } else {
+    const [verifyRes] = await Promise.all([
+      fetch('/api/auth/verify', { headers: { 'Authorization': `Bearer ${token}` } }),
+      loadAssets(),
+      loadMaterials(),
+      loadDatabaseStatus()
+    ]);
+    const data = await verifyRes.json();
+    if (!verifyRes.ok || !data.authenticated) {
       setAuthToken('');
       showLoginOverlay();
+    } else {
+      hideLoginOverlay();
     }
   } catch (err) {
     console.warn('Auth verify check failed:', err);
-    showLoginOverlay();
+    // หากเครือข่ายขัดข้องชั่วคราวแต่มีข้อมูลแคช ให้ใช้งานหน้าแรกต่อได้
   }
 }
 

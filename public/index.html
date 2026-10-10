@@ -7,10 +7,30 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>ระบบบริหารจัดการพัสดุและครุภัณฑ์โรงเรียน</title>
+  <script>
+    // ตรวจสอบสิทธิ์เบื้องต้นทันทีก่อนเรนเดอร์ เพื่อป้องกันหน้าต่างล็อกอินกะพริบขึ้นมาตอนกด F5 / รีเฟรช
+    (function() {
+      try {
+        var token = localStorage.getItem('school_auth_token') || sessionStorage.getItem('school_auth_token');
+        var isPublicAsset = window.location.search.indexOf('view_asset=') !== -1;
+        if (!token && !isPublicAsset) {
+          document.documentElement.classList.add('needs-login');
+        }
+      } catch (e) {}
+    })();
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="qrcode.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    /* จัดการการแสดงผลหน้าต่าง Login ไม่ให้กะพริบตอนรีเฟรช (F5) */
+    #login-overlay {
+      display: none;
+    }
+    html.needs-login #login-overlay {
+      display: flex !important;
+    }
+
     body {
       font-family: 'Sarabun', sans-serif;
       word-break: normal;
@@ -131,7 +151,7 @@
   <!-- ============================================================== -->
   <!-- 0. LOGIN OVERLAY (หน้าต่างรหัสผ่านก่อนเข้าใช้งาน) -->
   <!-- ============================================================== -->
-  <div id="login-overlay" class="fixed inset-0 z-[9999] flex items-center justify-center bg-gradient-to-br from-red-950 via-red-900 to-amber-950 p-4 transition-opacity duration-300">
+  <div id="login-overlay" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-gradient-to-br from-red-950 via-red-900 to-amber-950 p-4 transition-opacity duration-300">
     <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 sm:p-8 border-2 border-amber-300 text-center relative overflow-hidden">
       <div class="absolute -top-12 -right-12 w-32 h-32 bg-amber-200/50 rounded-full blur-2xl pointer-events-none"></div>
       <div class="absolute -bottom-12 -left-12 w-32 h-32 bg-red-200/40 rounded-full blur-2xl pointer-events-none"></div>
@@ -1321,7 +1341,7 @@
   </div>
 
   <!-- MODAL: แสดงบัตรข้อมูลครุภัณฑ์เมื่อสแกน QR Code (Public Verification Card) -->
-  <div id="publicAssetModal" class="fixed inset-0 bg-black/70 backdrop-blur-xs hidden flex items-center justify-center p-3 sm:p-4 z-50">
+  <div id="publicAssetModal" class="fixed inset-0 bg-black/70 backdrop-blur-xs hidden flex items-center justify-center p-3 sm:p-4 z-[10000]">
     <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-5 sm:p-6 max-h-[92vh] overflow-y-auto border border-amber-200">
       <div class="text-center pb-3 border-b border-slate-100">
         <div class="w-14 h-14 mx-auto mb-2 rounded-2xl bg-amber-100 border border-amber-300 flex items-center justify-center text-3xl shadow-xs">
@@ -1367,6 +1387,6 @@
     <option value="นางสาวภัฐธีรา  จุลพันธ์">ธุรการโรงเรียน</option>
   </datalist>
 
-  <script src="app.js?v=8.0"></script>
+  <script src="app.js?v=8.1"></script>
 </body>
 </html>
