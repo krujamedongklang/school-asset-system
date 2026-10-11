@@ -453,53 +453,53 @@
             </button>
           </div>
 
-          <!-- แถวที่ 2: แถบเครื่องมือสั่งพิมพ์และรายงานราชการ (Toolbar Strip จัดกลุ่มสวยงามเป็นระเบียบ) -->
-          <div class="bg-white/95 backdrop-blur-xs p-2 sm:p-2.5 rounded-2xl border border-amber-200/90 shadow-2xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5">
+          <!-- แถวที่ 2: แถบเครื่องมือสั่งพิมพ์และรายงานราชการ (Toolbar Strip ปรับโทนสีสุภาพ สบายตา ไม่แย่งสายตา) -->
+          <div class="bg-white/95 backdrop-blur-xs p-2 sm:p-2.5 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5">
             <!-- กลุ่มที่ 1: การพิมพ์ทะเบียน & พิมพ์สติกเกอร์ QR Code -->
             <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
-              <span class="text-[11px] font-bold text-amber-950/70 hidden sm:inline-flex items-center gap-1 pl-1">
+              <span class="text-[11px] font-bold text-slate-600 hidden sm:inline-flex items-center gap-1 pl-1">
                 <span>🖨️</span> <span>งานพิมพ์:</span>
               </span>
 
               <!-- ตัวเลือกรูปแบบการพิมพ์ -->
               <div class="relative inline-flex items-center flex-1 sm:flex-initial">
-                <select id="asset-print-mode" onchange="onAssetPrintModeChange()" class="w-full sm:w-auto text-xs border border-amber-200 bg-amber-50/50 hover:bg-amber-100/50 rounded-xl px-2.5 py-2 font-semibold text-slate-800 shadow-2xs cursor-pointer focus:ring-2 focus:ring-amber-500 focus:outline-none transition pr-7 appearance-none">
+                <select id="asset-print-mode" onchange="onAssetPrintModeChange()" class="w-full sm:w-auto text-xs border border-slate-200 bg-slate-50/70 hover:bg-slate-100/70 rounded-xl px-2.5 py-1.5 font-semibold text-slate-700 shadow-2xs cursor-pointer focus:ring-2 focus:ring-amber-500 focus:outline-none transition pr-7 appearance-none">
                   <option value="single-pages">📄 แยกพิมพ์แผ่นละ 1 รายการ</option>
                   <option value="combined-table">📑 รวมพิมพ์ในตารางเดียว</option>
                 </select>
-                <span class="pointer-events-none absolute right-2 text-amber-800/60 text-[10px]">▼</span>
+                <span class="pointer-events-none absolute right-2 text-slate-400 text-[10px]">▼</span>
               </div>
 
               <!-- ปุ่มพิมพ์ทะเบียนที่เลือก -->
-              <button onclick="printSelectedAssets()" id="btn-print-assets" class="flex-1 sm:flex-initial justify-center bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold px-3.5 py-2 rounded-xl shadow-xs hover:shadow transition flex items-center gap-1.5 text-xs border border-amber-600/30 whitespace-nowrap cursor-pointer transform active:scale-95">
+              <button onclick="printSelectedAssets()" id="btn-print-assets" class="flex-1 sm:flex-initial justify-center bg-amber-500 hover:bg-amber-600 text-white font-bold px-3.5 py-1.5 rounded-xl shadow-2xs hover:shadow-xs transition flex items-center gap-1.5 text-xs whitespace-nowrap cursor-pointer transform active:scale-95">
                 <span>🖨️</span>
                 <span id="btn-print-text">พิมพ์รายการที่เลือก</span>
               </button>
 
               <!-- ปุ่มพิมพ์สติกเกอร์ QR Code -->
-              <button onclick="openQrStickerModal()" class="flex-1 sm:flex-initial justify-center bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold px-3.5 py-2 rounded-xl shadow-xs hover:shadow transition flex items-center gap-1.5 text-xs whitespace-nowrap border border-emerald-700/30 cursor-pointer transform active:scale-95" title="พิมพ์สติกเกอร์ QR Code / Barcode ติดตัวครุภัณฑ์">
+              <button onclick="openQrStickerModal()" class="flex-1 sm:flex-initial justify-center bg-white hover:bg-emerald-50 text-emerald-800 hover:text-emerald-900 border border-emerald-300/80 font-bold px-3 py-1.5 rounded-xl shadow-2xs transition flex items-center gap-1.5 text-xs whitespace-nowrap cursor-pointer transform active:scale-95" title="พิมพ์สติกเกอร์ QR Code / Barcode ติดตัวครุภัณฑ์">
                 <span>🏷️</span>
                 <span>พิมพ์สติกเกอร์ QR Code</span>
               </button>
             </div>
 
             <!-- เส้นคั่นแบ่งกลุ่มสายตาบนหน้าจอขนาดใหญ่ -->
-            <div class="hidden lg:block h-6 w-px bg-amber-200/70 self-center"></div>
+            <div class="hidden lg:block h-5 w-px bg-slate-200 self-center"></div>
 
-            <!-- กลุ่มที่ 2: รายงานทางราชการ (ตรวจสอบประจำปี & ขอจำหน่าย อยู่ด้วยกันเสมอ ไม่แยกแถวเดี่ยว) -->
+            <!-- กลุ่มที่ 2: รายงานทางราชการ -->
             <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
-              <span class="text-[11px] font-bold text-amber-950/70 hidden sm:inline-flex items-center gap-1 pl-1">
+              <span class="text-[11px] font-bold text-slate-600 hidden sm:inline-flex items-center gap-1 pl-1">
                 <span>📋</span> <span>รายงานราชการ:</span>
               </span>
 
               <!-- รายงานตรวจสอบประจำปี -->
-              <button onclick="openAnnualInspectionModal()" class="flex-1 sm:flex-initial justify-center bg-gradient-to-r from-blue-700 to-indigo-800 hover:from-blue-800 hover:to-indigo-900 text-white px-3.5 py-2 rounded-xl font-bold shadow-xs hover:shadow transition flex items-center gap-1.5 text-xs whitespace-nowrap border border-blue-900/30 cursor-pointer transform active:scale-95" title="สร้างและพิมพ์รายงานผลการตรวจสอบพัสดุประจำปีงบประมาณ">
+              <button onclick="openAnnualInspectionModal()" class="flex-1 sm:flex-initial justify-center bg-white hover:bg-blue-50 text-blue-900 hover:text-blue-950 border border-blue-200/90 font-bold px-3 py-1.5 rounded-xl shadow-2xs transition flex items-center gap-1.5 text-xs whitespace-nowrap cursor-pointer transform active:scale-95" title="สร้างและพิมพ์รายงานผลการตรวจสอบพัสดุประจำปีงบประมาณ">
                 <span>📋</span>
                 <span>รายงานตรวจสอบประจำปี</span>
               </button>
 
               <!-- รายงานขอจำหน่าย -->
-              <button onclick="openDisposalReportModal()" class="flex-1 sm:flex-initial justify-center bg-gradient-to-r from-rose-700 to-red-800 hover:from-rose-800 hover:to-red-900 text-white px-3.5 py-2 rounded-xl font-bold shadow-xs hover:shadow transition flex items-center gap-1.5 text-xs whitespace-nowrap border border-rose-900/30 cursor-pointer transform active:scale-95" title="สร้างและพิมพ์รายงานขออนุมัติจำหน่ายครุภัณฑ์ชำรุด/เสื่อมสภาพ">
+              <button onclick="openDisposalReportModal()" class="flex-1 sm:flex-initial justify-center bg-white hover:bg-rose-50 text-rose-800 hover:text-rose-900 border border-rose-200/90 font-bold px-3 py-1.5 rounded-xl shadow-2xs transition flex items-center gap-1.5 text-xs whitespace-nowrap cursor-pointer transform active:scale-95" title="สร้างและพิมพ์รายงานขออนุมัติจำหน่ายครุภัณฑ์ชำรุด/เสื่อมสภาพ">
                 <span>🗑️</span>
                 <span>รายงานขอจำหน่าย</span>
               </button>
@@ -578,25 +578,49 @@
           </div>
         </div>
 
-        <!-- แถบกรองปีงบประมาณ / เดือน / สถานะ / ค้นหาครุภัณฑ์ -->
-        <div class="mb-3 sm:mb-4 bg-white p-3.5 sm:p-4 rounded-2xl shadow-xs border border-amber-200/80 no-print space-y-3">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
-            <div class="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-3 w-full sm:w-auto flex-wrap">
-              <div class="col-span-1 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-1.5">
+        <!-- แถบเครื่องมือค้นหาและตัวกรองครุภัณฑ์ (Clean & Unified Toolbar) -->
+        <div class="mb-3 sm:mb-4 bg-white p-3 sm:p-3.5 rounded-2xl shadow-xs border border-amber-200/80 no-print space-y-2.5">
+          <!-- แถวที่ 1: ค้นหาหลักแบบ Real-time + ปุ่มสลับมุมมอง (ตาราง / การ์ด) -->
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+            <div class="relative flex-1">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-amber-600/70">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+              </span>
+              <input type="text" id="asset-search-input" oninput="onAssetSearch(this.value)" placeholder="ค้นหาครุภัณฑ์ตามชื่อ, รหัสครุภัณฑ์, สถานที่ตั้ง, หรือชื่อครูผู้รับผิดชอบ..." class="w-full pl-10 pr-9 py-2 bg-slate-50/70 hover:bg-white focus:bg-white border border-slate-200 focus:border-amber-400 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-amber-400/30 shadow-2xs placeholder-slate-400 text-slate-800 transition outline-none">
+              <button type="button" id="asset-search-clear-btn" onclick="clearAssetSearch()" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 text-base cursor-pointer" title="ล้างการค้นหา">&times;</button>
+            </div>
+
+            <!-- สลับมุมมอง ตาราง vs การ์ดรูปภาพ -->
+            <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/80 shrink-0 self-end sm:self-auto">
+              <button type="button" onclick="setAssetViewMode('table')" id="view-mode-table-btn" class="px-2.5 py-1 text-xs font-bold rounded-lg transition bg-white text-red-950 shadow-2xs flex items-center gap-1 cursor-pointer">
+                <span>📋</span> <span>ตาราง</span>
+              </button>
+              <button type="button" onclick="setAssetViewMode('grid')" id="view-mode-grid-btn" class="px-2.5 py-1 text-xs font-semibold text-slate-600 hover:text-red-900 rounded-lg transition flex items-center gap-1 cursor-pointer">
+                <span>🖼️</span> <span>การ์ดรูปภาพ</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- แถวที่ 2: ตัวกรองย่อย (ปีงบ / เดือน / สภาพสถานะ) + จำนวนผลลัพธ์ -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-slate-100">
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+              <!-- ปีงบประมาณ -->
+              <div class="flex items-center gap-1.5">
                 <span class="text-[11px] sm:text-xs font-bold text-red-950 flex items-center gap-1">
-                  <span class="p-1 bg-amber-100 text-amber-900 rounded-md text-xs leading-none">📅</span>
-                  <span>ปีงบประมาณ:</span>
+                  <span class="p-0.5 bg-amber-100 text-amber-900 rounded text-[11px]">📅</span>
+                  <span>ปีงบ:</span>
                 </span>
-                <select id="asset-fiscal-year-select" onchange="onAssetFilterChange()" class="w-full sm:w-auto text-xs font-bold border border-amber-300 rounded-xl px-2.5 py-1.5 bg-amber-50/50 text-red-950 shadow-2xs focus:ring-2 focus:ring-amber-500 cursor-pointer">
+                <select id="asset-fiscal-year-select" onchange="onAssetFilterChange()" class="text-xs font-bold border border-amber-300 rounded-xl px-2.5 py-1 bg-amber-50/50 text-red-950 shadow-2xs focus:ring-2 focus:ring-amber-500 cursor-pointer">
                   <!-- Dynamically populated -->
                 </select>
               </div>
 
-              <div class="col-span-1 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-1.5">
-                <span class="text-[11px] sm:text-xs font-bold text-red-950">
-                  <span>เดือน:</span>
-                </span>
-                <select id="asset-month-select" onchange="onAssetFilterChange()" class="w-full sm:w-auto text-xs font-semibold border border-amber-300 rounded-xl px-2.5 py-1.5 bg-amber-50/50 text-red-950 shadow-2xs focus:ring-2 focus:ring-amber-500 cursor-pointer">
+              <!-- เดือน -->
+              <div class="flex items-center gap-1.5">
+                <span class="text-[11px] sm:text-xs font-bold text-red-950">เดือน:</span>
+                <select id="asset-month-select" onchange="onAssetFilterChange()" class="text-xs font-semibold border border-amber-300 rounded-xl px-2.5 py-1 bg-amber-50/50 text-red-950 shadow-2xs focus:ring-2 focus:ring-amber-500 cursor-pointer">
                   <option value="all">ทุกเดือน (ทั้งปีงบ)</option>
                   <option value="10">ตุลาคม (ต.ค.)</option>
                   <option value="11">พฤศจิกายน (พ.ย.)</option>
@@ -613,11 +637,10 @@
                 </select>
               </div>
 
-              <div class="col-span-1 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-1.5">
-                <span class="text-[11px] sm:text-xs font-bold text-red-950">
-                  <span>สภาพ/สถานะ:</span>
-                </span>
-                <select id="asset-status-select" onchange="onAssetFilterChange()" class="w-full sm:w-auto text-xs font-semibold border border-amber-300 rounded-xl px-2.5 py-1.5 bg-amber-50/50 text-red-950 shadow-2xs focus:ring-2 focus:ring-amber-500 cursor-pointer">
+              <!-- สภาพ/สถานะ -->
+              <div class="flex items-center gap-1.5">
+                <span class="text-[11px] sm:text-xs font-bold text-red-950">สถานะ:</span>
+                <select id="asset-status-select" onchange="onAssetFilterChange()" class="text-xs font-semibold border border-amber-300 rounded-xl px-2.5 py-1 bg-amber-50/50 text-red-950 shadow-2xs focus:ring-2 focus:ring-amber-500 cursor-pointer">
                   <option value="all">ทุกสถานะ</option>
                   <option value="good">🟢 ใช้งานได้ดี</option>
                   <option value="repair">🟠 ชำรุด (ซ่อมได้)</option>
@@ -630,51 +653,6 @@
 
             <!-- สรุปจำนวนรายการที่พบ -->
             <div class="text-[11px] sm:text-xs text-slate-500 font-medium self-end sm:self-auto" id="asset-search-result-count"></div>
-          </div>
-
-          <!-- แถบปุ่มลัดตัวกรองด่วน (Quick Filter Chips) + สลับมุมมอง ตาราง vs การ์ด -->
-          <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 flex-wrap">
-            <div class="flex items-center gap-1.5 overflow-x-auto touch-scroll py-0.5 no-scrollbar flex-1">
-              <span class="text-[11px] font-bold text-slate-500 whitespace-nowrap mr-0.5 flex items-center gap-1">
-                <span>⚡</span> <span>กรองด่วน:</span>
-              </span>
-              <button type="button" onclick="setQuickStatusFilter('all')" id="chip-status-all" class="quick-filter-chip active px-3 py-1 rounded-full text-xs font-bold transition whitespace-nowrap bg-amber-500 text-white shadow-2xs cursor-pointer">
-                ทั้งหมด
-              </button>
-              <button type="button" onclick="setQuickStatusFilter('good')" id="chip-status-good" class="quick-filter-chip px-3 py-1 rounded-full text-xs font-semibold transition whitespace-nowrap bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer">
-                🟢 ใช้งานได้ดี
-              </button>
-              <button type="button" onclick="setQuickStatusFilter('repair')" id="chip-status-repair" class="quick-filter-chip px-3 py-1 rounded-full text-xs font-semibold transition whitespace-nowrap bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer">
-                🟠 ชำรุด (ซ่อมได้)
-              </button>
-              <button type="button" onclick="setQuickStatusFilter('disposal')" id="chip-status-disposal" class="quick-filter-chip px-3 py-1 rounded-full text-xs font-semibold transition whitespace-nowrap bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer">
-                🔴 ขอจำหน่าย
-              </button>
-              <button type="button" onclick="setQuickStatusFilter('disposed')" id="chip-status-disposed" class="quick-filter-chip px-3 py-1 rounded-full text-xs font-semibold transition whitespace-nowrap bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer">
-                ⚫ จำหน่ายแล้ว
-              </button>
-            </div>
-
-            <!-- สลับมุมมอง ตาราง vs การ์ดรูปภาพ (View Mode Switcher) -->
-            <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/80 shrink-0">
-              <button type="button" onclick="setAssetViewMode('table')" id="view-mode-table-btn" class="px-2.5 py-1 text-xs font-bold rounded-lg transition bg-white text-red-950 shadow-2xs flex items-center gap-1 cursor-pointer">
-                <span>📋</span> <span>ตาราง</span>
-              </button>
-              <button type="button" onclick="setAssetViewMode('grid')" id="view-mode-grid-btn" class="px-2.5 py-1 text-xs font-semibold text-slate-600 hover:text-red-900 rounded-lg transition flex items-center gap-1 cursor-pointer">
-                <span>🖼️</span> <span>การ์ดรูปภาพ</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- แถบค้นหาข้อความ Real-time (Modern Search Box) -->
-          <div class="relative w-full">
-            <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-amber-600/70">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-              </svg>
-            </span>
-            <input type="text" id="asset-search-input" oninput="onAssetSearch(this.value)" placeholder="ค้นหาครุภัณฑ์ตามชื่อ, รหัสครุภัณฑ์, สถานที่ตั้ง, หรือชื่อครูผู้รับผิดชอบ..." class="w-full pl-10 pr-9 py-2.5 bg-slate-50/70 hover:bg-white focus:bg-white border-2 border-slate-200 focus:border-amber-400 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-amber-400/30 shadow-2xs placeholder-slate-400 text-slate-800 transition outline-none">
-            <button type="button" id="asset-search-clear-btn" onclick="clearAssetSearch()" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 text-base cursor-pointer" title="ล้างการค้นหา">&times;</button>
           </div>
         </div>
 
@@ -2110,6 +2088,6 @@
     <option value="นางสาวภัฐธีรา  จุลพันธ์">ธุรการโรงเรียน</option>
   </datalist>
 
-  <script src="app.js?v=10.5"></script>
+  <script src="app.js?v=10.6"></script>
 </body>
 </html>

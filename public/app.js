@@ -1530,6 +1530,7 @@ function setQuickStatusFilter(statusKey) {
     statusSelect.value = statusKey;
   }
   syncQuickFilterChips(statusKey);
+  updateAssetKpiCards();
   renderAssetTable();
   updateAssetSelectionUI();
 }
@@ -1546,6 +1547,7 @@ function onAssetFilterChange() {
   if (mSelect) assetMonth = mSelect.value;
   if (statusSelect) assetStatusFilter = statusSelect.value;
   syncQuickFilterChips(assetStatusFilter);
+  updateAssetKpiCards();
   renderAssetTable();
   updateAssetSelectionUI();
 }
@@ -1764,16 +1766,20 @@ function updateAssetKpiCards() {
 
   // ไฮไลต์ขอบการ์ด KPI มินิมอลที่ถูกเลือกกรองอยู่
   const kpiCards = {
-    'all': { el: document.getElementById('kpi-card-all'), border: 'border-amber-400', bg: 'bg-amber-50/50' },
-    'good': { el: document.getElementById('kpi-card-good'), border: 'border-emerald-400', bg: 'bg-emerald-50/50' },
-    'repair': { el: document.getElementById('kpi-card-repair'), border: 'border-amber-400', bg: 'bg-amber-50/50' },
-    'disposal': { el: document.getElementById('kpi-card-disposal'), border: 'border-rose-400', bg: 'bg-rose-50/50' }
+    'all': { el: document.getElementById('kpi-card-all'), border: 'border-amber-500', ringClass: 'ring-amber-400/50', bg: 'bg-amber-50/70' },
+    'good': { el: document.getElementById('kpi-card-good'), border: 'border-emerald-500', ringClass: 'ring-emerald-400/50', bg: 'bg-emerald-50/70' },
+    'repair': { el: document.getElementById('kpi-card-repair'), border: 'border-amber-500', ringClass: 'ring-amber-400/50', bg: 'bg-amber-50/70' },
+    'disposal': { el: document.getElementById('kpi-card-disposal'), border: 'border-rose-500', ringClass: 'ring-rose-400/50', bg: 'bg-rose-50/70' }
   };
   Object.entries(kpiCards).forEach(([key, config]) => {
     if (!config.el) return;
-    config.el.classList.remove('border-amber-400', 'border-emerald-400', 'border-rose-400', 'bg-amber-50/50', 'bg-emerald-50/50', 'bg-rose-50/50', 'shadow-xs');
+    config.el.classList.remove(
+      'border-amber-500', 'border-emerald-500', 'border-rose-500', 'border-amber-400', 'border-emerald-400', 'border-rose-400',
+      'ring-2', 'ring-amber-400/50', 'ring-emerald-400/50', 'ring-rose-400/50',
+      'bg-amber-50/70', 'bg-emerald-50/70', 'bg-rose-50/70', 'bg-amber-50/50', 'bg-emerald-50/50', 'bg-rose-50/50', 'shadow-xs'
+    );
     if (assetStatusFilter === key) {
-      config.el.classList.add(config.border, config.bg, 'shadow-xs');
+      config.el.classList.add(config.border, 'ring-2', config.ringClass, config.bg, 'shadow-xs');
     }
   });
 }
