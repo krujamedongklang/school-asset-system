@@ -1149,6 +1149,7 @@ async function handleSyncToSupabase() {
 
 // ==================== DOM READY ====================
 document.addEventListener('DOMContentLoaded', async () => {
+  initPwa();
   initOrgSettings();
   initMaterialMeta();
 
@@ -4643,4 +4644,75 @@ async function clearAllAuditLogs() {
     showToast('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'error');
   }
 }
+
+// ==================== PROGRESSIVE WEB APP (PWA) ====================
+let deferredPwaPrompt = null;
+
+function initPwa() {
+  // ลงทะเบียน Service Worker เมื่อโหลดหน้าเสร็จ
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then((reg) => {
+          console.log('✅ Service Worker registered successfully (PWA):', reg.scope);
+        })
+        .catch((err) => {
+          console.warn('⚠️ Service Worker registration failed:', err);
+        });
+    });
+  }
+
+  // ดักจับ Event เมื่อเบราว์เซอร์พร้อมให้ติดตั้ง (Chrome / Edge / Android)
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPwaPrompt = e;
+    const installBtn = document.getElementById('pwa-install-btn');
+    if (installBtn) {
+      installBtn.classList.remove('hidden');
+    }
+  });
+
+  // เมื่อติดตั้งลงอุปกรณ์สำเร็จ
+  window.addEventListener('appinstalled', () => {
+    deferredPwaPrompt = null;
+    const installBtn = document.getElementById('pwa-install-btn');
+    if (installBtn) installBtn.classList.add('hidden');
+    closeModal('pwaInstallModal');
+    if (typeof showToast === 'function') {
+      showToast('🎉 ติดตั้งแอปพลิเคชันโรงเรียนดงกลางสำเร็จแล้ว!', 'success');
+    }
+  });
+}
+
+function installPwaApp() {
+  const promptContainer = document.getElementById('pwa-prompt-container');
+  if (deferredPwaPrompt) {
+    if (promptContainer) promptContainer.classList.remove('hidden');
+  } else {
+    if (promptContainer) promptContainer.classList.add('hidden');
+  }
+  openModal('pwaInstallModal');
+}
+
+function triggerPwaPrompt() {
+  if (!deferredPwaPrompt) {
+    if (typeof showToast === 'function') {
+      showToast('กรุณาทำตามวิธีแนะนำสำหรับอุปกรณ์ของคุณด้านล่างครับ', 'info');
+    }
+    return;
+  }
+  deferredPwaPrompt.prompt();
+  deferredPwaPrompt.userChoice.then((choiceResult) => {
+    if (choiceResult && choiceResult.outcome === 'accepted') {
+      const installBtn = document.getElementById('pwa-install-btn');
+      if (installBtn) installBtn.classList.add('hidden');
+      closeModal('pwaInstallModal');
+    }
+    deferredPwaPrompt = null;
+  });
+}
+
+window.installPwaApp = installPwaApp;
+window.triggerPwaPrompt = triggerPwaPrompt;
+
 

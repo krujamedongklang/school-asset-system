@@ -2,11 +2,21 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#800000">
+  <meta name="description" content="ระบบบริหารจัดการพัสดุและครุภัณฑ์ โรงเรียนดงกลาง สพป.นม. 5">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png">
+  <link rel="icon" type="image/jpeg" href="/logo.jpg">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ระบบพัสดุ">
+  <meta name="application-name" content="ระบบพัสดุ โรงเรียนดงกลาง">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>ระบบบริหารจัดการพัสดุและครุภัณฑ์โรงเรียน</title>
+  <title>ระบบบริหารจัดการพัสดุและครุภัณฑ์โรงเรียนดงกลาง</title>
   <script>
     // ตรวจสอบสิทธิ์เบื้องต้นทันทีก่อนเรนเดอร์ เพื่อป้องกันหน้าต่างล็อกอินกะพริบขึ้นมาตอนกด F5 / รีเฟรช
     (function() {
@@ -338,6 +348,12 @@
               <span id="db-status-text"></span>
             </button>
 
+            <!-- ปุ่มติดตั้งแอปพลิเคชัน (PWA Install Button) จะปรากฏเมื่อเบราว์เซอร์รองรับการติดตั้ง -->
+            <button type="button" id="pwa-install-btn" onclick="installPwaApp()" class="hidden px-2.5 py-1.5 sm:px-3 sm:py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white border border-emerald-400/50 rounded-2xl text-xs font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap animate-pulse" title="ติดตั้งเป็นแอปพลิเคชันลงในอุปกรณ์">
+              <span>📲</span>
+              <span class="hidden sm:inline">ติดตั้งแอป</span>
+            </button>
+
             <!-- เมนูจัดการระบบ (ซ่อนรวม: ตั้งค่าหน่วยงาน, สำรองข้อมูล, นำเข้าข้อมูล, Supabase, เปลี่ยนรหัสผ่าน, ออกจากระบบ) -->
             <div class="relative inline-block text-left shrink-0" id="system-menu-container">
               <button type="button" onclick="toggleSystemMenu()" id="system-menu-btn" class="px-2.5 py-1.5 sm:px-3.5 sm:py-1.5 bg-gradient-to-r from-amber-500/20 to-red-950/60 hover:from-amber-400/30 hover:to-red-900 border border-amber-400/40 rounded-2xl text-xs font-bold transition text-amber-200 hover:text-white flex items-center gap-1.5 shadow-sm cursor-pointer focus:outline-none whitespace-nowrap">
@@ -357,6 +373,14 @@
                   </div>
                 </div>
               <div class="py-1">
+                <!-- ติดตั้งแอปพลิเคชัน (PWA) -->
+                <button type="button" onclick="installPwaApp(); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-900 flex items-center gap-2.5 font-medium transition cursor-pointer">
+                  <span class="text-base">📲</span>
+                  <div>
+                    <div class="font-bold text-emerald-800">ติดตั้งแอปพลิเคชัน (PWA)</div>
+                    <div class="text-[10px] text-slate-400">ติดตั้งลงในมือถือ / iPad / คอมพิวเตอร์</div>
+                  </div>
+                </button>
                 <!-- เมนูสำหรับ Admin: จัดการผู้ใช้งานและสิทธิ์ -->
                 <button type="button" id="menu-btn-user-mgmt" onclick="openModal('userManagementModal'); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-amber-50 hover:text-red-900 flex items-center justify-between font-medium transition cursor-pointer">
                   <div class="flex items-center gap-2.5">
@@ -2067,6 +2091,50 @@
     </div>
   </div>
 
+  <!-- MODAL: แนะนำการติดตั้งแอปพลิเคชัน (PWA Install Modal) -->
+  <div id="pwaInstallModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs hidden flex items-center justify-center p-3 sm:p-4 z-[10000]">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-5 sm:p-6 border border-amber-200">
+      <div class="text-center pb-3 border-b border-slate-100">
+        <div class="w-16 h-16 mx-auto mb-2 rounded-2xl bg-gradient-to-tr from-red-800 to-amber-500 p-1 shadow-md flex items-center justify-center">
+          <img src="/icons/icon-192.png" alt="โลโก้โรงเรียนดงกลาง" class="w-full h-full object-cover rounded-xl">
+        </div>
+        <h3 class="font-extrabold text-lg text-red-950">ติดตั้งแอปพลิเคชัน</h3>
+        <p class="text-xs text-slate-500 font-medium">ระบบบริหารจัดการพัสดุและครุภัณฑ์ โรงเรียนดงกลาง</p>
+      </div>
+
+      <div class="py-4 space-y-3.5 text-xs text-slate-700">
+        <!-- สำหรับ Android / PC / Edge ที่รองรับ Instant Install -->
+        <div id="pwa-prompt-container" class="space-y-2.5">
+          <p class="leading-relaxed text-center text-slate-600">
+            ติดตั้งเป็นแอปพลิเคชันลงในอุปกรณ์ของคุณ เพื่อเปิดใช้งานได้รวดเร็วเต็มหน้าจอ และทำงานได้สะดวกสบายโดยไม่ต้องเข้าผ่านเบราว์เซอร์
+          </p>
+          <button type="button" onclick="triggerPwaPrompt()" class="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-xl font-bold shadow-md transition flex items-center justify-center gap-2 cursor-pointer active:scale-95 text-xs sm:text-sm">
+            <span>📲</span> <span>กดติดตั้งแอปพลิเคชันทันที</span>
+          </button>
+        </div>
+
+        <!-- สำหรับ iOS (iPhone / iPad) หรือกรณีที่ต้องการเพิ่มด้วยตัวเอง -->
+        <div id="pwa-ios-instructions" class="space-y-2 bg-amber-50/80 p-3.5 rounded-2xl border border-amber-200 text-amber-950">
+          <div class="font-bold text-xs flex items-center gap-1.5 text-amber-900">
+            <span>📱</span> <span>วิธีติดตั้งบน iPhone / iPad (Safari):</span>
+          </div>
+          <ol class="list-decimal list-inside space-y-1 text-[11px] leading-relaxed text-amber-900/90 pl-1">
+            <li>เปิดเว็บไซต์นี้ด้วยเบราว์เซอร์ <strong>Safari</strong></li>
+            <li>แตะปุ่ม <strong>แชร์</strong> (ไอคอนสี่เหลี่ยมลูกศรชี้ขึ้น <span class="font-bold">⎋</span> ที่แถบล่าง)</li>
+            <li>เลื่อนลงมาแล้วแตะ <strong>"เพิ่มไปยังหน้าจอโฮม" (Add to Home Screen)</strong></li>
+            <li>แตะ <strong>"เพิ่ม" (Add)</strong> มุมขวาบน จะได้ไอคอนแอปบนหน้าจอมือถือทันที</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="flex justify-end pt-2 border-t border-slate-100">
+        <button type="button" onclick="closeModal('pwaInstallModal')" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition text-center cursor-pointer text-xs">
+          ปิดหน้าต่าง
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Datalist รายชื่อครูและบุคลากรโรงเรียนบ้านดงกลาง สำหรับ Auto-complete -->
   <datalist id="school-staff-datalist">
     <option value="นางสายสายใจ  วิลัยทอง">ผู้อำนวยการโรงเรียน</option>
@@ -2088,6 +2156,6 @@
     <option value="นางสาวภัฐธีรา  จุลพันธ์">ธุรการโรงเรียน</option>
   </datalist>
 
-  <script src="app.js?v=10.6"></script>
+  <script src="app.js?v=11.0"></script>
 </body>
 </html>

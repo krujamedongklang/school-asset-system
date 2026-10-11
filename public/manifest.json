@@ -1,0 +1,52 @@
+{
+  "name": "ระบบบริหารจัดการพัสดุและครุภัณฑ์ โรงเรียนดงกลาง",
+  "short_name": "ระบบพัสดุ",
+  "description": "ระบบทะเบียนคุมครุภัณฑ์และบัญชีคุมวัสดุ โรงเรียนดงกลาง สพป.นม. 5",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#800000",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["education", "productivity", "utilities"],
+  "shortcuts": [
+    {
+      "name": "ทะเบียนคุมครุภัณฑ์",
+      "short_name": "ครุภัณฑ์",
+      "description": "เปิดดูทะเบียนคุมครุภัณฑ์",
+      "url": "/#asset",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "บัญชีคุมวัสดุ",
+      "short_name": "วัสดุ",
+      "description": "เปิดดูบัญชีคุมวัสดุ",
+      "url": "/#material",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
