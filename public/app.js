@@ -4793,4 +4793,509 @@ initDarkMode();
 window.toggleDarkMode = toggleDarkMode;
 window.initDarkMode = initDarkMode;
 
+// ==================== MOBILE QR / BARCODE SCANNER (สแกนตรวจนับผ่านกล้องมือถือ) ====================
+let html5QrScannerInstance = null;
+let isScannerRunning = false;
+let currentScannedAsset = null;
+let currentCameraFacingMode = 'environment'; // environment = back camera
+let isTorchOn = false;
+
+function playScanBeep() {
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    gain.gain.setValueAtTime(0.25, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.12);
+  } catch (e) {}
+}
+
+async function openScannerModal() {
+  currentScannedAsset = null;
+  isTorchOn = false;
+
+  const resultPanel = document.getElementById('scanner-result-panel');
+  const viewfinderBox = document.getElementById('scanner-viewfinder-box');
+  const loading = document.getElementById('scanner-loading-indicator');
+  const errorBox = document.getElementById('scanner-error-message');
+  const torchBtn = document.getElementById('scanner-torch-btn');
+
+  if (resultPanel) {
+    resultPanel.innerHTML = '';
+    resultPanel.classList.add('hidden');
+  }
+  if (viewfinderBox) viewfinderBox.classList.remove('hidden');
+  if (loading) loading.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+  if (errorBox) errorBox.classList.add('hidden');
+  if (torchBtn) {
+    torchBtn.innerHTML = '<span>💡</span> <span class="hidden sm:inline">ไฟฉาย</span>';
+    torchBtn.className = 'px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition flex items-center gap-1 cursor-pointer';
+  }
+
+  openModal('mobileScannerModal');
+
+  // รอให้หน้าต่าง Modal ขยายเปิดเต็มที่ก่อนเริ่มสตรีมมิ่งกล้อง
+  setTimeout(() => {
+    startCameraScanner();
+  }, 250);
+}
+
+async function closeScannerModal() {
+  await stopCameraScanner();
+  closeModal('mobileScannerModal');
+}
+
+async function startCameraScanner() {
+  if (typeof Html5Qrcode === 'undefined') {
+    showToast('กำลังโหลดโมดูลสแกนกล้อง กรุณารอสักครู่...', 'warning');
+    return;
+  }
+
+  const readerEl = document.getElementById('scanner-reader');
+  const loading = document.getElementById('scanner-loading-indicator');
+  const errorBox = document.getElementById('scanner-error-message');
+  const errorText = document.getElementById('scanner-error-text');
+
+  if (!readerEl) return;
+  if (loading) loading.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+  if (errorBox) errorBox.classList.add('hidden');
+
+  await stopCameraScanner();
+
+  try {
+    html5QrScannerInstance = new Html5Qrcode("scanner-reader");
+
+    const config = {
+      fps: 15,
+      qrbox: (viewfinderWidth, viewfinderHeight) => {
+        const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+        const edgeSize = Math.max(160, Math.floor(minEdge * 0.72));
+        return { width: edgeSize, height: edgeSize };
+      },
+      aspectRatio: 1.0
+    };
+
+    await html5QrScannerInstance.start(
+      { facingMode: currentCameraFacingMode },
+      config,
+      onScanSuccess,
+      onScanError
+    );
+
+    isScannerRunning = true;
+    if (loading) loading.classList.add('opacity-0', 'pointer-events-none');
+  } catch (err) {
+    console.warn("Camera facingMode start failed, trying device fallback...", err);
+    try {
+      const devices = await Html5Qrcode.getCameras();
+      if (devices && devices.length > 0) {
+        const chosenCamera = devices[devices.length - 1].id;
+        await html5QrScannerInstance.start(
+          chosenCamera,
+          { fps: 15, qrbox: { width: 220, height: 220 }, aspectRatio: 1.0 },
+          onScanSuccess,
+          onScanError
+        );
+        isScannerRunning = true;
+        if (loading) loading.classList.add('opacity-0', 'pointer-events-none');
+      } else {
+        throw new Error('ไม่พบกล้องถ่ายภาพบนอุปกรณ์นี้');
+      }
+    } catch (fallbackErr) {
+      console.error("Camera completely failed:", fallbackErr);
+      isScannerRunning = false;
+      if (loading) loading.classList.add('hidden');
+      if (errorBox) {
+        errorBox.classList.remove('hidden');
+        if (errorText) {
+          const msg = fallbackErr.message || String(fallbackErr);
+          if (msg.includes('NotAllowedError') || msg.includes('Permission')) {
+            errorText.textContent = 'กรุณากด "อนุญาต (Allow)" ให้เบราว์เซอร์เข้าถึงกล้องถ่ายภาพ';
+          } else {
+            errorText.textContent = 'ไม่สามารถเปิดกล้องได้: ' + msg;
+          }
+        }
+      }
+    }
+  }
+}
+
+async function stopCameraScanner() {
+  if (html5QrScannerInstance && isScannerRunning) {
+    try {
+      await html5QrScannerInstance.stop();
+    } catch (e) {
+      console.warn("Error stopping scanner instance:", e);
+    }
+    try {
+      html5QrScannerInstance.clear();
+    } catch (e) {}
+  }
+  isScannerRunning = false;
+}
+
+async function toggleCameraFacing() {
+  currentCameraFacingMode = (currentCameraFacingMode === 'environment') ? 'user' : 'environment';
+  await startCameraScanner();
+}
+
+async function toggleTorch() {
+  if (!html5QrScannerInstance || !isScannerRunning) {
+    showToast('กรุณาเปิดกล้องก่อนใช้งานไฟฉาย', 'info');
+    return;
+  }
+  try {
+    isTorchOn = !isTorchOn;
+    await html5QrScannerInstance.applyVideoConstraints({
+      advanced: [{ torch: isTorchOn }]
+    });
+    const torchBtn = document.getElementById('scanner-torch-btn');
+    if (torchBtn) {
+      torchBtn.innerHTML = isTorchOn 
+        ? '<span>🔦</span> <span class="hidden sm:inline">ปิดไฟฉาย</span>' 
+        : '<span>💡</span> <span class="hidden sm:inline">ไฟฉาย</span>';
+      torchBtn.className = isTorchOn
+        ? 'px-2.5 py-1.5 bg-amber-400 text-red-950 font-bold rounded-xl shadow-md transition flex items-center gap-1 cursor-pointer'
+        : 'px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition flex items-center gap-1 cursor-pointer';
+    }
+  } catch (err) {
+    isTorchOn = false;
+    showToast('อุปกรณ์นี้ไม่รองรับการเปิดไฟฉายผ่านเบราว์เซอร์', 'info');
+  }
+}
+
+async function handleScanImageFile(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  if (!html5QrScannerInstance) {
+    html5QrScannerInstance = new Html5Qrcode("scanner-reader");
+  }
+
+  showToast('กำลังวิเคราะห์รูปภาพเพื่อตรวจจับรหัส...', 'info');
+
+  try {
+    const result = await html5QrScannerInstance.scanFile(file, true);
+    if (result) {
+      onScanSuccess(result, null);
+    }
+  } catch (err) {
+    showToast('❌ ไม่พบ QR Code หรือ Barcode ในรูปภาพนี้ กรุณาลองใช้รูปที่มีความคมชัด', 'warning');
+  } finally {
+    event.target.value = '';
+  }
+}
+
+function onScanSuccess(decodedText, decodedResult) {
+  if (!decodedText) return;
+
+  playScanBeep();
+  if (navigator.vibrate) {
+    try { navigator.vibrate(150); } catch (e) {}
+  }
+
+  if (html5QrScannerInstance && isScannerRunning) {
+    try {
+      html5QrScannerInstance.pause();
+    } catch (e) {}
+  }
+
+  handleScannedCode(decodedText);
+}
+
+function onScanError(errorMessage) {
+  // Scanning tick
+}
+
+function findAssetByScanCode(code) {
+  if (!code) return null;
+  const raw = String(code).trim();
+
+  // 1. URL parameter: view_asset
+  try {
+    if (raw.includes('view_asset=')) {
+      const match = raw.match(/view_asset=([^&]+)/);
+      if (match && match[1]) {
+        const idVal = match[1];
+        const byId = assetList.find(a => String(a.id) === idVal);
+        if (byId) return byId;
+      }
+    }
+  } catch (e) {}
+
+  // 2. Exact match by asset_code
+  const byCode = assetList.find(a => a.asset_code && a.asset_code.trim().toLowerCase() === raw.toLowerCase());
+  if (byCode) return byCode;
+
+  // 3. Exact match by ID
+  const byId = assetList.find(a => String(a.id) === raw);
+  if (byId) return byId;
+
+  // 4. Fuzzy match: stripping spaces, dashes, slashes
+  const cleanRaw = raw.replace(/[^a-zA-Z0-9ก-๙]/g, '').toLowerCase();
+  if (cleanRaw.length >= 3) {
+    const fuzzy = assetList.find(a => {
+      const cleanA = (a.asset_code || '').replace(/[^a-zA-Z0-9ก-๙]/g, '').toLowerCase();
+      return cleanA && (cleanA === cleanRaw || cleanA.endsWith(cleanRaw) || cleanRaw.endsWith(cleanA));
+    });
+    if (fuzzy) return fuzzy;
+  }
+
+  return null;
+}
+
+function handleScannedCode(code) {
+  const resultPanel = document.getElementById('scanner-result-panel');
+  const viewfinderBox = document.getElementById('scanner-viewfinder-box');
+  if (!resultPanel) return;
+
+  if (viewfinderBox) viewfinderBox.classList.add('hidden');
+  resultPanel.classList.remove('hidden');
+
+  const asset = findAssetByScanCode(code);
+  if (asset) {
+    currentScannedAsset = asset;
+    renderScanAssetCard(asset);
+  } else {
+    currentScannedAsset = null;
+    renderScanNotFoundCard(code);
+  }
+}
+
+function renderScanAssetCard(asset) {
+  const resultPanel = document.getElementById('scanner-result-panel');
+  if (!resultPanel) return;
+
+  let statusBadgeClass = 'bg-emerald-100 text-emerald-800 border-emerald-300';
+  if (asset.status === 'ชำรุด (สามารถซ่อมได้)') statusBadgeClass = 'bg-amber-100 text-amber-800 border-amber-300';
+  else if (asset.status === 'ชำรุด/เสื่อมสภาพ (ขอจำหน่าย)') statusBadgeClass = 'bg-rose-100 text-rose-800 border-rose-300';
+  else if (asset.status === 'จำหน่ายแล้ว') statusBadgeClass = 'bg-slate-200 text-slate-700 border-slate-300';
+
+  const defaultAuditor = (currentUser && currentUser.fullName) ? currentUser.fullName : (currentUser ? currentUser.username : 'ผู้ตรวจนับ');
+
+  resultPanel.innerHTML = `
+    <!-- แถบแจ้งเตือนสแกนสำเร็จ -->
+    <div class="p-2.5 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center justify-between shadow-2xs">
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="text-xl">✅</span>
+        <div class="min-w-0">
+          <div class="text-xs font-bold text-emerald-950 truncate">สแกนตรวจพบครุภัณฑ์ในระบบแล้ว!</div>
+          <div class="text-[10px] text-emerald-700 font-mono truncate">${escapeHtml(asset.asset_code || '-')}</div>
+        </div>
+      </div>
+      <button type="button" onclick="resumeScanner()" class="px-2.5 py-1.5 bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-bold transition shadow-2xs flex items-center gap-1 shrink-0 cursor-pointer">
+        <span>📷</span> <span>สแกนชิ้นต่อไป</span>
+      </button>
+    </div>
+
+    <!-- บัตรข้อมูลครุภัณฑ์ -->
+    <div class="bg-gradient-to-br from-red-50/50 via-white to-amber-50/50 p-3.5 rounded-2xl border border-amber-300/80 shadow-xs space-y-2.5">
+      <div class="flex items-start justify-between gap-2 border-b border-amber-200/60 pb-2">
+        <div class="min-w-0">
+          <div class="text-[10px] font-bold text-amber-800 uppercase tracking-wider">รายการครุภัณฑ์</div>
+          <div class="text-sm sm:text-base font-bold text-red-950 leading-tight">${escapeHtml(asset.asset_name || '-')}</div>
+        </div>
+        <span class="px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold border shrink-0 ${statusBadgeClass}">
+          ${escapeHtml(asset.status || 'ใช้งานได้ดี')}
+        </span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 text-[11px]">
+        <div>
+          <span class="text-slate-400 block text-[10px]">รหัสทะเบียน:</span>
+          <span class="font-mono font-bold text-red-950 text-xs">${escapeHtml(asset.asset_code || '-')}</span>
+        </div>
+        <div>
+          <span class="text-slate-400 block text-[10px]">หมวดหมู่:</span>
+          <span class="font-medium text-slate-800">${escapeHtml(asset.category || '-')}</span>
+        </div>
+        <div>
+          <span class="text-slate-400 block text-[10px]">สถานที่ตั้งเดิม:</span>
+          <span class="font-medium text-slate-800">${escapeHtml(asset.location || '-')}</span>
+        </div>
+        <div>
+          <span class="text-slate-400 block text-[10px]">ผู้รับผิดชอบ:</span>
+          <span class="font-medium text-slate-800">${escapeHtml(asset.responsible_person || '-')}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- แถบแสดงผลสำเร็จเมื่อกดบันทึกแล้ว -->
+    <div id="scan-audit-success-banner" class="hidden p-3 bg-emerald-100 text-emerald-950 border border-emerald-300 rounded-2xl text-xs font-bold text-center">
+      🎉 บันทึกผลการตรวจนับครุภัณฑ์เรียบร้อยแล้ว! สถานที่และประวัติได้รับการอัปเดต
+    </div>
+
+    <!-- ฟอร์มบันทึกผลการตรวจนับด่วน (Quick Audit & Status Update) -->
+    <form id="scan-audit-form" onsubmit="handleSaveScanAudit(event)" class="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200/90 shadow-xs space-y-2.5 text-xs">
+      <div class="font-bold text-slate-800 flex items-center justify-between pb-1 border-b border-slate-100">
+        <span class="flex items-center gap-1.5 text-red-950">
+          <span class="w-2 h-3.5 bg-amber-500 rounded-full inline-block"></span>
+          <span>⚡ บันทึกผลการตรวจนับด่วน</span>
+        </span>
+        <span class="text-[10px] text-slate-400 font-normal">ระเบียบฯ พ.ศ. ๒๕๖๐ ข้อ ๒๑๓</span>
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-bold text-slate-700 mb-1">สถานะสภาพครุภัณฑ์จริง:</label>
+        <select id="scan-audit-status" class="w-full border border-slate-300 rounded-xl p-2 font-semibold text-xs focus:ring-2 focus:ring-amber-500 bg-slate-50/70">
+          <option value="ใช้งานได้ดี" ${asset.status === 'ใช้งานได้ดี' ? 'selected' : ''}>✅ ใช้งานได้ดี (สภาพสมบูรณ์)</option>
+          <option value="ชำรุด (สามารถซ่อมได้)" ${asset.status === 'ชำรุด (สามารถซ่อมได้)' ? 'selected' : ''}>⚠️ ชำรุด (สามารถซ่อมได้)</option>
+          <option value="ชำรุด/เสื่อมสภาพ (ขอจำหน่าย)" ${asset.status === 'ชำรุด/เสื่อมสภาพ (ขอจำหน่าย)' ? 'selected' : ''}>❌ ชำรุด/เสื่อมสภาพ (ขอจำหน่าย)</option>
+          <option value="จำหน่ายแล้ว" ${asset.status === 'จำหน่ายแล้ว' ? 'selected' : ''}>🗑️ จำหน่ายแล้ว</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-bold text-slate-700 mb-1">สถานที่ตั้งปัจจุบัน (ห้อง/อาคาร):</label>
+        <input type="text" id="scan-audit-location" list="locationOptions" value="${escapeHtml(asset.location || '')}" placeholder="ระบุห้องหรือสถานที่ที่พบ..." class="w-full border border-slate-300 rounded-xl p-2 text-xs focus:ring-2 focus:ring-amber-500 bg-slate-50/70">
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-bold text-slate-700 mb-1">บันทึกผลการตรวจนับ / หมายเหตุ:</label>
+        <input type="text" id="scan-audit-note" placeholder="เช่น ตรวจนับประจำปี ครุภัณฑ์อยู่ในห้องเรียนสภาพปกติ..." class="w-full border border-slate-300 rounded-xl p-2 text-xs focus:ring-2 focus:ring-amber-500 bg-slate-50/70">
+      </div>
+
+      <input type="hidden" id="scan-audit-auditor" value="${escapeHtml(defaultAuditor)}">
+
+      <div class="pt-1.5 flex flex-col sm:flex-row gap-2">
+        <button type="submit" id="btn-save-scan-audit" class="flex-1 py-2.5 px-4 bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-800 hover:from-emerald-700 hover:to-teal-900 text-white rounded-xl font-bold shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer">
+          <span>💾</span> <span>บันทึกผลตรวจนับ</span>
+        </button>
+        <button type="button" onclick="resumeScanner()" class="py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition text-center cursor-pointer flex items-center justify-center gap-1">
+          <span>📷</span> <span>สแกนชิ้นต่อไป</span>
+        </button>
+        <button type="button" onclick="closeScannerModal(); editAsset(${asset.id});" class="py-2.5 px-3 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl font-semibold transition text-center cursor-pointer flex items-center justify-center gap-1">
+          <span>✏️</span> <span>แก้ไขเต็ม</span>
+        </button>
+      </div>
+    </form>
+  `;
+}
+
+function renderScanNotFoundCard(code) {
+  const resultPanel = document.getElementById('scanner-result-panel');
+  if (!resultPanel) return;
+
+  resultPanel.innerHTML = `
+    <div class="p-4 bg-amber-50 border border-amber-300 rounded-2xl text-center space-y-3">
+      <div class="text-3xl">🔍❓</div>
+      <div>
+        <div class="font-bold text-amber-950 text-sm">ไม่พบครุภัณฑ์รหัสนี้ในระบบ</div>
+        <div class="text-xs font-mono font-bold text-red-700 mt-1 bg-white p-2 rounded-xl border border-amber-200 break-all select-all">${escapeHtml(code)}</div>
+      </div>
+      <p class="text-[11px] text-slate-600">รหัสนี้อาจยังไม่ได้ลงทะเบียนในระบบ หรือเป็นรหัสจากระบบอื่น</p>
+      <div class="flex flex-col sm:flex-row gap-2 pt-1 justify-center">
+        <button type="button" onclick="resumeScanner()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-bold transition cursor-pointer flex items-center justify-center gap-1">
+          <span>📷</span> <span>สแกนรหัสอื่น</span>
+        </button>
+        <button type="button" onclick="closeScannerModal(); openAddAssetWithCode('${escapeHtml(code)}')" class="px-4 py-2 bg-gradient-to-r from-red-800 to-amber-700 hover:from-red-900 text-white rounded-xl font-bold shadow-md transition cursor-pointer flex items-center justify-center gap-1">
+          <span>+</span> <span>ลงทะเบียนเป็นครุภัณฑ์ใหม่</span>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function resumeScanner() {
+  const resultPanel = document.getElementById('scanner-result-panel');
+  const viewfinderBox = document.getElementById('scanner-viewfinder-box');
+  if (resultPanel) {
+    resultPanel.innerHTML = '';
+    resultPanel.classList.add('hidden');
+  }
+  if (viewfinderBox) viewfinderBox.classList.remove('hidden');
+
+  if (html5QrScannerInstance && isScannerRunning) {
+    try {
+      html5QrScannerInstance.resume();
+    } catch (e) {
+      startCameraScanner();
+    }
+  } else {
+    startCameraScanner();
+  }
+}
+
+async function handleSaveScanAudit(event) {
+  if (event) event.preventDefault();
+  if (!currentScannedAsset) return;
+
+  const newStatus = document.getElementById('scan-audit-status').value;
+  const newLocation = document.getElementById('scan-audit-location').value.trim();
+  const auditorName = document.getElementById('scan-audit-auditor').value.trim();
+  const note = document.getElementById('scan-audit-note').value.trim();
+
+  const assetId = currentScannedAsset.id;
+  const oldNotes = currentScannedAsset.notes || '';
+  const dateStr = new Date().toLocaleDateString('th-TH');
+  const auditEntry = `[ตรวจนับ ${dateStr} โดย ${auditorName}: สภาพ ${newStatus}${note ? ' (' + note + ')' : ''}]`;
+  const combinedNotes = oldNotes ? `${oldNotes} | ${auditEntry}` : auditEntry;
+
+  const updatedData = {
+    ...currentScannedAsset,
+    status: newStatus,
+    location: newLocation || currentScannedAsset.location,
+    notes: combinedNotes
+  };
+
+  try {
+    const res = await authFetch(`/api/assets/${assetId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedData)
+    });
+
+    if (res.ok) {
+      showToast(`✅ บันทึกการตรวจนับ "${currentScannedAsset.asset_name}" สำเร็จแล้ว`, 'success');
+      await loadAssets();
+
+      const successBanner = document.getElementById('scan-audit-success-banner');
+      if (successBanner) successBanner.classList.remove('hidden');
+
+      const saveBtn = document.getElementById('btn-save-scan-audit');
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '✓ บันทึกเรียบร้อยแล้ว';
+        saveBtn.className = 'flex-1 py-2.5 px-4 bg-slate-600 text-white rounded-xl font-bold cursor-default flex items-center justify-center gap-1.5';
+      }
+    } else {
+      const err = await res.json().catch(() => ({}));
+      showToast('บันทึกไม่สำเร็จ: ' + (err.error || 'ข้อผิดพลาดระบบ'), 'error');
+    }
+  } catch (err) {
+    showToast('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'error');
+  }
+}
+
+function openAddAssetWithCode(code) {
+  openAddAssetModal();
+  setTimeout(() => {
+    const codeInput = document.getElementById('asset-code');
+    if (codeInput) {
+      codeInput.value = code;
+      codeInput.focus();
+    }
+  }, 200);
+}
+
+window.openScannerModal = openScannerModal;
+window.closeScannerModal = closeScannerModal;
+window.startCameraScanner = startCameraScanner;
+window.stopCameraScanner = stopCameraScanner;
+window.toggleCameraFacing = toggleCameraFacing;
+window.toggleTorch = toggleTorch;
+window.handleScanImageFile = handleScanImageFile;
+window.resumeScanner = resumeScanner;
+window.handleSaveScanAudit = handleSaveScanAudit;
+window.openAddAssetWithCode = openAddAssetWithCode;
+
+
 

@@ -1,10 +1,11 @@
-const CACHE_NAME = 'dongklang-asset-v11.6';
+const CACHE_NAME = 'dongklang-asset-v11.7';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/logo.jpg',
   '/qrcode.min.js',
+  '/html5-qrcode.min.js',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/icons/apple-touch-icon.png',

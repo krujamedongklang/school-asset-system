@@ -40,6 +40,7 @@
     }
   </script>
   <script src="qrcode.min.js"></script>
+  <script src="html5-qrcode.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     /* รองรับการหมุนหน้าจอแนวนอน (Landscape Mode) บนมือถือและไอแพด */
@@ -676,6 +677,17 @@
                   </div>
                   <span id="menu-theme-status" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 whitespace-nowrap">โหมดสว่าง</span>
                 </button>
+                <!-- สแกนตรวจนับผ่านกล้อง (QR / Barcode) -->
+                <button type="button" onclick="openScannerModal(); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-900 flex items-center justify-between font-medium transition cursor-pointer">
+                  <div class="flex items-center gap-2.5">
+                    <span class="text-base">📷</span>
+                    <div>
+                      <div class="font-bold text-slate-800">สแกนตรวจนับ (QR / Barcode)</div>
+                      <div class="text-[10px] text-slate-400">สแกนตรวจนับครุภัณฑ์ผ่านกล้องมือถือ</div>
+                    </div>
+                  </div>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 whitespace-nowrap">กล้องมือถือ</span>
+                </button>
                 <!-- ติดตั้งแอปพลิเคชัน (PWA) ซ่อนรวมไว้ในเมนูจัดการระบบ -->
                 <button type="button" onclick="installPwaApp(); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-900 flex items-center justify-between font-medium transition cursor-pointer">
                   <div class="flex items-center gap-2.5">
@@ -776,11 +788,21 @@
               </span>
             </div>
 
-            <!-- ปุ่มหลัก: เพิ่มครุภัณฑ์ใหม่ (กะทัดรัด ไม่กินพื้นที่เต็มจอ) -->
-            <button id="btn-add-asset" onclick="openAddAssetModal()" class="shrink-0 bg-gradient-to-r from-red-700 via-red-800 to-rose-900 hover:from-red-800 hover:to-rose-950 text-white px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-xl font-bold shadow-xs hover:shadow-md transition transform active:scale-95 flex items-center gap-1 text-xs sm:text-sm border border-red-950/40 whitespace-nowrap cursor-pointer">
-              <span class="text-base leading-none font-bold">+</span>
-              <span>เพิ่มครุภัณฑ์ใหม่</span>
-            </button>
+            <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              <!-- ปุ่มสแกน QR Code / Barcode ตรวจนับผ่านกล้องมือถือ -->
+              <button type="button" id="btn-scan-qr" onclick="openScannerModal()" class="shrink-0 bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-800 hover:from-emerald-700 hover:to-teal-900 text-white px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl font-bold shadow-xs hover:shadow-md transition transform active:scale-95 flex items-center gap-1.5 text-xs sm:text-sm border border-emerald-900/40 whitespace-nowrap cursor-pointer" title="สแกน QR Code / Barcode ผ่านกล้องมือถือเพื่อตรวจนับ">
+                <span class="text-sm sm:text-base leading-none">📷</span>
+                <span class="hidden sm:inline">สแกนตรวจนับ (QR/Barcode)</span>
+                <span class="sm:hidden">สแกนตรวจนับ</span>
+              </button>
+
+              <!-- ปุ่มหลัก: เพิ่มครุภัณฑ์ใหม่ (กะทัดรัด ไม่กินพื้นที่เต็มจอ) -->
+              <button id="btn-add-asset" onclick="openAddAssetModal()" class="shrink-0 bg-gradient-to-r from-red-700 via-red-800 to-rose-900 hover:from-red-800 hover:to-rose-950 text-white px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-xl font-bold shadow-xs hover:shadow-md transition transform active:scale-95 flex items-center gap-1 text-xs sm:text-sm border border-red-950/40 whitespace-nowrap cursor-pointer">
+                <span class="text-base leading-none font-bold">+</span>
+                <span class="hidden sm:inline">เพิ่มครุภัณฑ์ใหม่</span>
+                <span class="sm:hidden">เพิ่มครุภัณฑ์</span>
+              </button>
+            </div>
           </div>
 
           <!-- แถวที่ 2: แถบเครื่องมือสั่งพิมพ์และรายงานราชการ (บนมือถือ: ซ่อนพับได้ด้วยปุ่มเดียว / บนคอม: แสดงเต็ม) -->
@@ -928,7 +950,8 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                 </svg>
               </span>
-              <input type="text" id="asset-search-input" oninput="onAssetSearch(this.value)" placeholder="ค้นหาครุภัณฑ์ตามชื่อ, รหัสครุภัณฑ์, ที่ตั้ง, ผู้รับผิดชอบ..." class="w-full pl-9 pr-8 py-1.5 sm:py-2 bg-slate-50/70 hover:bg-white focus:bg-white border border-slate-200 focus:border-amber-400 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-amber-400/30 shadow-2xs placeholder-slate-400 text-slate-800 transition outline-none">
+              <input type="text" id="asset-search-input" oninput="onAssetSearch(this.value)" placeholder="ค้นหาครุภัณฑ์ตามชื่อ, รหัสครุภัณฑ์, ที่ตั้ง, ผู้รับผิดชอบ..." class="w-full pl-9 pr-16 py-1.5 sm:py-2 bg-slate-50/70 hover:bg-white focus:bg-white border border-slate-200 focus:border-amber-400 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-amber-400/30 shadow-2xs placeholder-slate-400 text-slate-800 transition outline-none">
+              <button type="button" onclick="openScannerModal()" class="absolute inset-y-0 right-8 pr-1 flex items-center text-emerald-600 hover:text-emerald-700 text-sm cursor-pointer transition transform active:scale-90" title="สแกนค้นหาด้วยกล้อง (QR / Barcode)">📷</button>
               <button type="button" id="asset-search-clear-btn" onclick="clearAssetSearch()" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 text-base cursor-pointer" title="ล้างการค้นหา">&times;</button>
             </div>
 
@@ -2398,6 +2421,113 @@
     </div>
   </div>
 
+  <!-- ============================================================== -->
+  <!-- MODAL: Mobile QR Code / Barcode Scanner (สแกนตรวจนับผ่านกล้องมือถือ) -->
+  <!-- ============================================================== -->
+  <div id="mobileScannerModal" class="fixed inset-0 bg-black/85 backdrop-blur-md hidden flex items-center justify-center p-2 sm:p-4 z-50 no-print">
+    <div class="bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-amber-300/60 w-full max-w-lg overflow-hidden flex flex-col max-h-[95vh]">
+      <!-- ส่วนหัว Modal -->
+      <div class="px-4 py-3 sm:px-5 sm:py-3.5 bg-gradient-to-r from-red-950 via-red-900 to-rose-950 text-white flex items-center justify-between border-b border-amber-400/40 shrink-0">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="p-1.5 bg-amber-400/20 text-amber-300 rounded-xl text-base shrink-0">📷</span>
+          <div class="min-w-0">
+            <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-1.5 truncate">
+              <span>สแกน QR / Barcode</span>
+              <span class="text-[10px] px-2 py-0.5 bg-emerald-500/30 text-emerald-200 border border-emerald-400/30 rounded-full font-semibold">กล้องมือถือ</span>
+            </h3>
+            <p class="text-[10px] sm:text-xs text-amber-200/80 truncate">ส่องกล้องตรวจนับครุภัณฑ์หรือค้นหารายการทันที</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeScannerModal()" class="text-white/70 hover:text-white text-2xl font-bold leading-none p-1 -mr-1 cursor-pointer transition">&times;</button>
+      </div>
+
+      <!-- เนื้อหาภายใน Modal (Scrollable) -->
+      <div class="p-3 sm:p-5 overflow-y-auto touch-scroll space-y-3 flex-1">
+        
+        <!-- ส่วนกล้องสแกน (Viewfinder Box) -->
+        <div id="scanner-viewfinder-box" class="space-y-2.5">
+          <!-- กล่องแสดงภาพจากกล้อง HTML5-QRCode -->
+          <div class="relative bg-black rounded-2xl overflow-hidden border-2 border-emerald-500/80 shadow-inner flex flex-col items-center justify-center min-h-[260px] sm:min-h-[300px]">
+            <div id="scanner-reader" class="w-full h-full min-h-[260px] sm:min-h-[300px]"></div>
+
+            <!-- กรอบเล็งสแกน (Visual Reticle Overlay) -->
+            <div id="scanner-reticle-overlay" class="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div class="w-48 h-48 sm:w-56 sm:h-56 border-2 border-dashed border-emerald-400/70 rounded-2xl relative shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+                <!-- มุม 4 ด้าน -->
+                <span class="absolute -top-1 -left-1 w-4 h-4 border-t-3 border-l-3 border-emerald-400 rounded-tl"></span>
+                <span class="absolute -top-1 -right-1 w-4 h-4 border-t-3 border-r-3 border-emerald-400 rounded-tr"></span>
+                <span class="absolute -bottom-1 -left-1 w-4 h-4 border-b-3 border-l-3 border-emerald-400 rounded-bl"></span>
+                <span class="absolute -bottom-1 -right-1 w-4 h-4 border-b-3 border-r-3 border-emerald-400 rounded-br"></span>
+                <!-- แสงเลเซอร์วิ่ง -->
+                <div class="w-full h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent absolute top-1/2 -translate-y-1/2 animate-pulse shadow-[0_0_8px_#34d399]"></div>
+              </div>
+            </div>
+
+            <!-- ข้อความสถานะหรือคำเตือนขณะเปิดกล้อง -->
+            <div id="scanner-loading-indicator" class="absolute inset-0 bg-slate-900/90 text-white flex flex-col items-center justify-center p-4 text-center z-10 transition-opacity">
+              <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-emerald-500 border-t-transparent mb-3"></div>
+              <div class="text-xs sm:text-sm font-bold text-emerald-300">กำลังเชื่อมต่อกล้องถ่ายภาพ...</div>
+              <div class="text-[11px] text-slate-400 mt-1 max-w-xs">หากระบบขออนุญาตเข้าถึงกล้อง กรุณากด "อนุญาต (Allow)" เพื่อเริ่มสแกน</div>
+            </div>
+
+            <!-- ข้อความกรณีกล้องเปิดไม่สำเร็จ -->
+            <div id="scanner-error-message" class="hidden absolute inset-0 bg-slate-900/95 text-white flex flex-col items-center justify-center p-5 text-center z-20">
+              <div class="text-3xl mb-2">📷⚠️</div>
+              <div class="text-xs sm:text-sm font-bold text-rose-300" id="scanner-error-text">ไม่สามารถเปิดกล้องได้</div>
+              <div class="text-[11px] text-slate-400 mt-1 mb-3">กรุณาอนุญาตการเข้าถึงกล้องในเบราว์เซอร์ หรือใช้วิธีอัปโหลดรูปภาพแทน</div>
+              <div class="flex gap-2">
+                <button type="button" onclick="startCameraScanner()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition cursor-pointer">ลองใหม่อีกครั้ง</button>
+                <button type="button" onclick="document.getElementById('scanner-file-input').click()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-xs font-medium transition cursor-pointer">เลือกรูปภาพ</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- แถบปุ่มควบคุมกล้อง (สลับกล้อง / เปิดไฟฉาย / อัปโหลดรูป) -->
+          <div class="flex items-center justify-between gap-1.5 text-xs">
+            <div class="flex items-center gap-1.5">
+              <!-- ปุ่มสลับกล้องหน้า/หลัง -->
+              <button type="button" onclick="toggleCameraFacing()" id="scanner-switch-cam-btn" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition flex items-center gap-1 cursor-pointer" title="สลับกล้องหน้า/กล้องหลัง">
+                <span>🔄</span> <span class="hidden sm:inline">สลับกล้อง</span>
+              </button>
+
+              <!-- ปุ่มไฟฉาย (ถ้าอุปกรณ์รองรับ) -->
+              <button type="button" onclick="toggleTorch()" id="scanner-torch-btn" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition flex items-center gap-1 cursor-pointer" title="เปิด/ปิด ไฟฉาย">
+                <span>💡</span> <span class="hidden sm:inline">ไฟฉาย</span>
+              </button>
+            </div>
+
+            <!-- ปุ่มอัปโหลดรูปภาพเพื่อสแกน -->
+            <div>
+              <input type="file" id="scanner-file-input" accept="image/*" class="hidden" onchange="handleScanImageFile(event)">
+              <button type="button" onclick="document.getElementById('scanner-file-input').click()" class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300/80 rounded-xl font-bold transition flex items-center gap-1 cursor-pointer">
+                <span>📁</span> <span>เลือกภาพสแกน</span>
+              </button>
+            </div>
+          </div>
+
+          <p class="text-[10px] sm:text-[11px] text-slate-500 text-center">
+            💡 <strong>คำแนะนำ:</strong> นำกล้องไปส่องที่สติกเกอร์ <strong>QR Code</strong> หรือ <strong>Barcode</strong> ที่ติดอยู่บนตัวครุภัณฑ์
+          </p>
+        </div>
+
+        <!-- แผงแสดงผลการสแกน & ฟอร์มตรวจนับด่วน (Result & Quick Audit Panel) -->
+        <div id="scanner-result-panel" class="hidden space-y-3">
+          <!-- Populated dynamically by JS -->
+        </div>
+
+      </div>
+
+      <!-- ส่วนท้าย Modal -->
+      <div class="p-3 bg-slate-50 border-t border-slate-200/80 flex items-center justify-between text-xs shrink-0">
+        <span class="text-[11px] text-slate-500 flex items-center gap-1">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span>ระบบตรวจนับดิจิทัล (สแกนกล้อง)</span>
+        </span>
+        <button type="button" onclick="closeScannerModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-medium transition cursor-pointer">ปิดหน้าต่าง</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL: แนะนำการติดตั้งแอปพลิเคชัน (PWA Install Modal) -->
   <div id="pwaInstallModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs hidden flex items-center justify-center p-3 sm:p-4 z-[10000]">
     <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-5 sm:p-6 border border-amber-200">
@@ -2463,6 +2593,6 @@
     <option value="นางสาวภัฐธีรา  จุลพันธ์">ธุรการโรงเรียน</option>
   </datalist>
 
-  <script src="app.js?v=11.6"></script>
+  <script src="app.js?v=11.7"></script>
 </body>
 </html>
