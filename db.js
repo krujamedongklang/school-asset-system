@@ -129,7 +129,40 @@ sqliteDb.serialize(() => {
       seedAdminUser();
     }
   });
+
+  sqliteDb.run(`CREATE TABLE IF NOT EXISTS audit_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    username TEXT,
+    full_name TEXT,
+    action TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT,
+    entity_name TEXT,
+    details TEXT,
+    ip_address TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )`, (err) => {
+    if (!err) {
+      seedAuditLogs();
+    }
+  });
 });
+
+function seedAuditLogs() {
+  sqliteDb.get(`SELECT COUNT(*) as count FROM audit_logs`, (err, row) => {
+    if (!err && row && row.count === 0) {
+      const now = new Date().toISOString();
+      const initialLogs = [
+        ['system', 'ระบบสารสนเทศโรงเรียนบ้านดงกลาง', 'SYSTEM_INIT', 'system', '0', 'ระบบพัสดุและครุภัณฑ์', 'เริ่มต้นระบบสารสนเทศทะเบียนคุมพัสดุและครุภัณฑ์โรงเรียนบ้านดงกลาง', '127.0.0.1', now],
+        ['admin', 'ผู้ดูแลระบบ (แอดมิน)', 'LOGIN', 'user', '1', 'admin', 'ตั้งค่าและเปิดใช้งานบัญชีผู้ดูแลระบบพัสดุ', '127.0.0.1', now]
+      ];
+      const stmt = sqliteDb.prepare(`INSERT INTO audit_logs (username, full_name, action, entity_type, entity_id, entity_name, details, ip_address, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+      initialLogs.forEach(log => stmt.run(log));
+      stmt.finalize();
+    }
+  });
+}
 
 // Helper: บันทึกข้อมูลสำรอง Local JSON
 function saveLocalBackup(assets, materials) {
@@ -1214,6 +1247,100 @@ const dbService = {
       const materials = await this.getMaterials();
       saveLocalBackup(assets, materials);
     } catch (e) {}
+  },
+
+  async addAuditLog({ userId, username, fullName, action, entityType, entityId, entityName, details, ipAddress }) {
+    const timestamp = new Date().toISOString();
+    const logData = {
+      user_id: userId || null,
+      username: username || 'system',
+      full_name: fullName || 'ผู้ใช้งานระบบ',
+      action: action || 'ACTION',
+      entity_type: entityType || 'general',
+      entity_id: entityId ? String(entityId) : '',
+      entity_name: entityName || '',
+      details: details || '',
+      ip_address: ipAddress || '',
+      created_at: timestamp
+    };
+
+    if (isSupabaseActive && supabaseClient) {
+      try {
+        await supabaseClient.from('audit_logs').insert([logData]);
+      } catch (e) {}
+    }
+
+    return new Promise((resolve, reject) => {
+      const sql = `INSERT INTO audit_logs (user_id, username, full_name, action, entity_type, entity_id, entity_name, details, ip_address, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+      sqliteDb.run(sql, [
+        logData.user_id,
+        logData.username,
+        logData.full_name,
+        logData.action,
+        logData.entity_type,
+        logData.entity_id,
+        logData.entity_name,
+        logData.details,
+        logData.ip_address,
+        logData.created_at
+      ], function(err) {
+        if (err) return reject(err);
+        resolve(this.lastID);
+      });
+    });
+  },
+
+  async getAuditLogs({ limit = 100, offset = 0, entityType, entityId, action, search } = {}) {
+    return new Promise((resolve, reject) => {
+      let conditions = [];
+      let params = [];
+
+      if (entityType && entityType !== 'all') {
+        conditions.push('entity_type = ?');
+        params.push(entityType);
+      }
+      if (entityId) {
+        conditions.push('entity_id = ?');
+        params.push(String(entityId));
+      }
+      if (action && action !== 'all') {
+        conditions.push('action = ?');
+        params.push(action);
+      }
+      if (search && search.trim()) {
+        const q = `%${search.trim()}%`;
+        conditions.push('(entity_name LIKE ? OR details LIKE ? OR full_name LIKE ? OR username LIKE ?)');
+        params.push(q, q, q, q);
+      }
+
+      const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+      sqliteDb.get(`SELECT COUNT(*) as count FROM audit_logs ${whereClause}`, params, (cntErr, cntRow) => {
+        if (cntErr) return reject(cntErr);
+        const total = cntRow ? cntRow.count : 0;
+
+        const querySql = `SELECT * FROM audit_logs ${whereClause} ORDER BY id DESC LIMIT ? OFFSET ?`;
+        sqliteDb.all(querySql, [...params, limit, offset], (err, rows) => {
+          if (err) return reject(err);
+          resolve({ logs: rows || [], total });
+        });
+      });
+    });
+  },
+
+  async clearAuditLogs() {
+    if (isSupabaseActive && supabaseClient) {
+      try {
+        await supabaseClient.from('audit_logs').delete().neq('id', 0);
+      } catch (e) {}
+    }
+    return new Promise((resolve, reject) => {
+      sqliteDb.run('DELETE FROM audit_logs', function(err) {
+        if (err) return reject(err);
+        resolve(true);
+      });
+    });
   }
 };
 

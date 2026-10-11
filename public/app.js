@@ -417,11 +417,13 @@ function applyUserPermissionsToUI() {
   const btnUserMgmt = document.getElementById('menu-btn-user-mgmt');
   const btnOrg = document.getElementById('menu-btn-org');
   const btnSupabase = document.getElementById('menu-btn-supabase');
+  const btnAuditLogs = document.getElementById('menu-btn-audit-logs');
   const sectionBackup = document.getElementById('menu-section-backup');
 
   if (btnUserMgmt) btnUserMgmt.style.display = isAdmin ? 'flex' : 'none';
   if (btnOrg) btnOrg.style.display = isAdmin ? 'flex' : 'none';
   if (btnSupabase) btnSupabase.style.display = isAdmin ? 'flex' : 'none';
+  if (btnAuditLogs) btnAuditLogs.style.display = currentUser ? 'flex' : 'none';
   if (sectionBackup) sectionBackup.style.display = isAdmin ? 'block' : 'none';
 
   // ควบคุมปุ่มเพิ่มรายการ
@@ -4361,5 +4363,278 @@ function goToEditFromPublicCard() {
   if (!currentPublicAssetId) return;
   closeModal('publicAssetModal');
   editAsset(Number(currentPublicAssetId));
+}
+
+// ==================== ระบบบันทึกประวัติและกิจกรรม (HISTORY AUDIT TRAIL) ====================
+let auditEntityFilter = 'all';
+let auditEntityIdFilter = null;
+let auditSearchQuery = '';
+let auditSearchDebounceTimer = null;
+
+function openAuditTrailModal(entityType = 'all', entityId = null) {
+  auditEntityFilter = entityType;
+  auditEntityIdFilter = entityId;
+  auditSearchQuery = '';
+
+  const searchInput = document.getElementById('audit-search-input');
+  if (searchInput) searchInput.value = '';
+  const clearBtn = document.getElementById('audit-search-clear');
+  if (clearBtn) clearBtn.classList.add('hidden');
+
+  const actionSelect = document.getElementById('audit-action-select');
+  if (actionSelect) actionSelect.value = 'all';
+
+  syncAuditFilterChips();
+  openModal('auditTrailModal');
+  loadAuditLogs();
+}
+
+function openAssetAuditTrailFromCard() {
+  if (!currentPublicAssetId) return;
+  openAuditTrailModal('asset', currentPublicAssetId);
+}
+
+function setAuditEntityFilter(type) {
+  auditEntityFilter = type;
+  auditEntityIdFilter = null;
+  syncAuditFilterChips();
+  loadAuditLogs();
+}
+
+function syncAuditFilterChips() {
+  const chips = ['all', 'asset', 'material', 'user'];
+  chips.forEach(c => {
+    const el = document.getElementById(`audit-filter-${c}`);
+    if (!el) return;
+    if (c === auditEntityFilter) {
+      el.className = 'audit-chip active px-3 py-1 rounded-full text-xs font-bold transition whitespace-nowrap bg-amber-500 text-white shadow-2xs cursor-pointer';
+    } else {
+      el.className = 'audit-chip px-3 py-1 rounded-full text-xs font-semibold transition whitespace-nowrap bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 cursor-pointer';
+    }
+  });
+}
+
+function onAuditSearchInput(val) {
+  auditSearchQuery = val || '';
+  const clearBtn = document.getElementById('audit-search-clear');
+  if (clearBtn) {
+    if (auditSearchQuery.trim()) clearBtn.classList.remove('hidden');
+    else clearBtn.classList.add('hidden');
+  }
+  clearTimeout(auditSearchDebounceTimer);
+  auditSearchDebounceTimer = setTimeout(() => {
+    loadAuditLogs();
+  }, 250);
+}
+
+function clearAuditSearch() {
+  auditSearchQuery = '';
+  const searchInput = document.getElementById('audit-search-input');
+  if (searchInput) searchInput.value = '';
+  const clearBtn = document.getElementById('audit-search-clear');
+  if (clearBtn) clearBtn.classList.add('hidden');
+  loadAuditLogs();
+}
+
+async function loadAuditLogs() {
+  const container = document.getElementById('audit-timeline-container');
+  const summaryEl = document.getElementById('audit-status-summary');
+  const clearAllBtn = document.getElementById('audit-clear-all-btn');
+  if (!container) return;
+
+  if (clearAllBtn) {
+    clearAllBtn.style.display = (currentUser && currentUser.role === 'admin') ? 'inline-block' : 'none';
+  }
+
+  container.innerHTML = `
+    <div class="text-center py-12">
+      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600 mb-2"></div>
+      <div class="text-xs text-slate-500 font-medium">กำลังโหลดประวัติกิจกรรม...</div>
+    </div>
+  `;
+
+  try {
+    const actionSelect = document.getElementById('audit-action-select');
+    const actionVal = actionSelect ? actionSelect.value : 'all';
+
+    let url = `/api/audit-logs?entity_type=${encodeURIComponent(auditEntityFilter)}&action=${encodeURIComponent(actionVal)}&search=${encodeURIComponent(auditSearchQuery)}`;
+    if (auditEntityIdFilter) {
+      url += `&entity_id=${encodeURIComponent(auditEntityIdFilter)}`;
+    }
+
+    const res = await authFetch(url);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      container.innerHTML = `<div class="p-6 text-center text-xs text-rose-600">เกิดข้อผิดพลาด: ${escapeHtml(err.error || 'ไม่สามารถโหลดประวัติได้')}</div>`;
+      if (summaryEl) summaryEl.textContent = 'เกิดข้อผิดพลาดในการโหลดข้อมูล';
+      return;
+    }
+
+    const data = await res.json();
+    const logs = data.logs || [];
+    const total = data.total || logs.length;
+
+    renderAuditTimeline(logs, total);
+  } catch (err) {
+    container.innerHTML = `<div class="p-6 text-center text-xs text-rose-600">เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์</div>`;
+    if (summaryEl) summaryEl.textContent = 'เกิดข้อผิดพลาด';
+  }
+}
+
+function getAuditActionBadge(action) {
+  const map = {
+    'CREATE': { label: '🟢 เพิ่มรายการใหม่', bg: 'bg-emerald-50 text-emerald-800 border-emerald-300' },
+    'UPDATE': { label: '🟠 แก้ไขข้อมูล', bg: 'bg-amber-50 text-amber-800 border-amber-300' },
+    'STATUS_CHANGE': { label: '⚠️ เปลี่ยนสถานะ', bg: 'bg-orange-50 text-orange-800 border-orange-300' },
+    'DELETE': { label: '🔴 ลบรายการ', bg: 'bg-rose-50 text-rose-800 border-rose-300' },
+    'LOGIN': { label: '🔵 เข้าสู่ระบบ', bg: 'bg-blue-50 text-blue-800 border-blue-300' },
+    'REGISTER': { label: '📝 ลงทะเบียน', bg: 'bg-teal-50 text-teal-800 border-teal-300' },
+    'APPROVE_USER': { label: '🟣 อนุมัติผู้ใช้', bg: 'bg-purple-50 text-purple-800 border-purple-300' },
+    'PERMISSION_CHANGE': { label: '⚙️ เปลี่ยนสิทธิ์', bg: 'bg-indigo-50 text-indigo-800 border-indigo-300' },
+    'RESET_PASSWORD': { label: '🔑 รีเซ็ตรหัส', bg: 'bg-slate-100 text-slate-800 border-slate-300' },
+    'SYSTEM_INIT': { label: '🏛️ ติดตั้งระบบ', bg: 'bg-red-50 text-red-900 border-red-300' },
+    'CLEAR_LOGS': { label: '🧹 ล้างประวัติ', bg: 'bg-rose-100 text-rose-900 border-rose-300' }
+  };
+  const conf = map[action] || { label: `📌 ${action}`, bg: 'bg-slate-100 text-slate-700 border-slate-300' };
+  return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${conf.bg} whitespace-nowrap shadow-2xs">${conf.label}</span>`;
+}
+
+function formatAuditTimestamp(dateStr) {
+  if (!dateStr) return { full: '', relative: '' };
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return { full: dateStr, relative: '' };
+
+  const thaiMonths = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const day = d.getDate();
+  const month = thaiMonths[d.getMonth() + 1];
+  const year = d.getFullYear() + 543;
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const seconds = String(d.getSeconds()).padStart(2, '0');
+
+  const now = new Date();
+  const diffSec = Math.floor((now - d) / 1000);
+  let relText = '';
+  if (diffSec < 60) relText = 'เมื่อสักครู่';
+  else if (diffSec < 3600) relText = `${Math.floor(diffSec / 60)} นาทีที่แล้ว`;
+  else if (diffSec < 86400) relText = `${Math.floor(diffSec / 3600)} ชั่วโมงที่แล้ว`;
+  else if (diffSec < 172800) relText = 'เมื่อวานนี้';
+
+  return {
+    full: `${day} ${month} ${year} เวลา ${hours}:${minutes}:${seconds} น.`,
+    relative: relText
+  };
+}
+
+function renderAuditTimeline(logs, total) {
+  const container = document.getElementById('audit-timeline-container');
+  const summaryEl = document.getElementById('audit-status-summary');
+  if (!container) return;
+
+  if (summaryEl) {
+    if (auditEntityIdFilter) {
+      summaryEl.innerHTML = `ประวัติเฉพาะรายการนี้: แสดง <b>${logs.length}</b> กิจกรรม`;
+    } else {
+      summaryEl.innerHTML = `แสดง <b>${logs.length}</b> จากทั้งหมด <b>${total}</b> กิจกรรม`;
+    }
+  }
+
+  if (logs.length === 0) {
+    container.innerHTML = `
+      <div class="py-12 text-center text-slate-400 bg-white rounded-2xl border border-slate-200 p-6">
+        <span class="text-4xl block mb-2">📜</span>
+        <div class="font-bold text-slate-600 text-sm">ยังไม่มีบันทึกประวัติในเงื่อนไขนี้</div>
+        <p class="text-xs text-slate-400 mt-1">ประวัติจะถูกบันทึกอัตโนมัติเมื่อมีการเพิ่ม แก้ไข หรือลบข้อมูลในระบบ</p>
+      </div>
+    `;
+    return;
+  }
+
+  let html = `<div class="relative pl-6 sm:pl-8 space-y-4 before:content-[''] before:absolute before:top-2 before:bottom-2 before:left-3 sm:before:left-4 before:w-0.5 before:bg-amber-200">`;
+
+  logs.forEach(log => {
+    const timeInfo = formatAuditTimestamp(log.created_at);
+    let dotColor = 'bg-amber-400 border-amber-500';
+    if (log.action === 'CREATE') dotColor = 'bg-emerald-500 border-emerald-600';
+    else if (log.action === 'DELETE' || log.action === 'DELETE_USER') dotColor = 'bg-rose-500 border-rose-600';
+    else if (log.action === 'STATUS_CHANGE') dotColor = 'bg-orange-500 border-orange-600';
+    else if (log.action === 'LOGIN') dotColor = 'bg-blue-500 border-blue-600';
+
+    const entityIconMap = {
+      asset: '📦 ครุภัณฑ์',
+      material: '📑 วัสดุ',
+      user: '👤 ผู้ใช้',
+      system: '⚙️ ระบบ'
+    };
+    const entityLabel = entityIconMap[log.entity_type] || log.entity_type;
+
+    html += `
+      <div class="relative group">
+        <!-- Timeline Marker Node -->
+        <span class="absolute -left-6 sm:-left-8 top-3 w-3 sm:w-3.5 h-3 sm:h-3.5 rounded-full ${dotColor} border-2 border-white ring-2 ring-amber-100 shadow-2xs"></span>
+
+        <!-- Card Content Box -->
+        <div class="bg-white rounded-2xl border border-slate-200/90 hover:border-amber-300 p-3.5 sm:p-4 shadow-2xs hover:shadow-sm transition">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 mb-2 pb-2 border-b border-slate-100">
+            <div class="flex items-center gap-2 flex-wrap">
+              ${getAuditActionBadge(log.action)}
+              <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                ${entityLabel}
+              </span>
+              ${log.entity_id ? `<span class="text-[10px] font-mono text-slate-400">#${escapeHtml(log.entity_id)}</span>` : ''}
+            </div>
+            <div class="text-[11px] text-slate-500 font-medium flex items-center gap-1.5" title="${escapeHtml(timeInfo.full)}">
+              <span>🕒</span>
+              <span class="font-semibold text-slate-700">${escapeHtml(timeInfo.full)}</span>
+              ${timeInfo.relative ? `<span class="text-[10px] text-amber-700 font-bold bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200/60">(${timeInfo.relative})</span>` : ''}
+            </div>
+          </div>
+
+          <!-- Description and target entity -->
+          <div class="text-xs sm:text-sm text-slate-800 font-medium leading-relaxed mb-2">
+            ${escapeHtml(log.details || '-')}
+          </div>
+
+          <!-- Footer of log: actor and IP -->
+          <div class="flex items-center justify-between text-[11px] text-slate-500 pt-1.5 border-t border-slate-50">
+            <div class="flex items-center gap-1.5">
+              <span class="w-5 h-5 rounded-full bg-amber-100 border border-amber-300 text-red-950 font-bold flex items-center justify-center text-[10px]">
+                👤
+              </span>
+              <span class="font-bold text-slate-700">${escapeHtml(log.full_name || log.username || 'ผู้ใช้งานระบบ')}</span>
+              <span class="text-slate-400 font-mono text-[10px]">(@${escapeHtml(log.username || 'user')})</span>
+            </div>
+            ${log.ip_address ? `
+              <span class="text-[10px] font-mono text-slate-400 hidden sm:inline" title="IP Address">
+                IP: ${escapeHtml(log.ip_address)}
+              </span>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  html += `</div>`;
+  container.innerHTML = html;
+}
+
+async function clearAllAuditLogs() {
+  if (!confirm('ยืนยันที่จะล้างข้อมูลประวัติกิจกรรมทั้งหมด (Audit Trail Reset) หรือไม่?\nข้อมูลการตรวจสอบย้อนหลังจะถูกล้าง')) {
+    return;
+  }
+
+  try {
+    const res = await authFetch('/api/audit-logs', { method: 'DELETE' });
+    if (res.ok) {
+      showToast('ล้างประวัติกิจกรรมเรียบร้อยแล้ว', 'success');
+      loadAuditLogs();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      showToast('เกิดข้อผิดพลาด: ' + (err.error || 'ไม่สามารถล้างข้อมูลได้'), 'error');
+    }
+  } catch (err) {
+    showToast('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'error');
+  }
 }
 

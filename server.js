@@ -94,6 +94,28 @@ function requireAdd(req, res, next) {
   next();
 }
 
+// Helper: บันทึกประวัติกิจกรรม (History Audit Trail)
+async function recordAudit(req, { action, entityType, entityId, entityName, details }) {
+  try {
+    const user = req.user || {};
+    const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '';
+    const ipAddress = Array.isArray(ip) ? ip[0] : (String(ip).split(',')[0].trim());
+    await db.addAuditLog({
+      userId: user.id || null,
+      username: user.username || 'system',
+      fullName: user.full_name || user.username || 'ผู้ใช้งานระบบ',
+      action,
+      entityType,
+      entityId: entityId ? String(entityId) : null,
+      entityName: entityName || '',
+      details: details || '',
+      ipAddress
+    });
+  } catch (err) {
+    console.error('Audit log record error:', err);
+  }
+}
+
 // ล็อกอินเข้าสู่ระบบ (รองรับทั้ง username และ password)
 app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body;
@@ -102,6 +124,13 @@ app.post('/api/auth/login', async (req, res) => {
     const status = result.error && result.error.includes('รอผู้ดูแลระบบ') ? 403 : 401;
     return res.status(status).json({ error: result.error });
   }
+  await recordAudit({ user: result.user, headers: req.headers, socket: req.socket }, {
+    action: 'LOGIN',
+    entityType: 'user',
+    entityId: result.user.id,
+    entityName: result.user.full_name || result.user.username,
+    details: `เข้าสู่ระบบสำเร็จ (Username: ${result.user.username})`
+  });
   res.json({ success: true, message: 'เข้าสู่ระบบสำเร็จ', token: result.token, user: result.user });
 });
 
@@ -110,6 +139,13 @@ app.post('/api/auth/register', async (req, res) => {
   try {
     const { username, password, fullName, position } = req.body;
     const user = await db.registerUser({ username, password, fullName, position });
+    await recordAudit({ user: { username, full_name: fullName }, headers: req.headers, socket: req.socket }, {
+      action: 'REGISTER',
+      entityType: 'user',
+      entityId: user.id,
+      entityName: fullName,
+      details: `ส่งคำขอลงทะเบียนเข้าใช้งาน: ${fullName} (${username}) ตำแหน่ง: ${position || '-'}`
+    });
     res.json({
       success: true,
       message: 'ลงทะเบียนขอเข้าใช้งานสำเร็จแล้ว! ระบบได้ส่งข้อมูลไปยังผู้ดูแลระบบเรียบร้อย กรุณาแจ้งคุณครูผู้ดูแลระบบเพื่ออนุมัติสิทธิ์เข้าใช้งานครับ',
@@ -189,7 +225,26 @@ app.get('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
 app.put('/api/admin/users/:id/permissions', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { canEdit, canDelete, canAdd, role, status } = req.body;
+    const users = await db.getUsers(true);
+    const targetUser = users.find(u => String(u.id) === String(req.params.id));
     await db.updateUserPermissions(req.params.id, { canEdit, canDelete, canAdd, role, status });
+
+    const perms = [];
+    if (canAdd) perms.push('เพิ่ม');
+    if (canEdit) perms.push('แก้ไข');
+    if (canDelete) perms.push('ลบ');
+    const isApprove = status === 'active' && targetUser?.status === 'pending';
+
+    await recordAudit(req, {
+      action: isApprove ? 'APPROVE_USER' : 'PERMISSION_CHANGE',
+      entityType: 'user',
+      entityId: req.params.id,
+      entityName: targetUser?.full_name || targetUser?.username,
+      details: isApprove
+        ? `อนุมัติบัญชีผู้ใช้งาน: ${targetUser?.full_name || targetUser?.username} (บทบาท: ${role})`
+        : `ปรับสิทธิ์ ${targetUser?.full_name || targetUser?.username}: สถานะ ${status}, บทบาท ${role}, สิทธิ์ [${perms.join(', ')}]`
+    });
+
     res.json({ success: true, message: 'บันทึกสิทธิ์การใช้งานเรียบร้อยแล้ว' });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -203,7 +258,18 @@ app.put('/api/admin/users/:id/reset-password', requireAuth, requireAdmin, async 
     if (!newPassword || newPassword.length < 4) {
       return res.status(400).json({ error: 'รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 4 ตัวอักษร' });
     }
+    const users = await db.getUsers(true);
+    const targetUser = users.find(u => String(u.id) === String(req.params.id));
     await db.updateUserPassword(req.params.id, newPassword);
+
+    await recordAudit(req, {
+      action: 'RESET_PASSWORD',
+      entityType: 'user',
+      entityId: req.params.id,
+      entityName: targetUser?.full_name || targetUser?.username,
+      details: `รีเซ็ตรหัสผ่านใหม่ให้: ${targetUser?.full_name || targetUser?.username}`
+    });
+
     res.json({ success: true, message: 'รีเซ็ตรหัสผ่านให้ผู้ใช้เรียบร้อยแล้ว' });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -213,7 +279,18 @@ app.put('/api/admin/users/:id/reset-password', requireAuth, requireAdmin, async 
 // ลบบัญชีผู้ใช้งาน
 app.delete('/api/admin/users/:id', requireAuth, requireAdmin, async (req, res) => {
   try {
+    const users = await db.getUsers(true);
+    const targetUser = users.find(u => String(u.id) === String(req.params.id));
     await db.deleteUser(req.params.id);
+
+    await recordAudit(req, {
+      action: 'DELETE_USER',
+      entityType: 'user',
+      entityId: req.params.id,
+      entityName: targetUser?.full_name || targetUser?.username,
+      details: `ลบบัญชีผู้ใช้งาน: ${targetUser?.full_name || targetUser?.username}`
+    });
+
     res.json({ success: true, message: 'ลบบัญชีผู้ใช้งานเรียบร้อยแล้ว' });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -311,6 +388,13 @@ app.get('/api/assets', requireAuth, async (req, res) => {
 app.post('/api/assets', requireAuth, requireAdd, async (req, res) => {
   try {
     const id = await db.createAsset(req.body);
+    await recordAudit(req, {
+      action: 'CREATE',
+      entityType: 'asset',
+      entityId: id,
+      entityName: req.body.asset_name || 'ครุภัณฑ์ใหม่',
+      details: `เพิ่มครุภัณฑ์ใหม่: ${req.body.asset_name || '-'} (รหัส ${req.body.asset_code || '-'}) ราคาทุน ฿${Number(req.body.cost || 0).toLocaleString()} ผู้รับผิดชอบ: ${req.body.responsible_person || '-'}`
+    });
     res.json({ message: 'บันทึกข้อมูลครุภัณฑ์เรียบร้อยแล้ว', id });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -320,7 +404,35 @@ app.post('/api/assets', requireAuth, requireAdd, async (req, res) => {
 // แก้ไขครุภัณฑ์
 app.put('/api/assets/:id', requireAuth, requireEdit, async (req, res) => {
   try {
+    const allAssets = await db.getAssets();
+    const oldItem = allAssets.find(a => String(a.id) === String(req.params.id));
     await db.updateAsset(req.params.id, req.body);
+
+    let diffs = [];
+    if (oldItem) {
+      if ((oldItem.status || '').trim() !== (req.body.status || '').trim()) {
+        diffs.push(`เปลี่ยนสถานะเป็น "${req.body.status || '-'}"`);
+      }
+      if ((oldItem.location || '').trim() !== (req.body.location || '').trim()) {
+        diffs.push(`เปลี่ยนสถานที่ตั้งเป็น "${req.body.location || '-'}"`);
+      }
+      if ((oldItem.responsible_person || '').trim() !== (req.body.responsible_person || '').trim()) {
+        diffs.push(`เปลี่ยนผู้รับผิดชอบเป็น "${req.body.responsible_person || '-'}"`);
+      }
+    }
+    const details = diffs.length > 0 
+      ? `แก้ไขข้อมูล: ${diffs.join(', ')}`
+      : `แก้ไขข้อมูลครุภัณฑ์: ${req.body.asset_name || '-'} (รหัส ${req.body.asset_code || '-'})`;
+    const action = diffs.some(d => d.includes('สถานะ')) ? 'STATUS_CHANGE' : 'UPDATE';
+
+    await recordAudit(req, {
+      action,
+      entityType: 'asset',
+      entityId: req.params.id,
+      entityName: req.body.asset_name || oldItem?.asset_name || 'ครุภัณฑ์',
+      details
+    });
+
     res.json({ message: 'แก้ไขข้อมูลครุภัณฑ์เรียบร้อยแล้ว' });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -330,7 +442,18 @@ app.put('/api/assets/:id', requireAuth, requireEdit, async (req, res) => {
 // ลบครุภัณฑ์
 app.delete('/api/assets/:id', requireAuth, requireDelete, async (req, res) => {
   try {
+    const allAssets = await db.getAssets();
+    const targetItem = allAssets.find(a => String(a.id) === String(req.params.id));
     await db.deleteAsset(req.params.id);
+
+    await recordAudit(req, {
+      action: 'DELETE',
+      entityType: 'asset',
+      entityId: req.params.id,
+      entityName: targetItem ? targetItem.asset_name : 'ครุภัณฑ์',
+      details: `ลบรายการครุภัณฑ์: ${targetItem ? (targetItem.asset_name + ' (รหัส ' + (targetItem.asset_code || '-') + ')') : 'ID ' + req.params.id}`
+    });
+
     res.json({ message: 'ลบรายการสำเร็จ' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -367,6 +490,13 @@ app.get('/api/materials', requireAuth, async (req, res) => {
 app.post('/api/materials', requireAuth, requireAdd, async (req, res) => {
   try {
     const id = await db.createMaterial(req.body);
+    await recordAudit(req, {
+      action: 'CREATE',
+      entityType: 'material',
+      entityId: id,
+      entityName: req.body.party || 'รายการวัสดุ',
+      details: `บันทึกรายการวัสดุ: ${req.body.party || '-'} (เลขที่ ${req.body.doc_no || '-'}) รับเข้า ${req.body.qty_in || 0} / จ่ายออก ${req.body.qty_out || 0}`
+    });
     res.json({ message: 'บันทึกรายการวัสดุเรียบร้อยแล้ว', id });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -377,6 +507,13 @@ app.post('/api/materials', requireAuth, requireAdd, async (req, res) => {
 app.put('/api/materials/:id', requireAuth, requireEdit, async (req, res) => {
   try {
     await db.updateMaterial(req.params.id, req.body);
+    await recordAudit(req, {
+      action: 'UPDATE',
+      entityType: 'material',
+      entityId: req.params.id,
+      entityName: req.body.party || 'รายการวัสดุ',
+      details: `แก้ไขรายการวัสดุ: ${req.body.party || '-'} (เลขที่ ${req.body.doc_no || '-'})`
+    });
     res.json({ message: 'แก้ไขข้อมูลวัสดุเรียบร้อยแล้ว' });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -386,8 +523,53 @@ app.put('/api/materials/:id', requireAuth, requireEdit, async (req, res) => {
 // ลบรายการวัสดุ
 app.delete('/api/materials/:id', requireAuth, requireDelete, async (req, res) => {
   try {
+    const allMaterials = await db.getMaterials();
+    const targetMat = allMaterials.find(m => String(m.id) === String(req.params.id));
     await db.deleteMaterial(req.params.id);
+    await recordAudit(req, {
+      action: 'DELETE',
+      entityType: 'material',
+      entityId: req.params.id,
+      entityName: targetMat ? targetMat.party : 'รายการวัสดุ',
+      details: `ลบรายการวัสดุ: ${targetMat ? targetMat.party : 'ID ' + req.params.id}`
+    });
     res.json({ message: 'ลบรายการสำเร็จ' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==================== AUDIT LOGS (HISTORY AUDIT TRAIL) API ====================
+
+// ดึงประวัติกิจกรรม (Audit Trail)
+app.get('/api/audit-logs', requireAuth, async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
+    const offset = parseInt(req.query.offset, 10) || 0;
+    const entityType = req.query.entity_type || 'all';
+    const entityId = req.query.entity_id || null;
+    const action = req.query.action || 'all';
+    const search = req.query.search || '';
+
+    const result = await db.getAuditLogs({ limit, offset, entityType, entityId, action, search });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ล้างประวัติกิจกรรม (เฉพาะแอดมิน)
+app.delete('/api/audit-logs', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    await db.clearAuditLogs();
+    await recordAudit(req, {
+      action: 'CLEAR_LOGS',
+      entityType: 'system',
+      entityId: null,
+      entityName: 'ระบบบันทึกประวัติ',
+      details: 'ล้างข้อมูลประวัติกิจกรรมทั้งหมด (Audit Trail Reset)'
+    });
+    res.json({ success: true, message: 'ล้างประวัติกิจกรรมเรียบร้อยแล้ว' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

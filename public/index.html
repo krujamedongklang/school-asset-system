@@ -382,6 +382,13 @@
                     <div class="text-[10px] text-emerald-600 font-semibold">เก็บข้อมูลถาวรบนคลาวด์</div>
                   </div>
                 </button>
+                <button type="button" id="menu-btn-audit-logs" onclick="openAuditTrailModal(); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-amber-50 hover:text-red-900 flex items-center gap-2.5 font-medium transition cursor-pointer">
+                  <span class="text-base">📜</span>
+                  <div>
+                    <div class="font-bold text-slate-800">ประวัติกิจกรรม (Audit Trail)</div>
+                    <div class="text-[10px] text-amber-700 font-semibold">ตรวจสอบย้อนหลังทุกการแก้ไข/ลบ</div>
+                  </div>
+                </button>
               </div>
               <div class="py-1" id="menu-section-backup">
                 <button type="button" id="menu-btn-backup" onclick="exportBackup(); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-amber-50 hover:text-red-900 flex items-center gap-2.5 font-medium transition cursor-pointer">
@@ -1453,6 +1460,92 @@
       </div>
       </div>
     </div>
+  <!-- ==================== MODAL: HISTORY AUDIT TRAIL ==================== -->
+  <div id="auditTrailModal" class="fixed inset-0 bg-black/70 backdrop-blur-xs hidden flex items-center justify-center p-2.5 sm:p-4 z-50 no-print">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col border border-amber-200 overflow-hidden">
+      <!-- Modal Header -->
+      <div class="px-5 py-3.5 sm:py-4 bg-gradient-to-r from-red-950 via-amber-950 to-red-950 text-white flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-xl shadow-xs">
+            📜
+          </div>
+          <div>
+            <h3 class="font-bold text-sm sm:text-base text-amber-100 flex items-center gap-2">
+              <span>ประวัติการบันทึกและกิจกรรม</span>
+              <span class="text-[10px] font-mono uppercase bg-amber-500/20 text-amber-300 border border-amber-400/30 px-2 py-0.5 rounded-full">Audit Trail</span>
+            </h3>
+            <p class="text-[11px] text-amber-200/80">ตรวจสอบย้อนหลังทุกการเพิ่ม แก้ไข ลบ และเปลี่ยนสถานะพัสดุในระบบ</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeModal('auditTrailModal')" class="text-white/70 hover:text-white p-1 text-2xl font-bold leading-none cursor-pointer">&times;</button>
+      </div>
+
+      <!-- Controls & Filter Toolbar -->
+      <div class="p-3.5 sm:p-4 bg-slate-50 border-b border-slate-200 shrink-0 space-y-2.5">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <!-- Filter Chips: หมวดหมู่ Entity -->
+          <div class="flex items-center gap-1.5 overflow-x-auto touch-scroll py-0.5 no-scrollbar">
+            <button type="button" onclick="setAuditEntityFilter('all')" id="audit-filter-all" class="audit-chip active px-3 py-1 rounded-full text-xs font-bold transition whitespace-nowrap bg-amber-500 text-white shadow-2xs cursor-pointer">
+              ทั้งหมด
+            </button>
+            <button type="button" onclick="setAuditEntityFilter('asset')" id="audit-filter-asset" class="audit-chip px-3 py-1 rounded-full text-xs font-semibold transition whitespace-nowrap bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 cursor-pointer">
+              📦 ครุภัณฑ์
+            </button>
+            <button type="button" onclick="setAuditEntityFilter('material')" id="audit-filter-material" class="audit-chip px-3 py-1 rounded-full text-xs font-semibold transition whitespace-nowrap bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 cursor-pointer">
+              📑 วัสดุ
+            </button>
+            <button type="button" onclick="setAuditEntityFilter('user')" id="audit-filter-user" class="audit-chip px-3 py-1 rounded-full text-xs font-semibold transition whitespace-nowrap bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 cursor-pointer">
+              👤 ผู้ใช้งาน/ระบบ
+            </button>
+          </div>
+
+          <!-- Action Dropdown & Refresh -->
+          <div class="flex items-center gap-1.5 self-end sm:self-auto">
+            <select id="audit-action-select" onchange="loadAuditLogs()" class="text-xs bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 font-medium text-slate-700 focus:border-amber-500 outline-none">
+              <option value="all">ทุกประเภทกิจกรรม</option>
+              <option value="CREATE">🟢 เพิ่มรายการ (CREATE)</option>
+              <option value="UPDATE">🟠 แก้ไขข้อมูล (UPDATE)</option>
+              <option value="STATUS_CHANGE">⚠️ เปลี่ยนสถานะ (STATUS)</option>
+              <option value="DELETE">🔴 ลบรายการ (DELETE)</option>
+              <option value="LOGIN">🔵 เข้าสู่ระบบ (LOGIN)</option>
+              <option value="APPROVE_USER">🟣 อนุมัติผู้ใช้ (USER)</option>
+            </select>
+            <button type="button" onclick="loadAuditLogs()" class="p-1.5 bg-white hover:bg-amber-50 text-slate-700 hover:text-amber-900 border border-slate-200 rounded-xl transition cursor-pointer shadow-2xs" title="รีเฟรชประวัติล่าสุด">
+              🔄
+            </button>
+          </div>
+        </div>
+
+        <!-- Search Input -->
+        <div class="relative w-full">
+          <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+            🔍
+          </span>
+          <input type="text" id="audit-search-input" oninput="onAuditSearchInput(this.value)" placeholder="ค้นหาประวัติตามชื่อครู, ชื่อครุภัณฑ์/วัสดุ, หรือรายละเอียดการแก้ไข..." class="w-full pl-9 pr-8 py-2 bg-white border border-slate-200 focus:border-amber-400 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-amber-400/20 shadow-2xs placeholder-slate-400 text-slate-800 transition outline-none">
+          <button type="button" id="audit-search-clear" onclick="clearAuditSearch()" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer text-base">&times;</button>
+        </div>
+      </div>
+
+      <!-- Timeline List (Scrollable) -->
+      <div id="audit-timeline-container" class="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3 bg-slate-50/50 touch-scroll min-h-[280px]">
+        <!-- Populated dynamically by JS -->
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-5 py-3 bg-white border-t border-slate-200 flex items-center justify-between text-xs shrink-0">
+        <div id="audit-status-summary" class="text-slate-500 font-medium">
+          กำลังโหลดประวัติกิจกรรม...
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button" id="audit-clear-all-btn" onclick="clearAllAuditLogs()" class="hidden px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 rounded-xl font-semibold border border-rose-200 transition cursor-pointer">
+            🗑️ ล้างประวัติ (แอดมิน)
+          </button>
+          <button type="button" onclick="closeModal('auditTrailModal')" class="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition cursor-pointer">
+            ปิด
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- MODAL: รีเซ็ตรหัสผ่านให้ครู (สำหรับ Admin) -->
@@ -1983,10 +2076,13 @@
       </div>
 
       <div class="flex justify-between items-center pt-3 border-t border-slate-100 gap-2">
-        <button type="button" onclick="closeModal('publicAssetModal')" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition text-center">
+        <button type="button" onclick="closeModal('publicAssetModal')" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition text-center cursor-pointer">
           ปิดหน้าต่าง
         </button>
-        <button type="button" id="public-asset-edit-btn" onclick="goToEditFromPublicCard()" class="hidden w-full py-2.5 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 text-white rounded-xl font-bold transition text-center shadow-xs">
+        <button type="button" id="public-asset-history-btn" onclick="openAssetAuditTrailFromCard()" class="w-full py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl font-bold transition text-center cursor-pointer flex items-center justify-center gap-1 shadow-2xs">
+          <span>📜</span> <span>ประวัติรายการนี้</span>
+        </button>
+        <button type="button" id="public-asset-edit-btn" onclick="goToEditFromPublicCard()" class="hidden w-full py-2.5 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 text-white rounded-xl font-bold transition text-center shadow-xs cursor-pointer">
           ✏️ แก้ไขข้อมูล
         </button>
       </div>
@@ -2014,6 +2110,6 @@
     <option value="นางสาวภัฐธีรา  จุลพันธ์">ธุรการโรงเรียน</option>
   </datalist>
 
-  <script src="app.js?v=10.4"></script>
+  <script src="app.js?v=10.5"></script>
 </body>
 </html>
