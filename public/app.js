@@ -4741,57 +4741,84 @@ window.toggleMobilePrintToolbar = toggleMobilePrintToolbar;
 // ==================== LUXURY DARK MODE (โหมดมืดพรีเมียม) ====================
 function initDarkMode() {
   const savedTheme = localStorage.getItem('theme_mode');
-  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
+  // เริ่มต้นเป็นโหมดสว่าง ยกเว้นผู้ใช้จะเลือกโหมดมืดไว้ชัดเจน
+  const isDark = savedTheme === 'dark';
   applyDarkMode(isDark);
+}
+
+function setThemeMode(mode) {
+  const isDark = mode === 'dark';
+  localStorage.setItem('theme_mode', isDark ? 'dark' : 'light');
+  applyDarkMode(isDark);
+  if (typeof showToast === 'function') {
+    showToast(isDark ? '🌙 เปิดใช้งาน Luxury Dark Mode แล้ว' : '☀️ เปลี่ยนเป็นโหมดสว่างแล้ว', 'info');
+  }
 }
 
 function toggleDarkMode() {
   const isCurrentlyDark = document.documentElement.classList.contains('dark');
-  const newMode = !isCurrentlyDark;
-  applyDarkMode(newMode);
-  localStorage.setItem('theme_mode', newMode ? 'dark' : 'light');
-  if (typeof showToast === 'function') {
-    showToast(newMode ? '🌙 เปิดใช้งาน Luxury Dark Mode แล้ว' : '☀️ เปลี่ยนเป็นโหมดสว่างแล้ว', 'info');
-  }
+  setThemeMode(isCurrentlyDark ? 'light' : 'dark');
 }
 
 function applyDarkMode(isDark) {
   const root = document.documentElement;
-  const icon = document.getElementById('theme-toggle-icon');
-  const label = document.getElementById('theme-toggle-label');
-  const menuIcon = document.getElementById('menu-theme-icon');
-  const menuStatus = document.getElementById('menu-theme-status');
   const metaThemeColor = document.querySelector('meta[name="theme-color"]');
 
   if (isDark) {
     root.classList.add('dark');
-    if (icon) icon.textContent = '☀️';
-    if (label) label.textContent = 'โหมดสว่าง';
-    if (menuIcon) menuIcon.textContent = '☀️';
-    if (menuStatus) {
-      menuStatus.textContent = 'เปิดอยู่';
-      menuStatus.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30 whitespace-nowrap';
-    }
     if (metaThemeColor) metaThemeColor.setAttribute('content', '#080c14');
   } else {
     root.classList.remove('dark');
-    if (icon) icon.textContent = '🌙';
-    if (label) label.textContent = 'โหมดมืด';
-    if (menuIcon) menuIcon.textContent = '🌙';
-    if (menuStatus) {
-      menuStatus.textContent = 'ปิดอยู่';
-      menuStatus.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 whitespace-nowrap';
-    }
     if (metaThemeColor) metaThemeColor.setAttribute('content', '#800000');
+  }
+
+  // 1. อัปเดต Segmented Control ในเมนูจัดการระบบ (⚙️ Dropdown)
+  const menuBtnLight = document.getElementById('menu-btn-theme-light');
+  const menuBtnDark = document.getElementById('menu-btn-theme-dark');
+  const menuThemeBadge = document.getElementById('menu-theme-current-badge');
+
+  if (menuBtnLight && menuBtnDark) {
+    if (isDark) {
+      menuBtnLight.className = 'w-full py-1.5 px-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition flex items-center justify-center gap-1 cursor-pointer';
+      menuBtnDark.className = 'w-full py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer bg-gradient-to-r from-amber-400 to-amber-500 text-red-950 shadow-md border border-amber-300';
+    } else {
+      menuBtnLight.className = 'w-full py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer bg-white text-slate-900 shadow-2xs border border-slate-200/80';
+      menuBtnDark.className = 'w-full py-1.5 px-2 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-900 transition flex items-center justify-center gap-1 cursor-pointer';
+    }
+  }
+
+  if (menuThemeBadge) {
+    if (isDark) {
+      menuThemeBadge.textContent = '🌙 มืด (Luxury)';
+      menuThemeBadge.className = 'text-[9px] px-2 py-0.5 rounded-full font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30 whitespace-nowrap';
+    } else {
+      menuThemeBadge.textContent = '☀️ สว่าง';
+      menuThemeBadge.className = 'text-[9px] px-2 py-0.5 rounded-full font-bold bg-slate-100 text-slate-700 border border-slate-200 whitespace-nowrap';
+    }
+  }
+
+  // 2. อัปเดต Segmented Control ใน Footer
+  const footerBtnLight = document.getElementById('footer-theme-btn-light');
+  const footerBtnDark = document.getElementById('footer-theme-btn-dark');
+
+  if (footerBtnLight && footerBtnDark) {
+    if (isDark) {
+      footerBtnLight.className = 'px-2.5 py-1 rounded-lg font-semibold text-slate-400 hover:text-white transition flex items-center gap-1 cursor-pointer';
+      footerBtnDark.className = 'px-2.5 py-1 rounded-lg font-bold bg-gradient-to-r from-amber-400 to-amber-500 text-red-950 shadow-xs border border-amber-300 transition flex items-center gap-1 cursor-pointer';
+    } else {
+      footerBtnLight.className = 'px-2.5 py-1 rounded-lg font-bold bg-white text-slate-800 shadow-2xs border border-slate-200 transition flex items-center gap-1 cursor-pointer';
+      footerBtnDark.className = 'px-2.5 py-1 rounded-lg font-semibold text-slate-500 hover:text-slate-800 transition flex items-center gap-1 cursor-pointer';
+    }
   }
 }
 
 // เรียกใช้ทันทีตอนโหลดไฟล์
 initDarkMode();
 
+window.setThemeMode = setThemeMode;
 window.toggleDarkMode = toggleDarkMode;
 window.initDarkMode = initDarkMode;
+window.applyDarkMode = applyDarkMode;
 
 // ==================== MOBILE QR / BARCODE SCANNER (สแกนตรวจนับผ่านกล้องมือถือ) ====================
 let html5QrScannerInstance = null;

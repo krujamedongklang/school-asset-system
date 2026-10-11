@@ -27,18 +27,21 @@
           document.documentElement.classList.add('needs-login');
         }
         var theme = localStorage.getItem('theme_mode');
-        if (theme === 'dark' || (!theme && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        if (theme === 'dark') {
           document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
         }
       } catch (e) {}
     })();
+    // กำหนดค่า darkMode เป็น 'class' ก่อนโหลด Tailwind CDN
+    tailwind = {
+      config: {
+        darkMode: 'class'
+      }
+    };
   </script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class'
-    }
-  </script>
   <script src="qrcode.min.js"></script>
   <script src="html5-qrcode.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -628,12 +631,6 @@
 
           <!-- ต่อจาก 📋 บัญชีคุมวัสดุ: เมนูผู้ใช้งาน และ จัดการระบบ (อยู่ขวาสุด) -->
           <div class="flex items-center justify-end gap-1.5 sm:gap-2 shrink-0">
-            <!-- ปุ่มสลับ Luxury Dark Mode (โหมดมืดพรีเมียม) -->
-            <button type="button" onclick="toggleDarkMode()" id="theme-toggle-btn" class="px-2 py-1 sm:px-2.5 sm:py-1.5 bg-black/30 hover:bg-black/50 border border-amber-400/30 rounded-xl sm:rounded-2xl text-[11px] sm:text-xs text-amber-200 hover:text-white flex items-center gap-1 shadow-inner cursor-pointer transition transform active:scale-95 whitespace-nowrap" title="สลับโหมดสว่าง / Luxury Dark Mode">
-              <span id="theme-toggle-icon" class="text-xs sm:text-sm">🌙</span>
-              <span class="hidden md:inline font-semibold text-[11px]" id="theme-toggle-label">โหมดมืด</span>
-            </button>
-
             <!-- ป้ายสถานะ Cloud Database (ซ่อนไว้เพื่อให้หน้าจอสะอาดตา ไม่เกะกะ) -->
             <button type="button" onclick="openModal('supabaseModal')" id="db-status-badge" class="hidden" title="สถานะฐานข้อมูล">
               <span id="db-status-dot"></span>
@@ -656,111 +653,117 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
                 </svg>
               </button>
-              <div id="system-menu-dropdown" class="hidden absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-amber-200/80 py-1.5 z-50 text-xs divide-y divide-slate-100">
+              <div id="system-menu-dropdown" class="hidden absolute right-0 mt-2 w-64 bg-white dark:bg-[#0d1424] rounded-2xl shadow-2xl border border-amber-200/80 dark:border-amber-400/30 py-1.5 z-50 text-xs divide-y divide-slate-100 dark:divide-amber-400/15">
                 <!-- ส่วนหัวของเมนูดรอปดาวน์ แสดงผู้ใช้ที่ล็อกอินอยู่ -->
-                <div class="px-3.5 py-2 bg-gradient-to-r from-amber-50 to-orange-50/50 border-b border-amber-100/80 rounded-t-xl mb-1">
-                  <div class="text-[10px] text-amber-800 font-semibold">ผู้ใช้งานที่เข้าสู่ระบบ:</div>
-                  <div class="font-bold text-slate-800 text-xs truncate mt-0.5 flex items-center gap-1.5">
+                <div class="px-3.5 py-2 bg-gradient-to-r from-amber-50 to-orange-50/50 dark:from-amber-950/40 dark:to-slate-900 border-b border-amber-100/80 dark:border-amber-400/20 rounded-t-xl mb-1">
+                  <div class="text-[10px] text-amber-800 dark:text-amber-300 font-semibold">ผู้ใช้งานที่เข้าสู่ระบบ:</div>
+                  <div class="font-bold text-slate-800 dark:text-amber-100 text-xs truncate mt-0.5 flex items-center gap-1.5">
                     <span>👤</span>
                     <span id="menu-dropdown-user-name">ผู้ดูแลระบบ</span>
                   </div>
                 </div>
               <div class="py-1">
-                <!-- สลับ Luxury Dark Mode ในเมนูจัดการระบบ -->
-                <button type="button" onclick="toggleDarkMode(); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-amber-50 hover:text-red-900 flex items-center justify-between font-medium transition cursor-pointer">
-                  <div class="flex items-center gap-2.5">
-                    <span class="text-base" id="menu-theme-icon">🌙</span>
-                    <div>
-                      <div class="font-bold text-slate-800" id="menu-theme-title">Luxury Dark Mode</div>
-                      <div class="text-[10px] text-slate-400">สลับโหมดมืดพรีเมียม / โหมดสว่าง</div>
-                    </div>
+                <!-- ธีมการแสดงผล (Segmented Control: สว่าง / มืด) -->
+                <div class="px-3.5 py-2 border-b border-slate-100 dark:border-amber-400/15 space-y-1.5">
+                  <div class="flex items-center justify-between text-xs font-bold text-slate-800 dark:text-amber-200">
+                    <span class="flex items-center gap-1.5">
+                      <span>🎨</span> <span>ธีมการแสดงผล</span>
+                    </span>
+                    <span id="menu-theme-current-badge" class="text-[9px] px-2 py-0.5 rounded-full font-bold bg-slate-100 text-slate-700 border border-slate-200 dark:bg-amber-400/20 dark:text-amber-300 dark:border-amber-400/30">☀️ สว่าง</span>
                   </div>
-                  <span id="menu-theme-status" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 whitespace-nowrap">โหมดสว่าง</span>
-                </button>
+                  <div class="grid grid-cols-2 gap-1 bg-slate-100/80 dark:bg-black/50 p-0.5 rounded-xl border border-slate-200/80 dark:border-amber-400/25">
+                    <button type="button" onclick="setThemeMode('light')" id="menu-btn-theme-light" class="w-full py-1.5 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer bg-white text-slate-900 shadow-2xs border border-slate-200/80">
+                      <span>☀️</span> <span>สว่าง</span>
+                    </button>
+                    <button type="button" onclick="setThemeMode('dark')" id="menu-btn-theme-dark" class="w-full py-1.5 px-2 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-900 transition flex items-center justify-center gap-1 cursor-pointer">
+                      <span>🌙</span> <span>มืด</span>
+                    </button>
+                  </div>
+                </div>
                 <!-- สแกนตรวจนับผ่านกล้อง (QR / Barcode) -->
-                <button type="button" onclick="openScannerModal(); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-900 flex items-center justify-between font-medium transition cursor-pointer">
+                <button type="button" onclick="openScannerModal(); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-900 dark:hover:text-emerald-300 flex items-center justify-between font-medium transition cursor-pointer">
                   <div class="flex items-center gap-2.5">
                     <span class="text-base">📷</span>
                     <div>
-                      <div class="font-bold text-slate-800">สแกนตรวจนับ (QR / Barcode)</div>
-                      <div class="text-[10px] text-slate-400">สแกนตรวจนับครุภัณฑ์ผ่านกล้องมือถือ</div>
+                      <div class="font-bold text-slate-800 dark:text-emerald-200">สแกนตรวจนับ (QR / Barcode)</div>
+                      <div class="text-[10px] text-slate-400 dark:text-slate-400">สแกนตรวจนับครุภัณฑ์ผ่านกล้องมือถือ</div>
                     </div>
                   </div>
-                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 whitespace-nowrap">กล้องมือถือ</span>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700 whitespace-nowrap">กล้องมือถือ</span>
                 </button>
                 <!-- ติดตั้งแอปพลิเคชัน (PWA) ซ่อนรวมไว้ในเมนูจัดการระบบ -->
-                <button type="button" onclick="installPwaApp(); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-900 flex items-center justify-between font-medium transition cursor-pointer">
+                <button type="button" onclick="installPwaApp(); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-900 dark:hover:text-emerald-300 flex items-center justify-between font-medium transition cursor-pointer">
                   <div class="flex items-center gap-2.5">
                     <span class="text-base">📲</span>
                     <div>
-                      <div class="font-bold text-emerald-800">ติดตั้งแอปพลิเคชัน (PWA)</div>
-                      <div class="text-[10px] text-slate-400">ติดตั้งลงในมือถือ / iPad / คอมพิวเตอร์</div>
+                      <div class="font-bold text-emerald-800 dark:text-emerald-300">ติดตั้งแอปพลิเคชัน (PWA)</div>
+                      <div class="text-[10px] text-slate-400 dark:text-slate-400">ติดตั้งลงในมือถือ / iPad / คอมพิวเตอร์</div>
                     </div>
                   </div>
                   <span id="pwa-ready-badge" class="hidden px-2 py-0.5 bg-emerald-600 text-white font-bold rounded-full text-[10px] whitespace-nowrap">พร้อมติดตั้ง</span>
                 </button>
                 <!-- เมนูสำหรับ Admin: จัดการผู้ใช้งานและสิทธิ์ -->
-                <button type="button" id="menu-btn-user-mgmt" onclick="openModal('userManagementModal'); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-amber-50 hover:text-red-900 flex items-center justify-between font-medium transition cursor-pointer">
+                <button type="button" id="menu-btn-user-mgmt" onclick="openModal('userManagementModal'); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 dark:text-slate-200 hover:bg-amber-50 dark:hover:bg-amber-950/40 hover:text-red-900 dark:hover:text-amber-300 flex items-center justify-between font-medium transition cursor-pointer">
                   <div class="flex items-center gap-2.5">
                     <span class="text-base">👥</span>
                     <div>
-                      <div class="font-bold text-slate-800">จัดการผู้ใช้งานและสิทธิ์</div>
-                      <div class="text-[10px] text-slate-400">อนุมัติครูผู้ใช้ & สิทธิ์แก้ไข/ลบ</div>
+                      <div class="font-bold text-slate-800 dark:text-amber-100">จัดการผู้ใช้งานและสิทธิ์</div>
+                      <div class="text-[10px] text-slate-400 dark:text-slate-400">อนุมัติครูผู้ใช้ & สิทธิ์แก้ไข/ลบ</div>
                     </div>
                   </div>
                   <span id="pending-users-badge" class="hidden px-2 py-0.5 bg-rose-500 text-white font-bold rounded-full text-[10px] animate-pulse">0</span>
                 </button>
-                <button type="button" id="menu-btn-org" onclick="openModal('orgModal'); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-amber-50 hover:text-red-900 flex items-center gap-2.5 font-medium transition cursor-pointer">
+                <button type="button" id="menu-btn-org" onclick="openModal('orgModal'); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 dark:text-slate-200 hover:bg-amber-50 dark:hover:bg-amber-950/40 hover:text-red-900 dark:hover:text-amber-300 flex items-center gap-2.5 font-medium transition cursor-pointer">
                   <span class="text-base">⚙️</span>
                   <div>
-                    <div class="font-bold text-slate-800">ตั้งค่าหน่วยงาน</div>
-                    <div class="text-[10px] text-slate-400">ชื่อส่วนราชการและหน่วยงานพิมพ์</div>
+                    <div class="font-bold text-slate-800 dark:text-amber-100">ตั้งค่าหน่วยงาน</div>
+                    <div class="text-[10px] text-slate-400 dark:text-slate-400">ชื่อส่วนราชการและหน่วยงานพิมพ์</div>
                   </div>
                 </button>
-                <button type="button" id="menu-btn-supabase" onclick="openModal('supabaseModal'); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-amber-50 hover:text-red-900 flex items-center gap-2.5 font-medium transition cursor-pointer">
+                <button type="button" id="menu-btn-supabase" onclick="openModal('supabaseModal'); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 dark:text-slate-200 hover:bg-amber-50 dark:hover:bg-amber-950/40 hover:text-red-900 dark:hover:text-amber-300 flex items-center gap-2.5 font-medium transition cursor-pointer">
                   <span class="text-base">☁️</span>
                   <div>
-                    <div class="font-bold text-slate-800">Cloud Database (Supabase)</div>
-                    <div class="text-[10px] text-emerald-600 font-semibold">เก็บข้อมูลถาวรบนคลาวด์</div>
+                    <div class="font-bold text-slate-800 dark:text-amber-100">Cloud Database (Supabase)</div>
+                    <div class="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">เก็บข้อมูลถาวรบนคลาวด์</div>
                   </div>
                 </button>
-                <button type="button" id="menu-btn-audit-logs" onclick="openAuditTrailModal(); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-amber-50 hover:text-red-900 flex items-center gap-2.5 font-medium transition cursor-pointer">
+                <button type="button" id="menu-btn-audit-logs" onclick="openAuditTrailModal(); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 dark:text-slate-200 hover:bg-amber-50 dark:hover:bg-amber-950/40 hover:text-red-900 dark:hover:text-amber-300 flex items-center gap-2.5 font-medium transition cursor-pointer">
                   <span class="text-base">📜</span>
                   <div>
-                    <div class="font-bold text-slate-800">ประวัติกิจกรรม (Audit Trail)</div>
-                    <div class="text-[10px] text-amber-700 font-semibold">ตรวจสอบย้อนหลังทุกการแก้ไข/ลบ</div>
+                    <div class="font-bold text-slate-800 dark:text-amber-100">ประวัติกิจกรรม (Audit Trail)</div>
+                    <div class="text-[10px] text-amber-700 dark:text-amber-400 font-semibold">ตรวจสอบย้อนหลังทุกการแก้ไข/ลบ</div>
                   </div>
                 </button>
               </div>
               <div class="py-1" id="menu-section-backup">
-                <button type="button" id="menu-btn-backup" onclick="exportBackup(); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-amber-50 hover:text-red-900 flex items-center gap-2.5 font-medium transition cursor-pointer">
+                <button type="button" id="menu-btn-backup" onclick="exportBackup(); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 dark:text-slate-200 hover:bg-amber-50 dark:hover:bg-amber-950/40 hover:text-red-900 dark:hover:text-amber-300 flex items-center gap-2.5 font-medium transition cursor-pointer">
                   <span class="text-base">📥</span>
                   <div>
-                    <div class="font-bold text-slate-800">สำรองข้อมูล</div>
-                    <div class="text-[10px] text-slate-400">ดาวน์โหลดไฟล์สำรอง (.json)</div>
+                    <div class="font-bold text-slate-800 dark:text-amber-100">สำรองข้อมูล</div>
+                    <div class="text-[10px] text-slate-400 dark:text-slate-400">ดาวน์โหลดไฟล์สำรอง (.json)</div>
                   </div>
                 </button>
-                <button type="button" id="menu-btn-restore" onclick="openModal('restoreModal'); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-amber-50 hover:text-red-900 flex items-center gap-2.5 font-medium transition cursor-pointer">
+                <button type="button" id="menu-btn-restore" onclick="openModal('restoreModal'); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 dark:text-slate-200 hover:bg-amber-50 dark:hover:bg-amber-950/40 hover:text-red-900 dark:hover:text-amber-300 flex items-center gap-2.5 font-medium transition cursor-pointer">
                   <span class="text-base">📤</span>
                   <div>
-                    <div class="font-bold text-slate-800">นำเข้าข้อมูล</div>
-                    <div class="text-[10px] text-slate-400">กู้คืนข้อมูลจากไฟล์สำรอง (.json)</div>
+                    <div class="font-bold text-slate-800 dark:text-amber-100">นำเข้าข้อมูล</div>
+                    <div class="text-[10px] text-slate-400 dark:text-slate-400">กู้คืนข้อมูลจากไฟล์สำรอง (.json)</div>
                   </div>
                 </button>
               </div>
               <div class="py-1">
-                <button type="button" onclick="openModal('changePasswordModal'); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-amber-50 hover:text-red-900 flex items-center gap-2.5 font-medium transition cursor-pointer">
+                <button type="button" onclick="openModal('changePasswordModal'); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 dark:text-slate-200 hover:bg-amber-50 dark:hover:bg-amber-950/40 hover:text-red-900 dark:hover:text-amber-300 flex items-center gap-2.5 font-medium transition cursor-pointer">
                   <span class="text-base">🔑</span>
                   <div>
-                    <div class="font-bold text-slate-800">เปลี่ยนรหัสผ่าน</div>
-                    <div class="text-[10px] text-slate-400">เปลี่ยนรหัสเข้าใช้งานระบบ</div>
+                    <div class="font-bold text-slate-800 dark:text-amber-100">เปลี่ยนรหัสผ่าน</div>
+                    <div class="text-[10px] text-slate-400 dark:text-slate-400">เปลี่ยนรหัสเข้าใช้งานระบบ</div>
                   </div>
                 </button>
-                <button type="button" onclick="logout(); closeSystemMenu();" class="w-full text-left px-4 py-2 text-rose-700 hover:bg-rose-50 flex items-center gap-2.5 font-medium transition cursor-pointer">
+                <button type="button" onclick="logout(); closeSystemMenu();" class="w-full text-left px-4 py-2 text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-2.5 font-medium transition cursor-pointer">
                   <span class="text-base">🚪</span>
                   <div>
-                    <div class="font-bold text-rose-800">ออกจากระบบ</div>
-                    <div class="text-[10px] text-rose-400">ล็อกเอาท์จากอุปกรณ์นี้</div>
+                    <div class="font-bold text-rose-800 dark:text-rose-300">ออกจากระบบ</div>
+                    <div class="text-[10px] text-rose-400 dark:text-rose-500">ล็อกเอาท์จากอุปกรณ์นี้</div>
                   </div>
                 </button>
               </div>
@@ -1211,6 +1214,24 @@
           </table>
         </div>
       </div>
+
+      <!-- Footer: ข้อมูลระบบ และตัวสลับโหมดการแสดงผลแบบมินิมอล -->
+      <footer class="mt-8 pt-4 pb-6 border-t border-slate-200 dark:border-amber-400/20 text-xs text-slate-500 dark:text-slate-400 no-print flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <span>🏫</span>
+          <span class="font-semibold text-slate-700 dark:text-amber-200">โรงเรียนบ้านดงกลาง</span>
+          <span class="text-slate-400 dark:text-amber-400/40">•</span>
+          <span>ระบบบริหารจัดการพัสดุและครุภัณฑ์</span>
+        </div>
+        <div class="inline-flex items-center gap-1 bg-slate-100 dark:bg-black/50 p-1 rounded-xl border border-slate-200 dark:border-amber-400/25 text-xs">
+          <button type="button" onclick="setThemeMode('light')" id="footer-theme-btn-light" class="px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1 cursor-pointer bg-white text-slate-800 shadow-2xs border border-slate-200">
+            <span>☀️</span> <span>สว่าง</span>
+          </button>
+          <button type="button" onclick="setThemeMode('dark')" id="footer-theme-btn-dark" class="px-2.5 py-1 rounded-lg font-semibold text-slate-500 hover:text-slate-800 transition flex items-center gap-1 cursor-pointer">
+            <span>🌙</span> <span>มืด</span>
+          </button>
+        </div>
+      </footer>
 
     </div>
   </div>
@@ -2593,6 +2614,6 @@
     <option value="นางสาวภัฐธีรา  จุลพันธ์">ธุรการโรงเรียน</option>
   </datalist>
 
-  <script src="app.js?v=11.7"></script>
+  <script src="app.js?v=11.8"></script>
 </body>
 </html>
