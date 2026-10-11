@@ -4666,17 +4666,17 @@ function initPwa() {
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPwaPrompt = e;
-    const installBtn = document.getElementById('pwa-install-btn');
-    if (installBtn) {
-      installBtn.classList.remove('hidden');
+    const readyBadge = document.getElementById('pwa-ready-badge');
+    if (readyBadge) {
+      readyBadge.classList.remove('hidden');
     }
   });
 
   // เมื่อติดตั้งลงอุปกรณ์สำเร็จ
   window.addEventListener('appinstalled', () => {
     deferredPwaPrompt = null;
-    const installBtn = document.getElementById('pwa-install-btn');
-    if (installBtn) installBtn.classList.add('hidden');
+    const readyBadge = document.getElementById('pwa-ready-badge');
+    if (readyBadge) readyBadge.classList.add('hidden');
     closeModal('pwaInstallModal');
     if (typeof showToast === 'function') {
       showToast('🎉 ติดตั้งแอปพลิเคชันโรงเรียนดงกลางสำเร็จแล้ว!', 'success');
@@ -4704,8 +4704,8 @@ function triggerPwaPrompt() {
   deferredPwaPrompt.prompt();
   deferredPwaPrompt.userChoice.then((choiceResult) => {
     if (choiceResult && choiceResult.outcome === 'accepted') {
-      const installBtn = document.getElementById('pwa-install-btn');
-      if (installBtn) installBtn.classList.add('hidden');
+      const readyBadge = document.getElementById('pwa-ready-badge');
+      if (readyBadge) readyBadge.classList.add('hidden');
       closeModal('pwaInstallModal');
     }
     deferredPwaPrompt = null;

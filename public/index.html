@@ -348,13 +348,7 @@
               <span id="db-status-text"></span>
             </button>
 
-            <!-- ปุ่มติดตั้งแอปพลิเคชัน (PWA Install Button) จะปรากฏเมื่อเบราว์เซอร์รองรับการติดตั้ง -->
-            <button type="button" id="pwa-install-btn" onclick="installPwaApp()" class="hidden px-2.5 py-1.5 sm:px-3 sm:py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white border border-emerald-400/50 rounded-2xl text-xs font-bold transition shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap animate-pulse" title="ติดตั้งเป็นแอปพลิเคชันลงในอุปกรณ์">
-              <span>📲</span>
-              <span class="hidden sm:inline">ติดตั้งแอป</span>
-            </button>
-
-            <!-- เมนูจัดการระบบ (ซ่อนรวม: ตั้งค่าหน่วยงาน, สำรองข้อมูล, นำเข้าข้อมูล, Supabase, เปลี่ยนรหัสผ่าน, ออกจากระบบ) -->
+            <!-- เมนูจัดการระบบ (ซ่อนรวม: ติดตั้งแอป, ตั้งค่าหน่วยงาน, สำรองข้อมูล, นำเข้าข้อมูล, Supabase, เปลี่ยนรหัสผ่าน, ออกจากระบบ) -->
             <div class="relative inline-block text-left shrink-0" id="system-menu-container">
               <button type="button" onclick="toggleSystemMenu()" id="system-menu-btn" class="px-2.5 py-1.5 sm:px-3.5 sm:py-1.5 bg-gradient-to-r from-amber-500/20 to-red-950/60 hover:from-amber-400/30 hover:to-red-900 border border-amber-400/40 rounded-2xl text-xs font-bold transition text-amber-200 hover:text-white flex items-center gap-1.5 shadow-sm cursor-pointer focus:outline-none whitespace-nowrap">
                 <span class="text-xs sm:text-sm">⚙️</span>
@@ -373,13 +367,16 @@
                   </div>
                 </div>
               <div class="py-1">
-                <!-- ติดตั้งแอปพลิเคชัน (PWA) -->
-                <button type="button" onclick="installPwaApp(); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-900 flex items-center gap-2.5 font-medium transition cursor-pointer">
-                  <span class="text-base">📲</span>
-                  <div>
-                    <div class="font-bold text-emerald-800">ติดตั้งแอปพลิเคชัน (PWA)</div>
-                    <div class="text-[10px] text-slate-400">ติดตั้งลงในมือถือ / iPad / คอมพิวเตอร์</div>
+                <!-- ติดตั้งแอปพลิเคชัน (PWA) ซ่อนรวมไว้ในเมนูจัดการระบบ -->
+                <button type="button" onclick="installPwaApp(); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-900 flex items-center justify-between font-medium transition cursor-pointer">
+                  <div class="flex items-center gap-2.5">
+                    <span class="text-base">📲</span>
+                    <div>
+                      <div class="font-bold text-emerald-800">ติดตั้งแอปพลิเคชัน (PWA)</div>
+                      <div class="text-[10px] text-slate-400">ติดตั้งลงในมือถือ / iPad / คอมพิวเตอร์</div>
+                    </div>
                   </div>
+                  <span id="pwa-ready-badge" class="hidden px-2 py-0.5 bg-emerald-600 text-white font-bold rounded-full text-[10px] whitespace-nowrap">พร้อมติดตั้ง</span>
                 </button>
                 <!-- เมนูสำหรับ Admin: จัดการผู้ใช้งานและสิทธิ์ -->
                 <button type="button" id="menu-btn-user-mgmt" onclick="openModal('userManagementModal'); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-amber-50 hover:text-red-900 flex items-center justify-between font-medium transition cursor-pointer">
@@ -2156,6 +2153,6 @@
     <option value="นางสาวภัฐธีรา  จุลพันธ์">ธุรการโรงเรียน</option>
   </datalist>
 
-  <script src="app.js?v=11.0"></script>
+  <script src="app.js?v=11.1"></script>
 </body>
 </html>
