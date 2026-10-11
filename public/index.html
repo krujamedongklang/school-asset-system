@@ -18,7 +18,7 @@
   <meta http-equiv="Expires" content="0">
   <title>ระบบบริหารจัดการพัสดุและครุภัณฑ์โรงเรียนดงกลาง</title>
   <script>
-    // ตรวจสอบสิทธิ์เบื้องต้นทันทีก่อนเรนเดอร์ เพื่อป้องกันหน้าต่างล็อกอินกะพริบขึ้นมาตอนกด F5 / รีเฟรช
+    // ตรวจสอบสิทธิ์และโหมดธีมเบื้องต้นทันทีก่อนเรนเดอร์ เพื่อป้องกันหน้ากะพริบ
     (function() {
       try {
         var token = localStorage.getItem('school_auth_token') || sessionStorage.getItem('school_auth_token');
@@ -26,10 +26,19 @@
         if (!token && !isPublicAsset) {
           document.documentElement.classList.add('needs-login');
         }
+        var theme = localStorage.getItem('theme_mode');
+        if (theme === 'dark' || (!theme && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        }
       } catch (e) {}
     })();
   </script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class'
+    }
+  </script>
   <script src="qrcode.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
@@ -236,6 +245,224 @@
         height: 100% !important;
         display: block !important;
       }
+    /* ======================================================== */
+    /* LUXURY DARK MODE STYLES (โหมดมืดสไตล์พรีเมียมหรูหรา) */
+    /* ======================================================== */
+    html.dark {
+      color-scheme: dark;
+    }
+    html.dark body {
+      background-color: #080c14 !important;
+      color: #f1f5f9 !important;
+    }
+    html.dark .screen-only {
+      background-color: #080c14 !important;
+    }
+    /* แสงออร่าเรืองทอง-แดงเบอร์กันดีจางๆ ด้านหลัง */
+    html.dark .screen-only::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100vw;
+      height: 500px;
+      background: radial-gradient(ellipse at 50% 0%, rgba(136, 19, 55, 0.22) 0%, rgba(245, 158, 11, 0.06) 45%, transparent 75%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    html.dark nav {
+      background: linear-gradient(to right, #160306, #29050d, #190307) !important;
+      border-bottom: 2px solid #f59e0b !important;
+      box-shadow: 0 4px 25px rgba(0, 0, 0, 0.6) !important;
+    }
+    /* หัวเรื่อง */
+    html.dark h2 {
+      color: #fef08a !important;
+      text-shadow: 0 0 20px rgba(245, 158, 11, 0.25);
+    }
+    /* กล่องการ์ดและคอนเทนเนอร์ทั่วไป */
+    html.dark .bg-white {
+      background-color: #0f172a !important;
+      border-color: rgba(255, 255, 255, 0.08) !important;
+      color: #f1f5f9 !important;
+    }
+    html.dark .bg-slate-50,
+    html.dark .bg-slate-100 {
+      background-color: #1e293b !important;
+      color: #cbd5e1 !important;
+    }
+    /* ข้อความสีต่างๆ */
+    html.dark .text-slate-800,
+    html.dark .text-slate-700,
+    html.dark .text-red-950 {
+      color: #f8fafc !important;
+    }
+    html.dark .text-slate-600,
+    html.dark .text-slate-500 {
+      color: #94a3b8 !important;
+    }
+    html.dark .text-slate-400 {
+      color: #64748b !important;
+    }
+    html.dark .text-emerald-800,
+    html.dark .text-emerald-900 {
+      color: #6ee7b7 !important;
+    }
+    html.dark .text-amber-800,
+    html.dark .text-amber-900 {
+      color: #fde68a !important;
+    }
+    html.dark .text-rose-800,
+    html.dark .text-rose-700 {
+      color: #fda4af !important;
+    }
+    /* ป้าย Badge เลือกแล้ว */
+    html.dark #asset-selected-badge,
+    html.dark #material-selected-badge {
+      background-color: rgba(245, 158, 11, 0.15) !important;
+      color: #fde68a !important;
+      border-color: rgba(245, 158, 11, 0.35) !important;
+    }
+    /* KPI Cards ใน Dark Mode */
+    html.dark .kpi-card {
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.8)) !important;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+      border-color: rgba(255, 255, 255, 0.08) !important;
+    }
+    html.dark .kpi-card:hover {
+      border-color: rgba(245, 158, 11, 0.4) !important;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6), 0 0 15px rgba(245, 158, 11, 0.15) !important;
+    }
+    html.dark #kpi-card-all .kpi-val {
+      color: #fbbf24 !important;
+    }
+    html.dark #kpi-card-good .kpi-val {
+      color: #34d399 !important;
+    }
+    html.dark #kpi-card-repair .kpi-val {
+      color: #fb923c !important;
+    }
+    html.dark #kpi-card-disposal .kpi-val {
+      color: #fb7185 !important;
+    }
+    html.dark #kpi-total-cost {
+      color: #fde68a !important;
+    }
+    /* กล่องเครื่องมือค้นหาและตัวกรอง */
+    html.dark #asset-search-input,
+    html.dark #material-search-input,
+    html.dark input[type="text"],
+    html.dark input[type="password"],
+    html.dark input[type="number"],
+    html.dark input[type="date"],
+    html.dark select,
+    html.dark textarea {
+      background-color: #1e293b !important;
+      color: #f8fafc !important;
+      border-color: #334155 !important;
+    }
+    html.dark select option {
+      background-color: #1e293b !important;
+      color: #f8fafc !important;
+    }
+    html.dark input:focus,
+    html.dark select:focus,
+    html.dark textarea:focus {
+      border-color: #fbbf24 !important;
+      box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25) !important;
+    }
+    /* ตารางใน Dark Mode */
+    html.dark #screen-asset-table-container,
+    html.dark #screen-material-table-container {
+      background-color: #0f172a !important;
+      border-color: rgba(255, 255, 255, 0.08) !important;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+    }
+    html.dark #screen-asset-table-container thead th,
+    html.dark #screen-material-table-container thead th {
+      background-color: #1a0306 !important;
+      color: #fde68a !important;
+      border-color: rgba(245, 158, 11, 0.25) !important;
+    }
+    html.dark tbody tr {
+      border-color: rgba(255, 255, 255, 0.06) !important;
+      color: #cbd5e1 !important;
+    }
+    html.dark tbody tr:nth-child(even) {
+      background-color: rgba(255, 255, 255, 0.015) !important;
+    }
+    html.dark tbody tr:hover {
+      background-color: rgba(245, 158, 11, 0.08) !important;
+    }
+    html.dark td {
+      border-color: rgba(255, 255, 255, 0.06) !important;
+    }
+    html.dark td .text-amber-200,
+    html.dark td .text-amber-600,
+    html.dark td .text-amber-700 {
+      color: #fbbf24 !important;
+    }
+    /* ป้ายตัวกรอง */
+    html.dark .bg-amber-100 {
+      background-color: rgba(245, 158, 11, 0.2) !important;
+      color: #fde68a !important;
+    }
+    html.dark .bg-emerald-100 {
+      background-color: rgba(16, 185, 129, 0.2) !important;
+      color: #6ee7b7 !important;
+    }
+    html.dark .bg-rose-100 {
+      background-color: rgba(244, 63, 94, 0.2) !important;
+    }
+    /* แถบงานพิมพ์และรายงานบนมือถือ */
+    html.dark #asset-print-toolbar,
+    html.dark [onclick="toggleMobilePrintToolbar()"] {
+      background-color: #0f172a !important;
+      border-color: rgba(255, 255, 255, 0.08) !important;
+      color: #f8fafc !important;
+    }
+    /* Dropdown จัดการระบบ */
+    html.dark #system-menu-dropdown {
+      background-color: #0f172a !important;
+      border-color: rgba(245, 158, 11, 0.3) !important;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8) !important;
+    }
+    html.dark #system-menu-dropdown .bg-amber-50\/70,
+    html.dark #system-menu-dropdown .bg-gradient-to-r {
+      background: linear-gradient(to right, #1e0508, #2a080e) !important;
+      border-color: rgba(245, 158, 11, 0.2) !important;
+    }
+    html.dark #system-menu-dropdown button {
+      color: #e2e8f0 !important;
+    }
+    html.dark #system-menu-dropdown button:hover {
+      background-color: rgba(245, 158, 11, 0.12) !important;
+      color: #fbbf24 !important;
+    }
+    /* หน้าต่าง Modal ต่างๆ */
+    html.dark .modal-content,
+    html.dark [id$="Modal"] > div > div {
+      background-color: #0f172a !important;
+      color: #f8fafc !important;
+      border: 1px solid rgba(245, 158, 11, 0.3) !important;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9) !important;
+    }
+    html.dark [id$="Modal"] .bg-slate-50,
+    html.dark [id$="Modal"] .bg-slate-100 {
+      background-color: #1e293b !important;
+      color: #f1f5f9 !important;
+    }
+    html.dark [id$="Modal"] .border-slate-100,
+    html.dark [id$="Modal"] .border-slate-200 {
+      border-color: rgba(255, 255, 255, 0.08) !important;
+    }
+    /* ป้องกัน Dark Mode กระทบงานพิมพ์ A4 */
+    @media print {
+      html.dark, html.dark body {
+        background-color: white !important;
+        color: black !important;
+      }
     }
   </style>
 </head>
@@ -391,6 +618,12 @@
               <span id="nav-user-role-badge" class="px-1.5 py-0.2 sm:px-2 sm:py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-amber-400 text-red-950 shadow-2xs whitespace-nowrap">แอดมิน</span>
             </div>
 
+            <!-- ปุ่มสลับ Luxury Dark Mode (โหมดมืดพรีเมียม) -->
+            <button type="button" onclick="toggleDarkMode()" id="theme-toggle-btn" class="px-2 py-1 sm:px-2.5 sm:py-1.5 bg-black/30 hover:bg-black/50 border border-amber-400/30 rounded-xl sm:rounded-2xl text-[11px] sm:text-xs text-amber-200 hover:text-white flex items-center gap-1 shadow-inner cursor-pointer transition transform active:scale-95 whitespace-nowrap" title="สลับโหมดสว่าง / Luxury Dark Mode">
+              <span id="theme-toggle-icon" class="text-xs sm:text-sm">🌙</span>
+              <span class="hidden md:inline font-semibold text-[11px]" id="theme-toggle-label">โหมดมืด</span>
+            </button>
+
             <!-- ป้ายสถานะ Cloud Database (ซ่อนไว้เพื่อให้หน้าจอสะอาดตา ไม่เกะกะ) -->
             <button type="button" onclick="openModal('supabaseModal')" id="db-status-badge" class="hidden" title="สถานะฐานข้อมูล">
               <span id="db-status-dot"></span>
@@ -416,6 +649,17 @@
                   </div>
                 </div>
               <div class="py-1">
+                <!-- สลับ Luxury Dark Mode ในเมนูจัดการระบบ -->
+                <button type="button" onclick="toggleDarkMode(); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-amber-50 hover:text-red-900 flex items-center justify-between font-medium transition cursor-pointer">
+                  <div class="flex items-center gap-2.5">
+                    <span class="text-base" id="menu-theme-icon">🌙</span>
+                    <div>
+                      <div class="font-bold text-slate-800" id="menu-theme-title">Luxury Dark Mode</div>
+                      <div class="text-[10px] text-slate-400">สลับโหมดมืดพรีเมียม / โหมดสว่าง</div>
+                    </div>
+                  </div>
+                  <span id="menu-theme-status" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 whitespace-nowrap">โหมดสว่าง</span>
+                </button>
                 <!-- ติดตั้งแอปพลิเคชัน (PWA) ซ่อนรวมไว้ในเมนูจัดการระบบ -->
                 <button type="button" onclick="installPwaApp(); closeSystemMenu();" class="w-full text-left px-4 py-2 text-slate-700 hover:bg-emerald-50 hover:text-emerald-900 flex items-center justify-between font-medium transition cursor-pointer">
                   <div class="flex items-center gap-2.5">
@@ -2216,6 +2460,6 @@
     <option value="นางสาวภัฐธีรา  จุลพันธ์">ธุรการโรงเรียน</option>
   </datalist>
 
-  <script src="app.js?v=11.4"></script>
+  <script src="app.js?v=11.5"></script>
 </body>
 </html>

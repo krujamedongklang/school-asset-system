@@ -1149,6 +1149,7 @@ async function handleSyncToSupabase() {
 
 // ==================== DOM READY ====================
 document.addEventListener('DOMContentLoaded', async () => {
+  initDarkMode();
   initPwa();
   initOrgSettings();
   initMaterialMeta();
@@ -4736,5 +4737,60 @@ function toggleMobilePrintToolbar() {
 }
 
 window.toggleMobilePrintToolbar = toggleMobilePrintToolbar;
+
+// ==================== LUXURY DARK MODE (โหมดมืดพรีเมียม) ====================
+function initDarkMode() {
+  const savedTheme = localStorage.getItem('theme_mode');
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
+  applyDarkMode(isDark);
+}
+
+function toggleDarkMode() {
+  const isCurrentlyDark = document.documentElement.classList.contains('dark');
+  const newMode = !isCurrentlyDark;
+  applyDarkMode(newMode);
+  localStorage.setItem('theme_mode', newMode ? 'dark' : 'light');
+  if (typeof showToast === 'function') {
+    showToast(newMode ? '🌙 เปิดใช้งาน Luxury Dark Mode แล้ว' : '☀️ เปลี่ยนเป็นโหมดสว่างแล้ว', 'info');
+  }
+}
+
+function applyDarkMode(isDark) {
+  const root = document.documentElement;
+  const icon = document.getElementById('theme-toggle-icon');
+  const label = document.getElementById('theme-toggle-label');
+  const menuIcon = document.getElementById('menu-theme-icon');
+  const menuStatus = document.getElementById('menu-theme-status');
+  const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+
+  if (isDark) {
+    root.classList.add('dark');
+    if (icon) icon.textContent = '☀️';
+    if (label) label.textContent = 'โหมดสว่าง';
+    if (menuIcon) menuIcon.textContent = '☀️';
+    if (menuStatus) {
+      menuStatus.textContent = 'เปิดอยู่';
+      menuStatus.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30 whitespace-nowrap';
+    }
+    if (metaThemeColor) metaThemeColor.setAttribute('content', '#080c14');
+  } else {
+    root.classList.remove('dark');
+    if (icon) icon.textContent = '🌙';
+    if (label) label.textContent = 'โหมดมืด';
+    if (menuIcon) menuIcon.textContent = '🌙';
+    if (menuStatus) {
+      menuStatus.textContent = 'ปิดอยู่';
+      menuStatus.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 whitespace-nowrap';
+    }
+    if (metaThemeColor) metaThemeColor.setAttribute('content', '#800000');
+  }
+}
+
+// เรียกใช้ทันทีตอนโหลดไฟล์
+initDarkMode();
+
+window.toggleDarkMode = toggleDarkMode;
+window.initDarkMode = initDarkMode;
 
 
