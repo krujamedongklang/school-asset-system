@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#800000">
   <meta name="description" content="ระบบบริหารจัดการพัสดุและครุภัณฑ์ โรงเรียนดงกลาง สพป.นม. 5">
   <link rel="manifest" href="/manifest.json">
@@ -33,6 +33,60 @@
   <script src="qrcode.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    /* รองรับการหมุนหน้าจอแนวนอน (Landscape Mode) บนมือถือและไอแพด */
+    @media screen and (orientation: landscape) and (max-height: 540px) {
+      nav {
+        padding-top: 0.25rem !important;
+        padding-bottom: 0.25rem !important;
+      }
+      .container {
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+        padding-top: 0.35rem !important;
+      }
+      /* จัด KPI เป็น 4 คอลัมน์แถวเดียวแนวนอนเพื่อประหยัดพื้นที่แนวตั้ง */
+      .kpi-grid-responsive {
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        gap: 0.375rem !important;
+        margin-bottom: 0.5rem !important;
+      }
+      .kpi-grid-responsive .kpi-card {
+        padding: 0.35rem 0.5rem !important;
+      }
+      .kpi-grid-responsive .kpi-val {
+        font-size: 1.15rem !important;
+        line-height: 1.2 !important;
+      }
+      .kpi-grid-responsive .kpi-desc {
+        display: none !important;
+      }
+      #screen-asset-table-container,
+      #screen-material-table-container {
+        max-height: calc(100vh - 135px) !important;
+        overflow-y: auto !important;
+      }
+    }
+
+    /* ตรึงหัวตารางให้อยู่กับที่เมื่อเลื่อนข้อมูล (Sticky Table Header) */
+    #screen-asset-table-container,
+    #screen-material-table-container {
+      position: relative;
+    }
+    #screen-asset-table-container thead th,
+    #screen-material-table-container thead th {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background-color: #3b070c;
+      white-space: nowrap !important;
+    }
+
+    /* สไตล์การเลื่อนแนวนอนแบบ Touch Screen บนมือถือ */
+    .touch-scroll {
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-x: contain;
+    }
+
     /* จัดการการแสดงผลหน้าต่าง Login ไม่ให้กะพริบตอนรีเฟรช (F5) */
     #login-overlay {
       display: none;
@@ -310,36 +364,26 @@
   <div class="screen-only min-h-screen">
 
     <!-- Navigation Bar (แดง-เหลือง สีประจำโรงเรียนดงกลาง) -->
-    <nav class="bg-gradient-to-r from-red-950 via-red-900 to-rose-950 text-white p-3 sm:p-4 shadow-xl border-b-2 border-amber-400 no-print">
-      <div class="container mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5 sm:gap-3">
-        <h1 class="text-lg sm:text-xl font-bold flex items-center gap-2.5 sm:gap-3 tracking-wide">
-          <img src="logo.jpg" alt="ตราโรงเรียนดงกลาง" class="w-10 h-10 sm:w-11 sm:h-11 object-contain rounded-xl shadow-md bg-white p-0.5 border border-amber-300 shrink-0" onerror="this.outerHTML='<span class=\'p-2 bg-gradient-to-br from-amber-400 to-amber-500 text-red-950 rounded-xl shadow-md text-base leading-none\'>🏫</span>'">
-          <div class="flex flex-col">
-            <span class="text-white text-sm sm:text-lg font-bold leading-tight drop-shadow-sm">ระบบงานพัสดุและครุภัณฑ์สถานศึกษา</span>
-            <span class="text-amber-300/90 text-[11px] sm:text-xs font-medium tracking-wide">โรงเรียนบ้านดงกลาง (ธนาคารกรุงเทพ ๓๑)</span>
-          </div>
-        </h1>
-        <div class="flex items-center gap-2 sm:gap-3 w-full md:w-auto justify-between md:justify-end flex-wrap sm:flex-nowrap">
-          <!-- กลุ่มแท็บสลับหน้าหลัก (Segmented Switcher) -->
-          <div class="bg-black/35 backdrop-blur-xs p-1 rounded-2xl border border-amber-400/30 flex items-center gap-1 shadow-inner shrink-0">
-            <button type="button" onclick="switchTab('asset')" id="tab-asset-btn" class="px-3 py-1.5 sm:px-3.5 sm:py-1.5 bg-gradient-to-r from-amber-400 via-amber-400 to-amber-500 text-red-950 font-bold rounded-xl shadow-md transition text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5 cursor-pointer">
-              <span>📦</span> <span>ทะเบียนคุมครุภัณฑ์</span>
-            </button>
-            <button type="button" onclick="switchTab('material')" id="tab-material-btn" class="px-3 py-1.5 sm:px-3.5 sm:py-1.5 text-amber-200/90 hover:text-white hover:bg-white/10 font-semibold rounded-xl transition text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5 cursor-pointer">
-              <span>📋</span> <span>บัญชีคุมวัสดุ</span>
-            </button>
+    <!-- Navigation Bar (แดง-เหลือง สีประจำโรงเรียนดงกลาง) -->
+    <nav class="bg-gradient-to-r from-red-950 via-red-900 to-rose-950 text-white px-2.5 py-2 sm:px-4 sm:py-3 shadow-xl border-b-2 border-amber-400 no-print">
+      <div class="container mx-auto flex flex-col md:flex-row justify-between items-stretch md:items-center gap-2 sm:gap-3">
+        <!-- แถวที่ 1 บนมือถือ: โลโก้ + ชื่อระบบ + ข้อมูลผู้ใช้ & จัดการระบบ -->
+        <div class="flex items-center justify-between gap-2 w-full md:w-auto">
+          <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+            <img src="logo.jpg" alt="ตราโรงเรียนดงกลาง" class="w-8 h-8 sm:w-11 sm:h-11 object-contain rounded-xl shadow-md bg-white p-0.5 border border-amber-300 shrink-0" onerror="this.outerHTML='<span class=\'p-1.5 bg-gradient-to-br from-amber-400 to-amber-500 text-red-950 rounded-xl shadow-md text-sm leading-none\'>🏫</span>'">
+            <div class="flex flex-col min-w-0">
+              <span class="text-white text-xs sm:text-lg font-bold leading-tight drop-shadow-sm truncate">ระบบพัสดุและครุภัณฑ์</span>
+              <span class="text-amber-300/90 text-[10px] sm:text-xs font-medium tracking-wide truncate">รร.บ้านดงกลาง</span>
+            </div>
           </div>
 
-          <!-- เส้นคั่นแบ่งหมวดหมู่ -->
-          <div class="hidden lg:block h-6 w-px bg-amber-400/25 shrink-0"></div>
-
-          <!-- กลุ่มข้อมูลผู้ใช้และจัดการระบบ -->
-          <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <!-- ฝั่งขวา: ป้ายผู้ใช้ และ จัดการระบบ บนมือถืออยู่แถวเดียวกันกับโลโก้ -->
+          <div class="flex items-center gap-1.5 shrink-0">
             <!-- ป้ายแสดงผู้ใช้งานปัจจุบัน -->
-            <div id="nav-user-pill" class="flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-3 sm:py-1.5 bg-black/30 backdrop-blur-xs border border-amber-400/30 rounded-2xl text-xs text-amber-100 shadow-inner">
-              <span class="w-5 h-5 rounded-full bg-amber-400/20 text-amber-300 flex items-center justify-center text-xs shrink-0">👤</span>
-              <span id="nav-user-name" class="font-bold text-white max-w-[90px] sm:max-w-[130px] truncate text-xs">ผู้ดูแลระบบ</span>
-              <span id="nav-user-role-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-400 text-red-950 shadow-2xs whitespace-nowrap">👑 แอดมิน</span>
+            <div id="nav-user-pill" class="flex items-center gap-1 px-2 py-1 sm:px-3 sm:py-1.5 bg-black/30 backdrop-blur-xs border border-amber-400/30 rounded-xl sm:rounded-2xl text-[11px] sm:text-xs text-amber-100 shadow-inner">
+              <span class="text-xs">👤</span>
+              <span id="nav-user-name" class="font-bold text-white max-w-[65px] sm:max-w-[130px] truncate text-[11px] sm:text-xs">ผู้ดูแล</span>
+              <span id="nav-user-role-badge" class="px-1.5 py-0.2 sm:px-2 sm:py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-amber-400 text-red-950 shadow-2xs whitespace-nowrap">แอดมิน</span>
             </div>
 
             <!-- ป้ายสถานะ Cloud Database (ซ่อนไว้เพื่อให้หน้าจอสะอาดตา ไม่เกะกะ) -->
@@ -350,10 +394,10 @@
 
             <!-- เมนูจัดการระบบ (ซ่อนรวม: ติดตั้งแอป, ตั้งค่าหน่วยงาน, สำรองข้อมูล, นำเข้าข้อมูล, Supabase, เปลี่ยนรหัสผ่าน, ออกจากระบบ) -->
             <div class="relative inline-block text-left shrink-0" id="system-menu-container">
-              <button type="button" onclick="toggleSystemMenu()" id="system-menu-btn" class="px-2.5 py-1.5 sm:px-3.5 sm:py-1.5 bg-gradient-to-r from-amber-500/20 to-red-950/60 hover:from-amber-400/30 hover:to-red-900 border border-amber-400/40 rounded-2xl text-xs font-bold transition text-amber-200 hover:text-white flex items-center gap-1.5 shadow-sm cursor-pointer focus:outline-none whitespace-nowrap">
+              <button type="button" onclick="toggleSystemMenu()" id="system-menu-btn" class="px-2 py-1 sm:px-3.5 sm:py-1.5 bg-gradient-to-r from-amber-500/20 to-red-950/60 hover:from-amber-400/30 hover:to-red-900 border border-amber-400/40 rounded-xl sm:rounded-2xl text-[11px] sm:text-xs font-bold transition text-amber-200 hover:text-white flex items-center gap-1 shadow-sm cursor-pointer focus:outline-none whitespace-nowrap">
                 <span class="text-xs sm:text-sm">⚙️</span>
-                <span>จัดการระบบ</span>
-                <svg id="system-menu-arrow" class="w-3.5 h-3.5 text-amber-300 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <span class="hidden sm:inline">จัดการระบบ</span>
+                <svg id="system-menu-arrow" class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-300 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
                 </svg>
               </button>
@@ -446,36 +490,58 @@
             </div>
           </div>
         </div>
+
+        <!-- แถวที่ 2 บนมือถือ: แท็บสลับหน้าหลัก ขยายเต็มความกว้างอย่างสวยงาม -->
+        <div class="flex items-center justify-center md:justify-end shrink-0">
+          <div class="bg-black/35 backdrop-blur-xs p-1 rounded-xl sm:rounded-2xl border border-amber-400/30 flex items-center gap-1 shadow-inner w-full sm:w-auto">
+            <button type="button" onclick="switchTab('asset')" id="tab-asset-btn" class="flex-1 sm:flex-initial justify-center px-3 py-1.5 sm:px-3.5 sm:py-1.5 bg-gradient-to-r from-amber-400 via-amber-400 to-amber-500 text-red-950 font-bold rounded-lg sm:rounded-xl shadow-md transition text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5 cursor-pointer">
+              <span>📦</span> <span>ทะเบียนคุมครุภัณฑ์</span>
+            </button>
+            <button type="button" onclick="switchTab('material')" id="tab-material-btn" class="flex-1 sm:flex-initial justify-center px-3 py-1.5 sm:px-3.5 sm:py-1.5 text-amber-200/90 hover:text-white hover:bg-white/10 font-semibold rounded-lg sm:rounded-xl transition text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5 cursor-pointer">
+              <span>📋</span> <span>บัญชีคุมวัสดุ</span>
+            </button>
+          </div>
+        </div>
       </div>
     </nav>
 
-    <div class="container mx-auto p-2.5 sm:p-4 md:p-6">
+    <div class="container mx-auto p-2 sm:p-4 md:p-6">
 
       <!-- === TAB 1 SCREEN: ทะเบียนคุมทรัพย์สิน (ครุภัณฑ์) === -->
       <div id="tab-asset-screen" class="block">
         <!-- === ส่วนหัวเรื่องและชุดเครื่องมือ (Header & Actions Toolbar) === -->
-        <div class="mb-3 sm:mb-4 no-print space-y-2.5">
-          <!-- แถวที่ 1: หัวเรื่องทะเบียนคุมทรัพย์สิน + ป้ายจำนวนที่เลือก + ปุ่มเพิ่มครุภัณฑ์ใหม่ -->
-          <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2.5">
-            <div class="flex items-center gap-2.5 sm:gap-3 flex-wrap">
-              <h2 class="text-xl sm:text-2xl font-bold text-red-950 flex items-center gap-2">
-                <span class="w-2.5 h-6 sm:h-7 bg-gradient-to-b from-red-700 via-rose-600 to-amber-500 rounded-full inline-block shadow-xs"></span>
-                <span>ทะเบียนคุมทรัพย์สิน (ครุภัณฑ์)</span>
+        <div class="mb-2.5 sm:mb-4 no-print space-y-2">
+          <!-- แถวที่ 1: หัวเรื่องทะเบียนคุมทรัพย์สิน + ป้ายจำนวนที่เลือก + ปุ่มเพิ่มครุภัณฑ์ใหม่ อยู่แถวเดียวกันอย่างกะทัดรัด -->
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
+              <h2 class="text-sm sm:text-xl md:text-2xl font-bold text-red-950 flex items-center gap-1.5 truncate">
+                <span class="w-2 h-4 sm:w-2.5 sm:h-6 bg-gradient-to-b from-red-700 via-rose-600 to-amber-500 rounded-full inline-block shadow-xs shrink-0"></span>
+                <span class="truncate">ทะเบียนคุมทรัพย์สิน (ครุภัณฑ์)</span>
               </h2>
-              <span id="asset-selected-badge" class="hidden text-[11px] sm:text-xs bg-amber-100 text-amber-900 font-bold px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full border border-amber-300 shadow-xs flex items-center gap-1">
-                <span>✓</span> <span>เลือกแล้ว <span id="asset-selected-count">0</span> รายการ</span>
+              <span id="asset-selected-badge" class="hidden text-[10px] sm:text-xs bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded-full border border-amber-300 shadow-2xs whitespace-nowrap">
+                ✓ <span id="asset-selected-count">0</span> รายการ
               </span>
             </div>
 
-            <!-- ปุ่มหลัก: เพิ่มครุภัณฑ์ใหม่ (เด่นชัด เข้าถึงง่าย) -->
-            <button id="btn-add-asset" onclick="openAddAssetModal()" class="w-full sm:w-auto justify-center bg-gradient-to-r from-red-700 via-red-800 to-rose-900 hover:from-red-800 hover:to-rose-950 text-white px-4 py-2 sm:py-2.5 rounded-xl font-bold shadow-md hover:shadow-lg transition transform active:scale-95 flex items-center gap-2 text-xs sm:text-sm border border-red-950/40 whitespace-nowrap cursor-pointer">
+            <!-- ปุ่มหลัก: เพิ่มครุภัณฑ์ใหม่ (กะทัดรัด ไม่กินพื้นที่เต็มจอ) -->
+            <button id="btn-add-asset" onclick="openAddAssetModal()" class="shrink-0 bg-gradient-to-r from-red-700 via-red-800 to-rose-900 hover:from-red-800 hover:to-rose-950 text-white px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-xl font-bold shadow-xs hover:shadow-md transition transform active:scale-95 flex items-center gap-1 text-xs sm:text-sm border border-red-950/40 whitespace-nowrap cursor-pointer">
               <span class="text-base leading-none font-bold">+</span>
               <span>เพิ่มครุภัณฑ์ใหม่</span>
             </button>
           </div>
 
-          <!-- แถวที่ 2: แถบเครื่องมือสั่งพิมพ์และรายงานราชการ (Toolbar Strip ปรับโทนสีสุภาพ สบายตา ไม่แย่งสายตา) -->
-          <div class="bg-white/95 backdrop-blur-xs p-2 sm:p-2.5 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5">
+          <!-- แถวที่ 2: แถบเครื่องมือสั่งพิมพ์และรายงานราชการ (บนมือถือ: ซ่อนพับได้ด้วยปุ่มเดียว / บนคอม: แสดงเต็ม) -->
+          <div class="sm:hidden">
+            <button type="button" onclick="toggleMobilePrintToolbar()" class="w-full flex items-center justify-between px-3 py-1.5 bg-white/95 hover:bg-slate-50 rounded-xl border border-slate-200/90 text-xs font-bold text-slate-700 shadow-2xs transition">
+              <span class="flex items-center gap-1.5">
+                <span>🖨️</span>
+                <span>งานพิมพ์ & รายงานราชการ</span>
+              </span>
+              <span id="mobile-print-toolbar-arrow" class="text-[10px] text-amber-700 font-medium bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">แตะเพื่อเปิด ▾</span>
+            </button>
+          </div>
+
+          <div id="asset-print-toolbar" class="hidden sm:flex bg-white/95 backdrop-blur-xs p-2 sm:p-2.5 rounded-2xl border border-slate-200/90 shadow-2xs flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2 sm:gap-2.5">
             <!-- กลุ่มที่ 1: การพิมพ์ทะเบียน & พิมพ์สติกเกอร์ QR Code -->
             <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
               <span class="text-[11px] font-bold text-slate-600 hidden sm:inline-flex items-center gap-1 pl-1">
@@ -492,7 +558,7 @@
               </div>
 
               <!-- ปุ่มพิมพ์ทะเบียนที่เลือก -->
-              <button onclick="printSelectedAssets()" id="btn-print-assets" class="flex-1 sm:flex-initial justify-center bg-amber-500 hover:bg-amber-600 text-white font-bold px-3.5 py-1.5 rounded-xl shadow-2xs hover:shadow-xs transition flex items-center gap-1.5 text-xs whitespace-nowrap cursor-pointer transform active:scale-95">
+              <button onclick="printSelectedAssets()" id="btn-print-assets" class="flex-1 sm:flex-initial justify-center bg-amber-500 hover:bg-amber-600 text-white font-bold px-3 py-1.5 rounded-xl shadow-2xs hover:shadow-xs transition flex items-center gap-1.5 text-xs whitespace-nowrap cursor-pointer transform active:scale-95">
                 <span>🖨️</span>
                 <span id="btn-print-text">พิมพ์รายการที่เลือก</span>
               </button>
@@ -528,180 +594,177 @@
           </div>
         </div>
 
-        <!-- === แถบการ์ดสรุปสถิติภาพรวมครุภัณฑ์ (Asset KPI Stat Cards - Executive Glass Style) === -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5 mb-3 sm:mb-4 no-print">
+        <!-- === แถบการ์ดสรุปสถิติภาพรวมครุภัณฑ์ (Asset KPI Stat Cards - Responsive Compact) === -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 kpi-grid-responsive gap-2 sm:gap-3.5 mb-2.5 sm:mb-4 no-print">
           <!-- Card 1: ครุภัณฑ์ทั้งหมด -->
-          <div id="kpi-card-all" onclick="filterByKpiStatus('all')" class="bg-gradient-to-br from-white via-white to-amber-50/50 hover:to-amber-100/60 p-3 sm:p-4 rounded-2xl border border-slate-200/90 hover:border-amber-400 shadow-2xs hover:shadow-md transition-all duration-200 cursor-pointer relative overflow-hidden group select-none" title="คลิกเพื่อแสดงครุภัณฑ์ทุกสถานะ">
+          <div id="kpi-card-all" onclick="filterByKpiStatus('all')" class="kpi-card bg-gradient-to-br from-white via-white to-amber-50/50 hover:to-amber-100/60 p-2 sm:p-3.5 rounded-xl sm:rounded-2xl border border-slate-200/90 hover:border-amber-400 shadow-2xs hover:shadow-md transition-all duration-200 cursor-pointer relative overflow-hidden group select-none" title="คลิกเพื่อแสดงครุภัณฑ์ทุกสถานะ">
             <div class="h-1 w-full bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 absolute top-0 left-0"></div>
-            <div class="absolute -right-1 -bottom-2 text-4xl sm:text-5xl opacity-[0.08] group-hover:opacity-[0.16] group-hover:scale-110 transition-all select-none pointer-events-none">📦</div>
-            <div class="flex items-center justify-between text-xs font-bold text-slate-600">
-              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500"></span>ครุภัณฑ์ทั้งหมด</span>
-              <span class="text-[10px] text-amber-700 font-bold bg-amber-100/80 px-2 py-0.5 rounded-full">ทั้งหมด</span>
+            <div class="absolute -right-1 -bottom-2 text-3xl sm:text-5xl opacity-[0.06] group-hover:opacity-[0.15] group-hover:scale-110 transition-all select-none pointer-events-none">📦</div>
+            <div class="flex items-center justify-between text-[11px] sm:text-xs font-bold text-slate-600">
+              <span class="flex items-center gap-1 sm:gap-1.5"><span class="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-amber-500"></span>ทั้งหมด</span>
+              <span class="text-[9px] sm:text-[10px] text-amber-700 font-bold bg-amber-100/80 px-1.5 py-0.2 sm:px-2 sm:py-0.5 rounded-full">ทั้งหมด</span>
             </div>
-            <div class="flex items-baseline gap-1.5 mt-1.5">
-              <span class="text-2xl sm:text-3xl font-extrabold text-red-950 font-mono leading-tight" id="kpi-total-assets">0</span>
-              <span class="text-xs text-slate-400 font-medium">รายการ</span>
+            <div class="flex items-baseline gap-1 mt-0.5 sm:mt-1.5">
+              <span class="kpi-val text-xl sm:text-2xl md:text-3xl font-extrabold text-red-950 font-mono leading-tight" id="kpi-total-assets">0</span>
+              <span class="text-[10px] sm:text-xs text-slate-400 font-medium">รายการ</span>
             </div>
-            <div class="text-[11px] text-slate-500 font-medium mt-1 truncate flex items-center gap-1">
-              <span>มูลค่ารวม:</span> <span class="font-bold font-mono text-red-900" id="kpi-total-cost">฿0.00</span>
+            <div class="text-[10px] sm:text-[11px] text-slate-500 font-medium mt-0.5 truncate flex items-center gap-1">
+              <span class="hidden sm:inline">มูลค่ารวม:</span> <span class="font-bold font-mono text-red-900" id="kpi-total-cost">฿0.00</span>
             </div>
           </div>
 
           <!-- Card 2: ใช้งานได้ดี -->
-          <div id="kpi-card-good" onclick="filterByKpiStatus('good')" class="bg-gradient-to-br from-white via-white to-emerald-50/50 hover:to-emerald-100/60 p-3 sm:p-4 rounded-2xl border border-slate-200/90 hover:border-emerald-400 shadow-2xs hover:shadow-md transition-all duration-200 cursor-pointer relative overflow-hidden group select-none" title="คลิกเพื่อกรองเฉพาะรายการที่ใช้งานได้ดี">
+          <div id="kpi-card-good" onclick="filterByKpiStatus('good')" class="kpi-card bg-gradient-to-br from-white via-white to-emerald-50/50 hover:to-emerald-100/60 p-2 sm:p-3.5 rounded-xl sm:rounded-2xl border border-slate-200/90 hover:border-emerald-400 shadow-2xs hover:shadow-md transition-all duration-200 cursor-pointer relative overflow-hidden group select-none" title="คลิกเพื่อกรองเฉพาะรายการที่ใช้งานได้ดี">
             <div class="h-1 w-full bg-gradient-to-r from-emerald-400 via-teal-500 to-emerald-600 absolute top-0 left-0"></div>
-            <div class="absolute -right-1 -bottom-2 text-4xl sm:text-5xl opacity-[0.08] group-hover:opacity-[0.16] group-hover:scale-110 transition-all select-none pointer-events-none">✅</div>
-            <div class="flex items-center justify-between text-xs font-bold text-slate-600">
-              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>ใช้งานได้ดี</span>
-              <span class="text-[10px] text-emerald-800 font-bold bg-emerald-100 px-2 py-0.5 rounded-full" id="kpi-good-percent">100%</span>
+            <div class="absolute -right-1 -bottom-2 text-3xl sm:text-5xl opacity-[0.06] group-hover:opacity-[0.15] group-hover:scale-110 transition-all select-none pointer-events-none">✅</div>
+            <div class="flex items-center justify-between text-[11px] sm:text-xs font-bold text-slate-600">
+              <span class="flex items-center gap-1 sm:gap-1.5"><span class="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500"></span>ใช้งานได้ดี</span>
+              <span class="text-[9px] sm:text-[10px] text-emerald-800 font-bold bg-emerald-100 px-1.5 py-0.2 sm:px-2 sm:py-0.5 rounded-full" id="kpi-good-percent">100%</span>
             </div>
-            <div class="flex items-baseline gap-1.5 mt-1.5">
-              <span class="text-2xl sm:text-3xl font-extrabold text-emerald-700 font-mono leading-tight" id="kpi-good-assets">0</span>
-              <span class="text-xs text-slate-400 font-medium">รายการ</span>
+            <div class="flex items-baseline gap-1 mt-0.5 sm:mt-1.5">
+              <span class="kpi-val text-xl sm:text-2xl md:text-3xl font-extrabold text-emerald-700 font-mono leading-tight" id="kpi-good-assets">0</span>
+              <span class="text-[10px] sm:text-xs text-slate-400 font-medium">รายการ</span>
             </div>
-            <div class="text-[11px] text-emerald-800 font-medium mt-1 truncate">
+            <div class="kpi-desc hidden sm:block text-[11px] text-emerald-800 font-medium mt-0.5 truncate">
               <span>สภาพสมบูรณ์ พร้อมใช้งาน</span>
             </div>
           </div>
 
           <!-- Card 3: ชำรุด (ซ่อมได้) -->
-          <div id="kpi-card-repair" onclick="filterByKpiStatus('repair')" class="bg-gradient-to-br from-white via-white to-amber-50/50 hover:to-orange-100/60 p-3 sm:p-4 rounded-2xl border border-slate-200/90 hover:border-amber-400 shadow-2xs hover:shadow-md transition-all duration-200 cursor-pointer relative overflow-hidden group select-none" title="คลิกเพื่อกรองเฉพาะรายการที่ชำรุดรอซ่อม">
+          <div id="kpi-card-repair" onclick="filterByKpiStatus('repair')" class="kpi-card bg-gradient-to-br from-white via-white to-amber-50/50 hover:to-orange-100/60 p-2 sm:p-3.5 rounded-xl sm:rounded-2xl border border-slate-200/90 hover:border-amber-400 shadow-2xs hover:shadow-md transition-all duration-200 cursor-pointer relative overflow-hidden group select-none" title="คลิกเพื่อกรองเฉพาะรายการที่ชำรุดรอซ่อม">
             <div class="h-1 w-full bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 absolute top-0 left-0"></div>
-            <div class="absolute -right-1 -bottom-2 text-4xl sm:text-5xl opacity-[0.08] group-hover:opacity-[0.16] group-hover:scale-110 transition-all select-none pointer-events-none">🔧</div>
-            <div class="flex items-center justify-between text-xs font-bold text-slate-600">
-              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500"></span>ชำรุด (ซ่อมได้)</span>
-              <span class="text-[10px] text-amber-800 font-bold bg-amber-100 px-2 py-0.5 rounded-full">รอซ่อม</span>
+            <div class="absolute -right-1 -bottom-2 text-3xl sm:text-5xl opacity-[0.06] group-hover:opacity-[0.15] group-hover:scale-110 transition-all select-none pointer-events-none">🔧</div>
+            <div class="flex items-center justify-between text-[11px] sm:text-xs font-bold text-slate-600">
+              <span class="flex items-center gap-1 sm:gap-1.5"><span class="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-amber-500"></span>ชำรุดรอซ่อม</span>
+              <span class="text-[9px] sm:text-[10px] text-amber-800 font-bold bg-amber-100 px-1.5 py-0.2 sm:px-2 sm:py-0.5 rounded-full">รอซ่อม</span>
             </div>
-            <div class="flex items-baseline gap-1.5 mt-1.5">
-              <span class="text-2xl sm:text-3xl font-extrabold text-amber-700 font-mono leading-tight" id="kpi-repair-assets">0</span>
-              <span class="text-xs text-slate-400 font-medium">รายการ</span>
+            <div class="flex items-baseline gap-1 mt-0.5 sm:mt-1.5">
+              <span class="kpi-val text-xl sm:text-2xl md:text-3xl font-extrabold text-amber-700 font-mono leading-tight" id="kpi-repair-assets">0</span>
+              <span class="text-[10px] sm:text-xs text-slate-400 font-medium">รายการ</span>
             </div>
-            <div class="text-[11px] text-amber-800 font-medium mt-1 truncate">
+            <div class="kpi-desc hidden sm:block text-[11px] text-amber-800 font-medium mt-0.5 truncate">
               <span>ต้องซ่อมแซมก่อนใช้งาน</span>
             </div>
           </div>
 
           <!-- Card 4: ชำรุดรอจำหน่าย -->
-          <div id="kpi-card-disposal" onclick="filterByKpiStatus('disposal')" class="bg-gradient-to-br from-white via-white to-rose-50/50 hover:to-rose-100/60 p-3 sm:p-4 rounded-2xl border border-slate-200/90 hover:border-rose-400 shadow-2xs hover:shadow-md transition-all duration-200 cursor-pointer relative overflow-hidden group select-none" title="คลิกเพื่อกรองเฉพาะรายการที่ขอจำหน่าย/จำหน่ายแล้ว">
+          <div id="kpi-card-disposal" onclick="filterByKpiStatus('disposal')" class="kpi-card bg-gradient-to-br from-white via-white to-rose-50/50 hover:to-rose-100/60 p-2 sm:p-3.5 rounded-xl sm:rounded-2xl border border-slate-200/90 hover:border-rose-400 shadow-2xs hover:shadow-md transition-all duration-200 cursor-pointer relative overflow-hidden group select-none" title="คลิกเพื่อกรองเฉพาะรายการที่ขอจำหน่าย/จำหน่ายแล้ว">
             <div class="h-1 w-full bg-gradient-to-r from-rose-500 via-red-600 to-rose-700 absolute top-0 left-0"></div>
-            <div class="absolute -right-1 -bottom-2 text-4xl sm:text-5xl opacity-[0.08] group-hover:opacity-[0.16] group-hover:scale-110 transition-all select-none pointer-events-none">🗑️</div>
-            <div class="flex items-center justify-between text-xs font-bold text-slate-600">
-              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-rose-500"></span>ชำรุดรอจำหน่าย</span>
-              <span class="text-[10px] text-rose-800 font-bold bg-rose-100 px-2 py-0.5 rounded-full" id="kpi-disposed-count">รอจำหน่าย 0</span>
+            <div class="absolute -right-1 -bottom-2 text-3xl sm:text-5xl opacity-[0.06] group-hover:opacity-[0.15] group-hover:scale-110 transition-all select-none pointer-events-none">🗑️</div>
+            <div class="flex items-center justify-between text-[11px] sm:text-xs font-bold text-slate-600">
+              <span class="flex items-center gap-1 sm:gap-1.5"><span class="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-rose-500"></span>รอจำหน่าย</span>
+              <span class="text-[9px] sm:text-[10px] text-rose-800 font-bold bg-rose-100 px-1.5 py-0.2 sm:px-2 sm:py-0.5 rounded-full" id="kpi-disposed-count">0</span>
             </div>
-            <div class="flex items-baseline gap-1.5 mt-1.5">
-              <span class="text-2xl sm:text-3xl font-extrabold text-rose-800 font-mono leading-tight" id="kpi-disposal-assets">0</span>
-              <span class="text-xs text-slate-400 font-medium">รายการ</span>
+            <div class="flex items-baseline gap-1 mt-0.5 sm:mt-1.5">
+              <span class="kpi-val text-xl sm:text-2xl md:text-3xl font-extrabold text-rose-800 font-mono leading-tight" id="kpi-disposal-assets">0</span>
+              <span class="text-[10px] sm:text-xs text-slate-400 font-medium">รายการ</span>
             </div>
-            <div class="text-[11px] text-rose-700 font-medium mt-1 truncate">
+            <div class="kpi-desc hidden sm:block text-[11px] text-rose-700 font-medium mt-0.5 truncate">
               <span>เสื่อมสภาพ / จำหน่ายแล้ว</span>
             </div>
           </div>
         </div>
 
         <!-- แถบเครื่องมือค้นหาและตัวกรองครุภัณฑ์ (Clean & Unified Toolbar) -->
-        <div class="mb-3 sm:mb-4 bg-white p-3 sm:p-3.5 rounded-2xl shadow-xs border border-amber-200/80 no-print space-y-2.5">
+        <div class="mb-3 sm:mb-4 bg-white p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl shadow-xs border border-amber-200/80 no-print space-y-2">
           <!-- แถวที่ 1: ค้นหาหลักแบบ Real-time + ปุ่มสลับมุมมอง (ตาราง / การ์ด) -->
-          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+          <div class="flex items-center gap-2 sm:gap-3">
             <div class="relative flex-1">
-              <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-amber-600/70">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-amber-600/70">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                 </svg>
               </span>
-              <input type="text" id="asset-search-input" oninput="onAssetSearch(this.value)" placeholder="ค้นหาครุภัณฑ์ตามชื่อ, รหัสครุภัณฑ์, สถานที่ตั้ง, หรือชื่อครูผู้รับผิดชอบ..." class="w-full pl-10 pr-9 py-2 bg-slate-50/70 hover:bg-white focus:bg-white border border-slate-200 focus:border-amber-400 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-amber-400/30 shadow-2xs placeholder-slate-400 text-slate-800 transition outline-none">
+              <input type="text" id="asset-search-input" oninput="onAssetSearch(this.value)" placeholder="ค้นหาครุภัณฑ์ตามชื่อ, รหัสครุภัณฑ์, ที่ตั้ง, ผู้รับผิดชอบ..." class="w-full pl-9 pr-8 py-1.5 sm:py-2 bg-slate-50/70 hover:bg-white focus:bg-white border border-slate-200 focus:border-amber-400 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-amber-400/30 shadow-2xs placeholder-slate-400 text-slate-800 transition outline-none">
               <button type="button" id="asset-search-clear-btn" onclick="clearAssetSearch()" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 text-base cursor-pointer" title="ล้างการค้นหา">&times;</button>
             </div>
 
             <!-- สลับมุมมอง ตาราง vs การ์ดรูปภาพ -->
-            <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/80 shrink-0 self-end sm:self-auto">
-              <button type="button" onclick="setAssetViewMode('table')" id="view-mode-table-btn" class="px-2.5 py-1 text-xs font-bold rounded-lg transition bg-white text-red-950 shadow-2xs flex items-center gap-1 cursor-pointer">
-                <span>📋</span> <span>ตาราง</span>
+            <div class="flex items-center gap-0.5 bg-slate-100 p-0.5 sm:p-1 rounded-xl border border-slate-200/80 shrink-0">
+              <button type="button" onclick="setAssetViewMode('table')" id="view-mode-table-btn" class="px-2 py-1 text-xs font-bold rounded-lg transition bg-white text-red-950 shadow-2xs flex items-center gap-1 cursor-pointer">
+                <span>📋</span> <span class="hidden sm:inline">ตาราง</span>
               </button>
-              <button type="button" onclick="setAssetViewMode('grid')" id="view-mode-grid-btn" class="px-2.5 py-1 text-xs font-semibold text-slate-600 hover:text-red-900 rounded-lg transition flex items-center gap-1 cursor-pointer">
-                <span>🖼️</span> <span>การ์ดรูปภาพ</span>
+              <button type="button" onclick="setAssetViewMode('grid')" id="view-mode-grid-btn" class="px-2 py-1 text-xs font-semibold text-slate-600 hover:text-red-900 rounded-lg transition flex items-center gap-1 cursor-pointer">
+                <span>🖼️</span> <span class="hidden sm:inline">การ์ด</span>
               </button>
             </div>
           </div>
 
           <!-- แถวที่ 2: ตัวกรองย่อย (ปีงบ / เดือน / สภาพสถานะ) + จำนวนผลลัพธ์ -->
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-slate-100">
-            <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2 pt-1.5 border-t border-slate-100">
+            <div class="grid grid-cols-3 sm:flex sm:items-center gap-1.5 sm:gap-2.5 flex-1 min-w-0">
               <!-- ปีงบประมาณ -->
-              <div class="flex items-center gap-1.5">
-                <span class="text-[11px] sm:text-xs font-bold text-red-950 flex items-center gap-1">
-                  <span class="p-0.5 bg-amber-100 text-amber-900 rounded text-[11px]">📅</span>
-                  <span>ปีงบ:</span>
-                </span>
-                <select id="asset-fiscal-year-select" onchange="onAssetFilterChange()" class="text-xs font-bold border border-amber-300 rounded-xl px-2.5 py-1 bg-amber-50/50 text-red-950 shadow-2xs focus:ring-2 focus:ring-amber-500 cursor-pointer">
+              <div class="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-1.5 min-w-0">
+                <span class="text-[10px] sm:text-xs font-bold text-red-950 truncate">📅 ปีงบ:</span>
+                <select id="asset-fiscal-year-select" onchange="onAssetFilterChange()" class="w-full sm:w-auto text-[11px] sm:text-xs font-bold border border-amber-300 rounded-lg sm:rounded-xl px-1.5 sm:px-2.5 py-1 bg-amber-50/50 text-red-950 shadow-2xs focus:ring-2 focus:ring-amber-500 cursor-pointer truncate">
                   <!-- Dynamically populated -->
                 </select>
               </div>
 
               <!-- เดือน -->
-              <div class="flex items-center gap-1.5">
-                <span class="text-[11px] sm:text-xs font-bold text-red-950">เดือน:</span>
-                <select id="asset-month-select" onchange="onAssetFilterChange()" class="text-xs font-semibold border border-amber-300 rounded-xl px-2.5 py-1 bg-amber-50/50 text-red-950 shadow-2xs focus:ring-2 focus:ring-amber-500 cursor-pointer">
-                  <option value="all">ทุกเดือน (ทั้งปีงบ)</option>
-                  <option value="10">ตุลาคม (ต.ค.)</option>
-                  <option value="11">พฤศจิกายน (พ.ย.)</option>
-                  <option value="12">ธันวาคม (ธ.ค.)</option>
-                  <option value="1">มกราคม (ม.ค.)</option>
-                  <option value="2">กุมภาพันธ์ (ก.พ.)</option>
-                  <option value="3">มีนาคม (มี.ค.)</option>
-                  <option value="4">เมษายน (เม.ย.)</option>
-                  <option value="5">พฤษภาคม (พ.ค.)</option>
-                  <option value="6">มิถุนายน (มิ.ย.)</option>
-                  <option value="7">กรกฎาคม (ก.ค.)</option>
-                  <option value="8">สิงหาคม (ส.ค.)</option>
-                  <option value="9">กันยายน (ก.ย.)</option>
+              <div class="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-1.5 min-w-0">
+                <span class="text-[10px] sm:text-xs font-bold text-red-950 truncate">🗓️ เดือน:</span>
+                <select id="asset-month-select" onchange="onAssetFilterChange()" class="w-full sm:w-auto text-[11px] sm:text-xs font-semibold border border-amber-300 rounded-lg sm:rounded-xl px-1.5 sm:px-2.5 py-1 bg-amber-50/50 text-red-950 shadow-2xs focus:ring-2 focus:ring-amber-500 cursor-pointer truncate">
+                  <option value="all">ทุกเดือน</option>
+                  <option value="10">ต.ค.</option>
+                  <option value="11">พ.ย.</option>
+                  <option value="12">ธ.ค.</option>
+                  <option value="1">ม.ค.</option>
+                  <option value="2">ก.พ.</option>
+                  <option value="3">มี.ค.</option>
+                  <option value="4">เม.ย.</option>
+                  <option value="5">พ.ค.</option>
+                  <option value="6">มิ.ย.</option>
+                  <option value="7">ก.ค.</option>
+                  <option value="8">ส.ค.</option>
+                  <option value="9">ก.ย.</option>
                 </select>
               </div>
 
               <!-- สภาพ/สถานะ -->
-              <div class="flex items-center gap-1.5">
-                <span class="text-[11px] sm:text-xs font-bold text-red-950">สถานะ:</span>
-                <select id="asset-status-select" onchange="onAssetFilterChange()" class="text-xs font-semibold border border-amber-300 rounded-xl px-2.5 py-1 bg-amber-50/50 text-red-950 shadow-2xs focus:ring-2 focus:ring-amber-500 cursor-pointer">
+              <div class="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-1.5 min-w-0">
+                <span class="text-[10px] sm:text-xs font-bold text-red-950 truncate">🏷️ สถานะ:</span>
+                <select id="asset-status-select" onchange="onAssetFilterChange()" class="w-full sm:w-auto text-[11px] sm:text-xs font-semibold border border-amber-300 rounded-lg sm:rounded-xl px-1.5 sm:px-2.5 py-1 bg-amber-50/50 text-red-950 shadow-2xs focus:ring-2 focus:ring-amber-500 cursor-pointer truncate">
                   <option value="all">ทุกสถานะ</option>
-                  <option value="good">🟢 ใช้งานได้ดี</option>
-                  <option value="repair">🟠 ชำรุด (ซ่อมได้)</option>
-                  <option value="disposal">🔴 ชำรุด/เสื่อมสภาพ (ขอจำหน่าย)</option>
-                  <option value="disposed">⚫ จำหน่ายแล้ว</option>
-                  <option value="lost">⚪ สูญหาย</option>
+                  <option value="good">🟢 ปกติ</option>
+                  <option value="repair">🟠 ซ่อม</option>
+                  <option value="disposal">🔴 ขอจำหน่าย</option>
+                  <option value="disposed">⚫ จำหน่าย</option>
+                  <option value="lost">⚪ หาย</option>
                 </select>
               </div>
             </div>
 
             <!-- สรุปจำนวนรายการที่พบ -->
-            <div class="text-[11px] sm:text-xs text-slate-500 font-medium self-end sm:self-auto" id="asset-search-result-count"></div>
+            <div class="text-[10px] sm:text-xs text-slate-500 font-medium text-right shrink-0" id="asset-search-result-count"></div>
           </div>
         </div>
 
         <!-- 1) VIEW MODE: TABLE VIEW (มุมมองตารางมาตรฐานราชการ) -->
-        <div id="screen-asset-table-container" class="bg-white p-3 sm:p-5 md:p-6 rounded-2xl shadow-xs border border-amber-100 overflow-x-auto touch-scroll">
-          <div class="block sm:hidden text-[10px] text-amber-800/80 mb-2 font-medium text-right">
-            👉 เลื่อนตารางไปทางขวาเพื่อดูข้อมูลทั้งหมด
+        <div id="screen-asset-table-container" class="bg-white p-2.5 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl shadow-xs border border-amber-100 overflow-x-auto touch-scroll">
+          <div class="block sm:hidden text-[10px] text-amber-800/80 mb-1.5 font-medium text-right">
+            👉 เลื่อนตารางไปทางขวา หรือหมุนแนวนอนเพื่อดูข้อมูลกว้างขึ้น
           </div>
           <table class="w-full text-left border-collapse text-xs">
             <thead>
               <tr class="bg-gradient-to-r from-red-950 via-red-900 to-rose-950 text-amber-100 border-b border-amber-400/40">
-                <th class="p-2.5 border border-red-900/40 text-center w-10">
+                <th class="p-2 sm:p-2.5 border border-red-900/40 text-center w-10 whitespace-nowrap">
                   <input type="checkbox" id="select-all-asset-chk" onchange="toggleSelectAllAssets(this.checked)" class="w-4 h-4 accent-amber-500 rounded cursor-pointer" title="เลือก/ยกเลิก ทั้งหมด">
                 </th>
-                <th class="p-2.5 border border-red-900/40 text-center">ลำดับ</th>
-                <th class="p-2.5 border border-red-900/40">วัน เดือน ปี</th>
-                <th class="p-2.5 border border-red-900/40">รหัสทรัพย์สิน</th>
-                <th class="p-2.5 border border-red-900/40">ชื่อทรัพย์สิน/ยี่ห้อ/รุ่น/รายละเอียด</th>
-                <th class="p-2.5 border border-red-900/40">คุณสมบัติ</th>
-                <th class="p-2.5 border border-red-900/40">เลขที่เอกสาร</th>
-                <th class="p-2.5 border border-red-900/40 text-right">ราคา/หน่วย</th>
-                <th class="p-2.5 border border-red-900/40 text-center">อายุ (ปี)</th>
-                <th class="p-2.5 border border-red-900/40 text-right">ค่าเสื่อม/ปี</th>
-                <th class="p-2.5 border border-red-900/40 text-right text-amber-200">มูลค่าสุทธิ</th>
-                <th class="p-2.5 border border-red-900/40">ที่ตั้ง</th>
-                <th class="p-2.5 border border-red-900/40 text-center">สถานะ</th>
-                <th class="p-2.5 border border-red-900/40">ผู้รับผิดชอบ</th>
-                <th class="p-2.5 border border-red-900/40 text-center">จัดการ</th>
+                <th class="p-2 sm:p-2.5 border border-red-900/40 text-center whitespace-nowrap">ลำดับ</th>
+                <th class="p-2 sm:p-2.5 border border-red-900/40 whitespace-nowrap">วัน เดือน ปี</th>
+                <th class="p-2 sm:p-2.5 border border-red-900/40 whitespace-nowrap">รหัสทรัพย์สิน</th>
+                <th class="p-2 sm:p-2.5 border border-red-900/40 whitespace-nowrap">ชื่อทรัพย์สิน/ยี่ห้อ/รุ่น/รายละเอียด</th>
+                <th class="p-2 sm:p-2.5 border border-red-900/40 whitespace-nowrap">คุณสมบัติ</th>
+                <th class="p-2 sm:p-2.5 border border-red-900/40 whitespace-nowrap">เลขที่เอกสาร</th>
+                <th class="p-2 sm:p-2.5 border border-red-900/40 text-right whitespace-nowrap">ราคา/หน่วย</th>
+                <th class="p-2 sm:p-2.5 border border-red-900/40 text-center whitespace-nowrap">อายุ (ปี)</th>
+                <th class="p-2 sm:p-2.5 border border-red-900/40 text-right whitespace-nowrap">ค่าเสื่อม/ปี</th>
+                <th class="p-2 sm:p-2.5 border border-red-900/40 text-right text-amber-200 whitespace-nowrap">มูลค่าสุทธิ</th>
+                <th class="p-2 sm:p-2.5 border border-red-900/40 whitespace-nowrap">ที่ตั้ง</th>
+                <th class="p-2 sm:p-2.5 border border-red-900/40 text-center whitespace-nowrap">สถานะ</th>
+                <th class="p-2 sm:p-2.5 border border-red-900/40 whitespace-nowrap">ผู้รับผิดชอบ</th>
+                <th class="p-2 sm:p-2.5 border border-red-900/40 text-center whitespace-nowrap">จัดการ</th>
               </tr>
             </thead>
             <tbody id="screen-asset-table-body">
@@ -720,156 +783,150 @@
 
       <!-- === TAB 2 SCREEN: บัญชีคุมวัสดุ === -->
       <div id="tab-material-screen" class="hidden">
-        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2.5 sm:gap-3 mb-3 sm:mb-4 no-print">
-          <div>
-            <div class="flex items-center gap-2 sm:gap-3">
-              <h2 class="text-xl sm:text-2xl font-bold text-red-950 flex items-center gap-2">
-                <span class="w-2.5 h-6 sm:h-7 bg-gradient-to-b from-amber-500 via-amber-600 to-red-700 rounded-full inline-block shadow-xs"></span>
-                <span>บัญชีคุมวัสดุ</span>
-              </h2>
-              <span id="material-selected-badge" class="hidden text-[11px] sm:text-xs bg-amber-100 text-amber-900 font-bold px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full border border-amber-300 shadow-xs">
-                เลือกแล้ว <span id="material-selected-count">0</span> รายการ
-              </span>
-            </div>
+        <div class="flex items-center justify-between gap-2 mb-2.5 sm:mb-4 no-print">
+          <div class="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
+            <h2 class="text-sm sm:text-xl md:text-2xl font-bold text-red-950 flex items-center gap-1.5 truncate">
+              <span class="w-2 h-4 sm:w-2.5 sm:h-6 bg-gradient-to-b from-amber-500 via-amber-600 to-red-700 rounded-full inline-block shadow-xs shrink-0"></span>
+              <span class="truncate">บัญชีคุมวัสดุ</span>
+            </h2>
+            <span id="material-selected-badge" class="hidden text-[10px] sm:text-xs bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded-full border border-amber-300 shadow-2xs whitespace-nowrap">
+              ✓ <span id="material-selected-count">0</span>
+            </span>
           </div>
-          <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-            <button onclick="openModal('materialMetaModal')" class="flex-1 sm:flex-initial justify-center bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white px-3 py-2 sm:px-3.5 sm:py-2 rounded-xl text-xs font-semibold shadow-xs transition flex items-center gap-1 border border-amber-800/30 whitespace-nowrap">
-              📝 <span>หัวบัตรวัสดุ</span>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button onclick="openModal('materialMetaModal')" class="bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl text-xs font-semibold shadow-2xs transition flex items-center gap-1 border border-amber-800/30 whitespace-nowrap cursor-pointer" title="ตั้งค่าข้อมูลหัวบัตรวัสดุ">
+              <span>📝</span> <span class="hidden sm:inline">หัวบัตรวัสดุ</span>
             </button>
-            <button id="btn-add-material" onclick="openAddMaterialModal()" class="flex-1 sm:flex-initial justify-center bg-gradient-to-r from-red-700 to-red-800 hover:from-red-800 hover:to-red-900 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-xl font-semibold shadow-xs transition text-xs sm:text-sm border border-red-900/30 whitespace-nowrap">
-              + <span>รับ-จ่ายวัสดุ</span>
+            <button id="btn-add-material" onclick="openAddMaterialModal()" class="bg-gradient-to-r from-red-700 to-red-800 hover:from-red-800 hover:to-red-900 text-white px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-xl font-bold shadow-xs transition text-xs sm:text-sm border border-red-900/30 whitespace-nowrap cursor-pointer">
+              <span>+</span> <span>รับ-จ่ายวัสดุ</span>
             </button>
-            <button onclick="printSelectedMaterials()" id="btn-print-materials" class="flex-1 sm:flex-initial justify-center bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold px-3 py-2 sm:px-4 sm:py-2 rounded-xl shadow-xs transition flex items-center gap-1.5 text-xs sm:text-sm border border-amber-600/30 whitespace-nowrap">
-              <span>🖨️</span> <span id="btn-print-material-text">พิมพ์บัญชีคุมวัสดุ (PDF)</span>
+            <button onclick="printSelectedMaterials()" id="btn-print-materials" class="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold px-2 py-1.5 sm:px-3.5 sm:py-2 rounded-xl shadow-2xs transition flex items-center gap-1 text-xs whitespace-nowrap cursor-pointer" title="พิมพ์บัญชีคุมวัสดุ PDF">
+              <span>🖨️</span> <span class="hidden sm:inline" id="btn-print-material-text">พิมพ์ PDF</span>
             </button>
           </div>
         </div>
 
-        <!-- === แถบการ์ดสรุปสถิติภาพรวมวัสดุ (Material KPI Stat Cards - Minimal) === -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-2.5 mb-2.5 sm:mb-3 no-print">
+        <!-- === แถบการ์ดสรุปสถิติภาพรวมวัสดุ (Material KPI Stat Cards - Responsive Compact) === -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 kpi-grid-responsive gap-2 sm:gap-2.5 mb-2.5 sm:mb-3 no-print">
           <!-- Card 1: รายการบันทึกทั้งหมด -->
-          <div class="bg-white p-2 sm:px-3 sm:py-2 rounded-xl border border-slate-200/90 shadow-2xs">
+          <div class="kpi-card bg-white p-2 sm:px-3 sm:py-2 rounded-xl border border-slate-200/90 shadow-2xs">
             <div class="flex items-center justify-between text-[11px] font-semibold text-slate-500">
               <span class="flex items-center gap-1"><span>📝</span> <span>บันทึกวัสดุ</span></span>
               <span class="text-[10px] text-slate-400 font-medium truncate" id="kpi-mat-types-count">0 ชนิด</span>
             </div>
             <div class="flex items-baseline gap-1 mt-0.5">
-              <span class="text-base sm:text-lg font-bold text-red-950 font-mono leading-tight" id="kpi-mat-total-entries">0</span>
+              <span class="kpi-val text-base sm:text-lg font-bold text-red-950 font-mono leading-tight" id="kpi-mat-total-entries">0</span>
               <span class="text-[10px] text-slate-400 font-medium">รายการ</span>
             </div>
           </div>
 
           <!-- Card 2: มูลค่าจัดซื้อรับเข้ารวม -->
-          <div class="bg-white p-2 sm:px-3 sm:py-2 rounded-xl border border-slate-200/90 shadow-2xs">
+          <div class="kpi-card bg-white p-2 sm:px-3 sm:py-2 rounded-xl border border-slate-200/90 shadow-2xs">
             <div class="flex items-center justify-between text-[11px] font-semibold text-slate-500">
               <span class="flex items-center gap-1"><span>📥</span> <span>จัดซื้อรับเข้า</span></span>
               <span class="text-[10px] text-slate-400 font-medium truncate">ยอดจัดซื้อ</span>
             </div>
             <div class="flex items-baseline gap-1 mt-0.5">
-              <span class="text-base sm:text-lg font-bold text-emerald-700 font-mono leading-tight" id="kpi-mat-inflow-cost">0.00</span>
+              <span class="kpi-val text-base sm:text-lg font-bold text-emerald-700 font-mono leading-tight" id="kpi-mat-inflow-cost">0.00</span>
               <span class="text-[10px] text-slate-400 font-medium">บาท</span>
             </div>
           </div>
 
           <!-- Card 3: รายการจ่ายออกสะสม -->
-          <div class="bg-white p-2 sm:px-3 sm:py-2 rounded-xl border border-slate-200/90 shadow-2xs">
+          <div class="kpi-card bg-white p-2 sm:px-3 sm:py-2 rounded-xl border border-slate-200/90 shadow-2xs">
             <div class="flex items-center justify-between text-[11px] font-semibold text-slate-500">
               <span class="flex items-center gap-1"><span>📤</span> <span>จ่ายออกสะสม</span></span>
               <span class="text-[10px] text-slate-400 font-medium truncate">จ่ายให้บุคลากร</span>
             </div>
             <div class="flex items-baseline gap-1 mt-0.5">
-              <span class="text-base sm:text-lg font-bold text-blue-700 font-mono leading-tight" id="kpi-mat-issue-count">0</span>
+              <span class="kpi-val text-base sm:text-lg font-bold text-blue-700 font-mono leading-tight" id="kpi-mat-issue-count">0</span>
               <span class="text-[10px] text-slate-400 font-medium">ครั้ง</span>
             </div>
           </div>
 
           <!-- Card 4: ชนิดวัสดุคงเหลือพร้อมใช้ -->
-          <div class="bg-white p-2 sm:px-3 sm:py-2 rounded-xl border border-slate-200/90 shadow-2xs">
+          <div class="kpi-card bg-white p-2 sm:px-3 sm:py-2 rounded-xl border border-slate-200/90 shadow-2xs">
             <div class="flex items-center justify-between text-[11px] font-semibold text-slate-500">
               <span class="flex items-center gap-1"><span>🏢</span> <span>คลังวัสดุ</span></span>
               <span class="text-[10px] text-slate-400 font-medium truncate">พร้อมเบิกจ่าย</span>
             </div>
             <div class="flex items-baseline gap-1 mt-0.5">
-              <span class="text-base sm:text-lg font-bold text-purple-700 font-mono leading-tight" id="kpi-mat-active-items">0</span>
+              <span class="kpi-val text-base sm:text-lg font-bold text-purple-700 font-mono leading-tight" id="kpi-mat-active-items">0</span>
               <span class="text-[10px] text-slate-400 font-medium">ชนิด</span>
             </div>
           </div>
         </div>
 
         <!-- แถบกรองปีงบประมาณ / เดือน / ค้นหาวัสดุ -->
-        <div class="mb-3 sm:mb-4 bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-xs border border-amber-200/80 no-print space-y-2.5 sm:space-y-3">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
-            <div class="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
-              <div class="col-span-1 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-1.5">
-                <span class="text-[11px] sm:text-xs font-bold text-red-950 flex items-center gap-1">
-                  <span class="p-1 bg-amber-100 text-amber-900 rounded-md text-xs leading-none">📅</span>
-                  <span>ปีงบประมาณ:</span>
-                </span>
-                <select id="material-fiscal-year-select" onchange="onMaterialFilterChange()" class="w-full sm:w-auto text-xs font-bold border border-amber-300 rounded-xl px-2.5 py-1.5 bg-amber-50/50 text-red-950 shadow-2xs focus:ring-2 focus:ring-amber-500 cursor-pointer">
-                  <!-- Dynamically populated -->
-                </select>
-              </div>
-
-              <div class="col-span-1 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-1.5">
-                <span class="text-[11px] sm:text-xs font-bold text-red-950">
-                  <span>เดือน:</span>
-                </span>
-                <select id="material-month-select" onchange="onMaterialFilterChange()" class="w-full sm:w-auto text-xs font-semibold border border-amber-300 rounded-xl px-2.5 py-1.5 bg-amber-50/50 text-red-950 shadow-2xs focus:ring-2 focus:ring-amber-500 cursor-pointer">
-                  <option value="all">ทุกเดือน (ทั้งปีงบ)</option>
-                  <option value="10">ตุลาคม (ต.ค.)</option>
-                  <option value="11">พฤศจิกายน (พ.ย.)</option>
-                  <option value="12">ธันวาคม (ธ.ค.)</option>
-                  <option value="1">มกราคม (ม.ค.)</option>
-                  <option value="2">กุมภาพันธ์ (ก.พ.)</option>
-                  <option value="3">มีนาคม (มี.ค.)</option>
-                  <option value="4">เมษายน (เม.ย.)</option>
-                  <option value="5">พฤษภาคม (พ.ค.)</option>
-                  <option value="6">มิถุนายน (มิ.ย.)</option>
-                  <option value="7">กรกฎาคม (ก.ค.)</option>
-                  <option value="8">สิงหาคม (ส.ค.)</option>
-                  <option value="9">กันยายน (ก.ย.)</option>
-                </select>
-              </div>
-            </div>
-
-            <!-- สรุปจำนวนรายการที่พบ -->
-            <div class="text-[11px] sm:text-xs text-slate-500 font-medium self-end sm:self-auto" id="material-search-result-count"></div>
-          </div>
-
-          <!-- แถบค้นหาข้อความ Real-time -->
+        <div class="mb-3 sm:mb-4 bg-white p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl shadow-xs border border-amber-200/80 no-print space-y-2">
+          <!-- แถวที่ 1: ค้นหาข้อความ Real-time -->
           <div class="relative w-full">
             <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-amber-600/70">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
               </svg>
             </span>
-            <input type="text" id="material-search-input" oninput="onMaterialSearch(this.value)" placeholder="ค้นหาวัสดุ (รับจาก/จ่ายให้, เลขที่เอกสาร, ประเภทเงิน, หมายเหตุ...)" class="w-full pl-9 pr-8 py-2 bg-slate-50/60 hover:bg-white focus:bg-white border border-slate-200 focus:border-amber-400 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 shadow-2xs placeholder-slate-400 text-slate-800 transition">
+            <input type="text" id="material-search-input" oninput="onMaterialSearch(this.value)" placeholder="ค้นหาวัสดุ (รับจาก/จ่ายให้, เลขที่เอกสาร, ประเภทเงิน, หมายเหตุ...)" class="w-full pl-9 pr-8 py-1.5 sm:py-2 bg-slate-50/60 hover:bg-white focus:bg-white border border-slate-200 focus:border-amber-400 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 shadow-2xs placeholder-slate-400 text-slate-800 transition">
             <button type="button" id="material-search-clear-btn" onclick="clearMaterialSearch()" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 text-sm cursor-pointer" title="ล้างการค้นหา">&times;</button>
+          </div>
+
+          <!-- แถวที่ 2: ตัวกรองปีงบ / เดือน + ยอดสรุปผลลัพธ์ -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2 pt-1.5 border-t border-slate-100">
+            <div class="grid grid-cols-2 sm:flex sm:items-center gap-1.5 sm:gap-2.5 flex-1 min-w-0">
+              <div class="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-1.5 min-w-0">
+                <span class="text-[10px] sm:text-xs font-bold text-red-950 truncate">📅 ปีงบ:</span>
+                <select id="material-fiscal-year-select" onchange="onMaterialFilterChange()" class="w-full sm:w-auto text-[11px] sm:text-xs font-bold border border-amber-300 rounded-lg sm:rounded-xl px-1.5 sm:px-2.5 py-1 bg-amber-50/50 text-red-950 shadow-2xs focus:ring-2 focus:ring-amber-500 cursor-pointer truncate">
+                  <!-- Dynamically populated -->
+                </select>
+              </div>
+
+              <div class="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-1.5 min-w-0">
+                <span class="text-[10px] sm:text-xs font-bold text-red-950 truncate">🗓️ เดือน:</span>
+                <select id="material-month-select" onchange="onMaterialFilterChange()" class="w-full sm:w-auto text-[11px] sm:text-xs font-semibold border border-amber-300 rounded-lg sm:rounded-xl px-1.5 sm:px-2.5 py-1 bg-amber-50/50 text-red-950 shadow-2xs focus:ring-2 focus:ring-amber-500 cursor-pointer truncate">
+                  <option value="all">ทุกเดือน</option>
+                  <option value="10">ต.ค.</option>
+                  <option value="11">พ.ย.</option>
+                  <option value="12">ธ.ค.</option>
+                  <option value="1">ม.ค.</option>
+                  <option value="2">ก.พ.</option>
+                  <option value="3">มี.ค.</option>
+                  <option value="4">เม.ย.</option>
+                  <option value="5">พ.ค.</option>
+                  <option value="6">มิ.ย.</option>
+                  <option value="7">ก.ค.</option>
+                  <option value="8">ส.ค.</option>
+                  <option value="9">ก.ย.</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- สรุปจำนวนรายการที่พบ -->
+            <div class="text-[10px] sm:text-xs text-slate-500 font-medium text-right shrink-0" id="material-search-result-count"></div>
           </div>
         </div>
 
-        <div class="bg-white p-3 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl shadow-xs border border-amber-100 overflow-x-auto touch-scroll">
-          <div class="block sm:hidden text-[10px] text-amber-800/80 mb-2 font-medium text-right">
-            👉 เลื่อนตารางไปทางขวาเพื่อดูข้อมูลทั้งหมด
+        <div id="screen-material-table-container" class="bg-white p-2.5 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl shadow-xs border border-amber-100 overflow-x-auto touch-scroll">
+          <div class="block sm:hidden text-[10px] text-amber-800/80 mb-1.5 font-medium text-right">
+            👉 เลื่อนตารางไปทางขวา หรือหมุนแนวนอนเพื่อดูข้อมูลกว้างขึ้น
           </div>
           <table class="w-full text-left border-collapse text-xs">
             <thead>
               <tr class="bg-gradient-to-r from-red-950 via-red-900 to-rose-950 text-amber-100 border-b border-amber-400/40">
-                <th class="p-2.5 border border-red-900/40 text-center w-10">
+                <th class="p-2 sm:p-2.5 border border-red-900/40 text-center w-10 whitespace-nowrap">
                   <input type="checkbox" id="select-all-material-chk" onchange="toggleSelectAllMaterials(this.checked)" class="w-4 h-4 accent-amber-500 rounded cursor-pointer" title="เลือก/ยกเลิก ทั้งหมด">
                 </th>
-                <th class="p-2.5 border border-red-900/40">วัน เดือน ปี</th>
-                <th class="p-2.5 border border-red-900/40">รับจาก / จ่ายให้</th>
-                <th class="p-2.5 border border-red-900/40">เลขที่เอกสาร</th>
-                <th class="p-2.5 border border-red-900/40">ประเภทเงิน</th>
-                <th class="p-2.5 border border-red-900/40 text-center">ยอดยกมา</th>
-                <th class="p-2.5 border border-red-900/40 text-center">รับ</th>
-                <th class="p-2.5 border border-red-900/40 text-center">จ่าย</th>
-                <th class="p-2.5 border border-red-900/40 text-center text-amber-200 font-bold">คงเหลือ</th>
-                <th class="p-2.5 border border-red-900/40 text-right">ราคา/หน่วย (Vat)</th>
-                <th class="p-2.5 border border-red-900/40 text-right text-amber-200 font-bold">รวมเงิน</th>
-                <th class="p-2.5 border border-red-900/40">หมายเหตุ</th>
-                <th class="p-2.5 border border-red-900/40 text-center">จัดการ</th>
+                <th class="p-2 sm:p-2.5 border border-red-900/40 whitespace-nowrap">วัน เดือน ปี</th>
+                <th class="p-2 sm:p-2.5 border border-red-900/40 whitespace-nowrap">รับจาก / จ่ายให้</th>
+                <th class="p-2 sm:p-2.5 border border-red-900/40 whitespace-nowrap">เลขที่เอกสาร</th>
+                <th class="p-2 sm:p-2.5 border border-red-900/40 whitespace-nowrap">ประเภทเงิน</th>
+                <th class="p-2 sm:p-2.5 border border-red-900/40 text-center whitespace-nowrap">ยอดยกมา</th>
+                <th class="p-2 sm:p-2.5 border border-red-900/40 text-center whitespace-nowrap">รับ</th>
+                <th class="p-2 sm:p-2.5 border border-red-900/40 text-center whitespace-nowrap">จ่าย</th>
+                <th class="p-2 sm:p-2.5 border border-red-900/40 text-center text-amber-200 font-bold whitespace-nowrap">คงเหลือ</th>
+                <th class="p-2 sm:p-2.5 border border-red-900/40 text-right whitespace-nowrap">ราคา/หน่วย (Vat)</th>
+                <th class="p-2 sm:p-2.5 border border-red-900/40 text-right text-amber-200 font-bold whitespace-nowrap">รวมเงิน</th>
+                <th class="p-2 sm:p-2.5 border border-red-900/40 whitespace-nowrap">หมายเหตุ</th>
+                <th class="p-2 sm:p-2.5 border border-red-900/40 text-center whitespace-nowrap">จัดการ</th>
               </tr>
             </thead>
             <tbody id="screen-material-table-body">
@@ -2153,6 +2210,6 @@
     <option value="นางสาวภัฐธีรา  จุลพันธ์">ธุรการโรงเรียน</option>
   </datalist>
 
-  <script src="app.js?v=11.1"></script>
+  <script src="app.js?v=11.2"></script>
 </body>
 </html>

@@ -4715,4 +4715,23 @@ function triggerPwaPrompt() {
 window.installPwaApp = installPwaApp;
 window.triggerPwaPrompt = triggerPwaPrompt;
 
+// ฟังก์ชันสลับเปิด/ปิดแถบเครื่องมืองานพิมพ์และรายงานราชการบนมือถือ
+function toggleMobilePrintToolbar() {
+  const tb = document.getElementById('asset-print-toolbar');
+  const arrow = document.getElementById('mobile-print-toolbar-arrow');
+  if (!tb) return;
+  const isHidden = tb.classList.contains('hidden');
+  if (isHidden) {
+    tb.classList.remove('hidden');
+    tb.classList.add('flex');
+    if (arrow) arrow.textContent = 'แตะเพื่อย่อ ▴';
+  } else {
+    tb.classList.remove('flex');
+    tb.classList.add('hidden');
+    if (arrow) arrow.textContent = 'แตะเพื่อเปิด ▾';
+  }
+}
+
+window.toggleMobilePrintToolbar = toggleMobilePrintToolbar;
+
 
