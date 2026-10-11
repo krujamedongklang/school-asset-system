@@ -1182,20 +1182,23 @@ function switchTab(tab) {
   const btnAsset = document.getElementById('tab-asset-btn');
   const btnMaterial = document.getElementById('tab-material-btn');
 
+  const activeClass = 'flex-1 sm:flex-initial justify-center px-2.5 py-1.5 sm:px-3.5 sm:py-1.5 bg-gradient-to-r from-amber-400 via-amber-400 to-amber-500 text-red-950 font-bold rounded-lg sm:rounded-xl shadow-md transition-all duration-150 text-xs sm:text-sm whitespace-nowrap flex items-center gap-1 cursor-pointer';
+  const inactiveClass = 'flex-1 sm:flex-initial justify-center px-2.5 py-1.5 sm:px-3.5 sm:py-1.5 text-amber-200/90 hover:text-white hover:bg-white/10 font-semibold rounded-lg sm:rounded-xl transition-all duration-150 text-xs sm:text-sm whitespace-nowrap flex items-center gap-1 cursor-pointer';
+
   if (tab === 'asset') {
-    screenAsset.classList.remove('hidden');
-    screenMaterial.classList.add('hidden');
+    if (screenAsset) screenAsset.classList.remove('hidden');
+    if (screenMaterial) screenMaterial.classList.add('hidden');
     setPrintTarget('asset');
 
-    btnAsset.className = 'px-3 py-1.5 sm:px-3.5 sm:py-1.5 bg-gradient-to-r from-amber-400 via-amber-400 to-amber-500 text-red-950 font-bold rounded-xl shadow-md transition text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5 cursor-pointer';
-    btnMaterial.className = 'px-3 py-1.5 sm:px-3.5 sm:py-1.5 text-amber-200/90 hover:text-white hover:bg-white/10 font-semibold rounded-xl transition text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5 cursor-pointer';
+    if (btnAsset) btnAsset.className = activeClass;
+    if (btnMaterial) btnMaterial.className = inactiveClass;
   } else {
-    screenAsset.classList.add('hidden');
-    screenMaterial.classList.remove('hidden');
+    if (screenAsset) screenAsset.classList.add('hidden');
+    if (screenMaterial) screenMaterial.classList.remove('hidden');
     setPrintTarget('material');
 
-    btnAsset.className = 'px-3 py-1.5 sm:px-3.5 sm:py-1.5 text-amber-200/90 hover:text-white hover:bg-white/10 font-semibold rounded-xl transition text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5 cursor-pointer';
-    btnMaterial.className = 'px-3 py-1.5 sm:px-3.5 sm:py-1.5 bg-gradient-to-r from-amber-400 via-amber-400 to-amber-500 text-red-950 font-bold rounded-xl shadow-md transition text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5 cursor-pointer';
+    if (btnAsset) btnAsset.className = inactiveClass;
+    if (btnMaterial) btnMaterial.className = activeClass;
   }
 }
 
