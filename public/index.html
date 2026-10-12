@@ -43,6 +43,11 @@
         } else {
           document.documentElement.classList.remove('tab-material-mode');
         }
+
+        // ตรวจสอบโหมด Standalone / PWA (Home Screen) บนมือถือ
+        if (window.navigator.standalone || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)) {
+          document.documentElement.classList.add('standalone-mode');
+        }
       } catch (e) {}
     })();
     // กำหนดค่า darkMode เป็น 'class' เพื่อป้องกันเบราว์เซอร์เปิดโหมดมืดอัตโนมัติตาม OS
@@ -57,6 +62,36 @@
   <script src="html5-qrcode.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    /* ป้องกันแถบสถานะ/นาฬิกาบนมือถือ (iOS Notch, Dynamic Island, Status Bar, PWA) ทับส่วนหัวระบบ */
+    @media screen and (max-width: 1023px) {
+      nav {
+        padding-top: max(0.625rem, calc(env(safe-area-inset-top, 0px) + 0.35rem), calc(constant(safe-area-inset-top, 0px) + 0.35rem)) !important;
+      }
+      footer {
+        padding-bottom: max(1.5rem, calc(env(safe-area-inset-bottom, 0px) + 1rem)) !important;
+      }
+    }
+
+    /* เมื่อเปิดใช้งานเป็นแอปบนหน้าจอมือถือ (PWA / Standalone Home Screen บน iPhone/Android) */
+    @media screen and (max-width: 1023px) and (display-mode: standalone) {
+      nav {
+        padding-top: max(2.85rem, calc(env(safe-area-inset-top, 0px) + 0.35rem)) !important;
+      }
+    }
+
+    /* คลาส Standalone ที่ตรวจจับผ่าน JavaScript สำหรับอุปกรณ์ iOS โดยเฉพาะ */
+    html.standalone-mode nav {
+      padding-top: max(2.85rem, calc(env(safe-area-inset-top, 0px) + 0.35rem)) !important;
+    }
+
+    /* บังคับจอคอมพิวเตอร์ (Desktop >= 1024px) ให้คงความสวยงามเดิม 100% ไม่ได้รับผลกระทบใดๆ */
+    @media screen and (min-width: 1024px) {
+      nav,
+      html.standalone-mode nav {
+        padding-top: 0.75rem !important;
+      }
+    }
+
     /* โหมดป้องกันการกะพริบสลับแท็บตอนรีเฟรช 0.0 วินาที (Zero-Flicker Tab Mode) */
     html.tab-material-mode #tab-asset-screen {
       display: none !important;
@@ -2715,6 +2750,6 @@
     <option value="นางสาวภัฐธีรา  จุลพันธ์">ธุรการโรงเรียน</option>
   </datalist>
 
-  <script src="app.js?v=13.1"></script>
+  <script src="app.js?v=13.2"></script>
 </body>
 </html>
