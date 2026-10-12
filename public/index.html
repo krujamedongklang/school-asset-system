@@ -29,11 +29,15 @@
         localStorage.removeItem('theme_mode');
         document.documentElement.classList.remove('dark');
 
-        // ตรวจสอบแท็บที่เปิดค้างไว้ล่าสุด (วัสดุ หรือ ครุภัณฑ์) เพื่อเตรียมพร้อมหน้าจอล่วงหน้า ป้องกันการกะพริบตอนรีเฟรช
-        var urlParams = new URLSearchParams(window.location.search);
-        var paramTab = urlParams.get('tab');
-        var hash = window.location.hash.replace('#', '').toLowerCase();
-        var savedTab = (paramTab === 'material' || paramTab === 'asset') ? paramTab : ((hash === 'material' || hash === 'asset') ? hash : localStorage.getItem('school_active_tab'));
+        // ล้าง #hash ออกจากช่อง Address Bar ทันที ถ้ามีตกค้าง เพื่อให้ URL สะอาดเรียบร้อย
+        if (window.location.hash && (window.location.hash === '#material' || window.location.hash === '#asset')) {
+          try {
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+          } catch(e) {}
+        }
+
+        // ตรวจสอบแท็บที่เปิดค้างไว้ล่าสุด (วัสดุ หรือ ครุภัณฑ์) จาก localStorage เพื่อเตรียมพร้อมหน้าจอล่วงหน้า ป้องกันการกะพริบตอนรีเฟรช
+        var savedTab = localStorage.getItem('school_active_tab');
         if (savedTab === 'material') {
           document.documentElement.classList.add('init-tab-material');
         }
@@ -2641,6 +2645,6 @@
     <option value="นางสาวภัฐธีรา  จุลพันธ์">ธุรการโรงเรียน</option>
   </datalist>
 
-  <script src="app.js?v=12.7"></script>
+  <script src="app.js?v=12.8"></script>
 </body>
 </html>

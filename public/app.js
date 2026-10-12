@@ -15,13 +15,6 @@ function cleanFieldText(val) {
 // ==================== ระบบจดจำแท็บที่เปิดล่าสุด (Persistent Active Tab) ====================
 function getInitialTab() {
   try {
-    const urlParams = new URLSearchParams(window.location.search);
-    const paramTab = urlParams.get('tab');
-    if (paramTab === 'material' || paramTab === 'asset') return paramTab;
-
-    const hash = window.location.hash.replace('#', '').toLowerCase();
-    if (hash === 'material' || hash === 'asset') return hash;
-
     const savedTab = localStorage.getItem('school_active_tab');
     if (savedTab === 'material' || savedTab === 'asset') return savedTab;
   } catch (e) {
@@ -1260,7 +1253,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // ==================== สลับแท็บ (Screen & Print Sync & Persistent State) ====================
-function switchTab(tab, updateHistory = true) {
+function switchTab(tab) {
   if (tab !== 'material' && tab !== 'asset') {
     tab = 'asset';
   }
@@ -1268,10 +1261,9 @@ function switchTab(tab, updateHistory = true) {
 
   try {
     localStorage.setItem('school_active_tab', tab);
-    if (updateHistory && window.history && window.history.replaceState) {
-      const url = new URL(window.location.href);
-      url.hash = tab === 'material' ? 'material' : 'asset';
-      window.history.replaceState(null, '', url.toString());
+    // ซ่อน/ล้าง #hash ออกจากช่อง Address Bar เพื่อให้ URL สะอาดเรียบร้อย ไม่มี #asset หรือ #material
+    if (window.location.hash && (window.location.hash === '#material' || window.location.hash === '#asset')) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
     }
   } catch (e) {
     console.warn('Tab persistence error:', e);
@@ -1304,14 +1296,6 @@ function switchTab(tab, updateHistory = true) {
     if (btnMaterial) btnMaterial.className = activeClass;
   }
 }
-
-// ตรวจสอบการเปลี่ยน hash ผ่านปุ่ม Back / Forward ของเบราว์เซอร์
-window.addEventListener('hashchange', () => {
-  const targetTab = getInitialTab();
-  if (targetTab !== currentTab) {
-    switchTab(targetTab, false);
-  }
-});
 
 // ==================== ส่วนราชการ & หน่วยงาน (สำหรับพิมพ์) ====================
 function initOrgSettings() {

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dongklang-asset-v12.7';
+const CACHE_NAME = 'dongklang-asset-v12.8';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
