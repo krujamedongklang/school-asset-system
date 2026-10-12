@@ -28,6 +28,15 @@
         }
         localStorage.removeItem('theme_mode');
         document.documentElement.classList.remove('dark');
+
+        // ตรวจสอบแท็บที่เปิดค้างไว้ล่าสุด (วัสดุ หรือ ครุภัณฑ์) เพื่อเตรียมพร้อมหน้าจอล่วงหน้า ป้องกันการกะพริบตอนรีเฟรช
+        var urlParams = new URLSearchParams(window.location.search);
+        var paramTab = urlParams.get('tab');
+        var hash = window.location.hash.replace('#', '').toLowerCase();
+        var savedTab = (paramTab === 'material' || paramTab === 'asset') ? paramTab : ((hash === 'material' || hash === 'asset') ? hash : localStorage.getItem('school_active_tab'));
+        if (savedTab === 'material') {
+          document.documentElement.classList.add('init-tab-material');
+        }
       } catch (e) {}
     })();
     // กำหนดค่า darkMode เป็น 'class' เพื่อป้องกันเบราว์เซอร์เปิดโหมดมืดอัตโนมัติตาม OS
@@ -42,6 +51,10 @@
   <script src="html5-qrcode.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    /* ป้องกันการกะพริบสลับแท็บตอนรีเฟรชหน้าเว็บ */
+    html.init-tab-material #tab-asset-screen { display: none !important; }
+    html.init-tab-material #tab-material-screen { display: block !important; }
+
     /* รองรับการหมุนหน้าจอแนวนอน (Landscape Mode) บนมือถือและไอแพด */
     @media screen and (orientation: landscape) and (max-height: 540px) {
       nav {
@@ -2628,6 +2641,6 @@
     <option value="นางสาวภัฐธีรา  จุลพันธ์">ธุรการโรงเรียน</option>
   </datalist>
 
-  <script src="app.js?v=12.6"></script>
+  <script src="app.js?v=12.7"></script>
 </body>
 </html>

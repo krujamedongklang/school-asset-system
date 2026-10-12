@@ -12,7 +12,25 @@ function cleanFieldText(val) {
   return str;
 }
 
-let currentTab = 'asset';
+// ==================== ระบบจดจำแท็บที่เปิดล่าสุด (Persistent Active Tab) ====================
+function getInitialTab() {
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramTab = urlParams.get('tab');
+    if (paramTab === 'material' || paramTab === 'asset') return paramTab;
+
+    const hash = window.location.hash.replace('#', '').toLowerCase();
+    if (hash === 'material' || hash === 'asset') return hash;
+
+    const savedTab = localStorage.getItem('school_active_tab');
+    if (savedTab === 'material' || savedTab === 'asset') return savedTab;
+  } catch (e) {
+    console.warn('Error reading initial tab:', e);
+  }
+  return 'asset';
+}
+
+let currentTab = getInitialTab();
 let assetList = [];
 let materialList = [];
 
@@ -1217,6 +1235,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   try { initOrgSettings(); } catch(e) { console.warn('Org settings init error:', e); }
   try { initMaterialMeta(); } catch(e) { console.warn('Material meta init error:', e); }
 
+  // สลับไปยังแท็บที่เปิดค้างไว้ล่าสุดทันที (ทะเบียนคุมครุภัณฑ์ หรือ บัญชีคุมวัสดุ) ป้องกันการเด้งกลับ
+  switchTab(currentTab, false);
+
   // กำหนดวันปัจจุบันเป็นค่าเริ่มต้นในฟอร์ม
   const today = new Date().toISOString().split('T')[0];
   const aDate = document.getElementById('a_date');
@@ -1238,9 +1259,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-// ==================== สลับแท็บ (Screen & Print Sync) ====================
-function switchTab(tab) {
+// ==================== สลับแท็บ (Screen & Print Sync & Persistent State) ====================
+function switchTab(tab, updateHistory = true) {
+  if (tab !== 'material' && tab !== 'asset') {
+    tab = 'asset';
+  }
   currentTab = tab;
+
+  try {
+    localStorage.setItem('school_active_tab', tab);
+    if (updateHistory && window.history && window.history.replaceState) {
+      const url = new URL(window.location.href);
+      url.hash = tab === 'material' ? 'material' : 'asset';
+      window.history.replaceState(null, '', url.toString());
+    }
+  } catch (e) {
+    console.warn('Tab persistence error:', e);
+  }
+
+  // ปลดคลาสเริ่มต้นที่ใช้ป้องกันการกะพริบ
+  document.documentElement.classList.remove('init-tab-material');
+
   const screenAsset = document.getElementById('tab-asset-screen');
   const screenMaterial = document.getElementById('tab-material-screen');
   const btnAsset = document.getElementById('tab-asset-btn');
@@ -1265,6 +1304,14 @@ function switchTab(tab) {
     if (btnMaterial) btnMaterial.className = activeClass;
   }
 }
+
+// ตรวจสอบการเปลี่ยน hash ผ่านปุ่ม Back / Forward ของเบราว์เซอร์
+window.addEventListener('hashchange', () => {
+  const targetTab = getInitialTab();
+  if (targetTab !== currentTab) {
+    switchTab(targetTab, false);
+  }
+});
 
 // ==================== ส่วนราชการ & หน่วยงาน (สำหรับพิมพ์) ====================
 function initOrgSettings() {
