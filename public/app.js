@@ -1248,6 +1248,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // สลับไปยังแท็บที่เปิดค้างไว้ล่าสุดทันที (ทะเบียนคุมครุภัณฑ์ หรือ บัญชีคุมวัสดุ) ป้องกันการเด้งกลับ
   switchTab(currentTab, false);
 
+  // คืนค่าตัวเลือกตัวกรองที่เคยเลือกไว้จาก localStorage
+  restoreFilterUIState();
+
   // กำหนดวันปัจจุบันเป็นค่าเริ่มต้นในฟอร์ม
   const today = new Date().toISOString().split('T')[0];
   const aDate = document.getElementById('a_date');
@@ -1435,13 +1438,13 @@ function formatThaiDate(dateStr) {
 
 // ==================== ตัวแปรและฟังก์ชันระบบปีงบประมาณและค้นหา ====================
 const START_FISCAL_YEAR = 2570; // เริ่มต้นที่ปีงบประมาณ 2570 (ปีงบ 70)
-let assetFiscalYear = '2570';
-let assetMonth = 'all';
-let assetStatusFilter = 'all';
+let assetFiscalYear = localStorage.getItem('asset_fiscal_year') || 'all';
+let assetMonth = localStorage.getItem('asset_month') || 'all';
+let assetStatusFilter = localStorage.getItem('asset_status_filter') || 'all';
 let assetViewMode = localStorage.getItem('asset_view_mode') || 'table';
-let materialFiscalYear = '2570';
-let materialMonth = 'all';
-let materialNameFilter = 'all';
+let materialFiscalYear = localStorage.getItem('material_fiscal_year') || 'all';
+let materialMonth = localStorage.getItem('material_month') || 'all';
+let materialNameFilter = localStorage.getItem('material_name_filter') || 'all';
 
 let assetSearchQuery = '';
 let materialSearchQuery = '';
@@ -1623,17 +1626,48 @@ function populateFiscalYearOptions(tab) {
 
   if (currentVal === 'all') {
     selectEl.value = 'all';
-  } else if (availableYears.includes(parseInt(currentVal, 10))) {
-    selectEl.value = currentVal;
-  } else if (availableYears.includes(START_FISCAL_YEAR)) {
-    selectEl.value = String(START_FISCAL_YEAR);
-    if (tab === 'asset') assetFiscalYear = String(START_FISCAL_YEAR);
-    else materialFiscalYear = String(START_FISCAL_YEAR);
-  } else {
-    selectEl.value = 'all';
     if (tab === 'asset') assetFiscalYear = 'all';
     else materialFiscalYear = 'all';
+  } else if (availableYears.includes(parseInt(currentVal, 10))) {
+    selectEl.value = currentVal;
+    if (tab === 'asset') assetFiscalYear = currentVal;
+    else materialFiscalYear = currentVal;
+  } else if (availableYears.length === 0) {
+    // ข้อมูลกำลังโหลดหรือยังไม่มีรายการ ให้คงค่าเดิมที่เคยเลือกไว้
+    selectEl.value = currentVal || 'all';
+  } else if (availableYears.includes(START_FISCAL_YEAR)) {
+    selectEl.value = String(START_FISCAL_YEAR);
+    if (tab === 'asset') {
+      assetFiscalYear = String(START_FISCAL_YEAR);
+      try { localStorage.setItem('asset_fiscal_year', assetFiscalYear); } catch(e) {}
+    } else {
+      materialFiscalYear = String(START_FISCAL_YEAR);
+      try { localStorage.setItem('material_fiscal_year', materialFiscalYear); } catch(e) {}
+    }
+  } else {
+    selectEl.value = 'all';
+    if (tab === 'asset') {
+      assetFiscalYear = 'all';
+      try { localStorage.setItem('asset_fiscal_year', 'all'); } catch(e) {}
+    } else {
+      materialFiscalYear = 'all';
+      try { localStorage.setItem('material_fiscal_year', 'all'); } catch(e) {}
+    }
   }
+}
+
+function restoreFilterUIState() {
+  const aMonthEl = document.getElementById('asset-month-select');
+  if (aMonthEl && assetMonth) aMonthEl.value = assetMonth;
+
+  const aStatusEl = document.getElementById('asset-status-select');
+  if (aStatusEl && assetStatusFilter) {
+    aStatusEl.value = assetStatusFilter;
+    syncQuickFilterChips(assetStatusFilter);
+  }
+
+  const mMonthEl = document.getElementById('material-month-select');
+  if (mMonthEl && materialMonth) mMonthEl.value = materialMonth;
 }
 
 function syncQuickFilterChips(statusKey) {
@@ -1651,6 +1685,7 @@ function syncQuickFilterChips(statusKey) {
 
 function setQuickStatusFilter(statusKey) {
   assetStatusFilter = statusKey;
+  try { localStorage.setItem('asset_status_filter', assetStatusFilter); } catch(e) {}
   const statusSelect = document.getElementById('asset-status-select');
   if (statusSelect) {
     statusSelect.value = statusKey;
@@ -1669,9 +1704,18 @@ function onAssetFilterChange() {
   const fySelect = document.getElementById('asset-fiscal-year-select');
   const mSelect = document.getElementById('asset-month-select');
   const statusSelect = document.getElementById('asset-status-select');
-  if (fySelect) assetFiscalYear = fySelect.value;
-  if (mSelect) assetMonth = mSelect.value;
-  if (statusSelect) assetStatusFilter = statusSelect.value;
+  if (fySelect) {
+    assetFiscalYear = fySelect.value;
+    try { localStorage.setItem('asset_fiscal_year', assetFiscalYear); } catch(e) {}
+  }
+  if (mSelect) {
+    assetMonth = mSelect.value;
+    try { localStorage.setItem('asset_month', assetMonth); } catch(e) {}
+  }
+  if (statusSelect) {
+    assetStatusFilter = statusSelect.value;
+    try { localStorage.setItem('asset_status_filter', assetStatusFilter); } catch(e) {}
+  }
   syncQuickFilterChips(assetStatusFilter);
   updateAssetKpiCards();
   renderAssetTable();
@@ -1682,9 +1726,18 @@ function onMaterialFilterChange() {
   const fySelect = document.getElementById('material-fiscal-year-select');
   const mSelect = document.getElementById('material-month-select');
   const matSelect = document.getElementById('material-item-select');
-  if (fySelect) materialFiscalYear = fySelect.value;
-  if (mSelect) materialMonth = mSelect.value;
-  if (matSelect) materialNameFilter = matSelect.value;
+  if (fySelect) {
+    materialFiscalYear = fySelect.value;
+    try { localStorage.setItem('material_fiscal_year', materialFiscalYear); } catch(e) {}
+  }
+  if (mSelect) {
+    materialMonth = mSelect.value;
+    try { localStorage.setItem('material_month', materialMonth); } catch(e) {}
+  }
+  if (matSelect) {
+    materialNameFilter = matSelect.value;
+    try { localStorage.setItem('material_name_filter', materialNameFilter); } catch(e) {}
+  }
   renderMaterialTable();
   updateMaterialSelectionUI();
 }
@@ -1705,9 +1758,12 @@ function populateMaterialDropdown() {
     });
     if (currentVal !== 'all' && distinctNames.includes(currentVal)) {
       selectEl.value = currentVal;
+    } else if (currentVal !== 'all' && distinctNames.length === 0) {
+      selectEl.value = currentVal;
     } else {
       selectEl.value = 'all';
       materialNameFilter = 'all';
+      try { localStorage.setItem('material_name_filter', 'all'); } catch(e) {}
     }
   }
 
@@ -2004,7 +2060,7 @@ function renderAssetTable() {
   }
 
   if (countSpan) {
-    const isFiltered = assetFiscalYear !== 'all' || assetMonth !== 'all' || assetSearchQuery.trim();
+    const isFiltered = assetFiscalYear !== 'all' || assetMonth !== 'all' || assetStatusFilter !== 'all' || assetSearchQuery.trim();
     if (isFiltered) {
       countSpan.innerHTML = `แสดง <span class="font-bold text-amber-800">${list.length}</span> รายการ (จากทั้งหมด ${assetList.length} รายการ)`;
     } else {
