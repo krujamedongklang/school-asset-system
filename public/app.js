@@ -411,7 +411,7 @@ function updateNavbarUserPill() {
 
 function applyUserPermissionsToUI() {
   const isAdmin = currentUser && currentUser.role === 'admin';
-  const canAdd = isAdmin || (currentUser && currentUser.canAdd);
+  const canAdd = !currentUser || isAdmin || Boolean(currentUser.canAdd);
 
   // ควบคุมเมนู Admin
   const btnUserMgmt = document.getElementById('menu-btn-user-mgmt');
@@ -464,28 +464,47 @@ async function checkAuthAndInitialize() {
   }
 
   try {
-    const [verifyRes] = await Promise.all([
-      fetch('/api/auth/verify', { headers: { 'Authorization': `Bearer ${token}` } }),
+    const verifyRes = await fetch('/api/auth/verify', { headers: { 'Authorization': `Bearer ${token}` } });
+    if (verifyRes.ok) {
+      const data = await verifyRes.json();
+      if (data && data.authenticated && data.user) {
+        currentUser = data.user;
+        localStorage.setItem('cached_current_user', JSON.stringify(currentUser));
+        updateNavbarUserPill();
+        applyUserPermissionsToUI();
+        hideLoginOverlay();
+        if (currentUser.role === 'admin') {
+          checkPendingUsersCount();
+        }
+      } else {
+        setAuthToken('');
+        showLoginOverlay();
+        return;
+      }
+    } else {
+      // หากเกิดข้อผิดพลาดในการตรวจสอบ token
+      if (verifyRes.status === 401 || verifyRes.status === 403) {
+        setAuthToken('');
+        showLoginOverlay();
+        return;
+      }
+    }
+  } catch (err) {
+    console.warn('Auth verify check warning (offline or network error):', err);
+    if (currentUser) {
+      hideLoginOverlay();
+    }
+  }
+
+  // โหลดข้อมูลครุภัณฑ์ วัสดุ และสถานะฐานข้อมูล
+  try {
+    await Promise.all([
       loadAssets(),
       loadMaterials(),
       loadDatabaseStatus()
     ]);
-    const data = await verifyRes.json();
-    if (!verifyRes.ok || !data.authenticated || !data.user) {
-      setAuthToken('');
-      showLoginOverlay();
-    } else {
-      currentUser = data.user;
-      localStorage.setItem('cached_current_user', JSON.stringify(currentUser));
-      updateNavbarUserPill();
-      applyUserPermissionsToUI();
-      hideLoginOverlay();
-      if (currentUser.role === 'admin') {
-        checkPendingUsersCount();
-      }
-    }
   } catch (err) {
-    console.warn('Auth verify check failed:', err);
+    console.warn('Loading assets/materials error:', err);
   }
 }
 
@@ -1149,10 +1168,9 @@ async function handleSyncToSupabase() {
 
 // ==================== DOM READY ====================
 document.addEventListener('DOMContentLoaded', async () => {
-  initDarkMode();
-  initPwa();
-  initOrgSettings();
-  initMaterialMeta();
+  try { initPwa(); } catch(e) { console.warn('PWA init error:', e); }
+  try { initOrgSettings(); } catch(e) { console.warn('Org settings init error:', e); }
+  try { initMaterialMeta(); } catch(e) { console.warn('Material meta init error:', e); }
 
   // กำหนดวันปัจจุบันเป็นค่าเริ่มต้นในฟอร์ม
   const today = new Date().toISOString().split('T')[0];
@@ -1161,7 +1179,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (aDate) aDate.value = today;
   if (mDate) mDate.value = today;
 
-  // ตรวจสอบการเข้าสู่ระบบ
+  // ตรวจสอบการเข้าสู่ระบบและโหลดข้อมูลครุภัณฑ์/วัสดุ
   await checkAuthAndInitialize();
 
   // เริ่มต้นสถานะมุมมองตารางหรือการ์ด
@@ -1875,6 +1893,9 @@ function renderAssetTable() {
     return;
   }
 
+  const canEdit = !currentUser || currentUser.canEdit || currentUser.role === 'admin';
+  const canDelete = !currentUser || currentUser.canDelete || currentUser.role === 'admin';
+
   list.forEach((item, index) => {
     const isSelected = selectedAssetIds.has(item.id);
     const tr = document.createElement('tr');
@@ -1919,8 +1940,8 @@ function renderAssetTable() {
       <td class="p-2 border border-slate-200 text-center whitespace-nowrap space-x-1" onclick="event.stopPropagation()">
         <button onclick="printSingleQrSticker(${item.id})" class="text-emerald-700 hover:text-emerald-900 p-1.5 font-semibold rounded-lg hover:bg-emerald-100 transition shadow-2xs cursor-pointer" title="พิมพ์สติกเกอร์ QR Code ติดตัวครุภัณฑ์">🏷️</button>
         <button onclick="printSingleAsset(${item.id})" class="text-amber-600 hover:text-amber-800 p-1.5 font-semibold rounded-lg hover:bg-amber-100 transition shadow-2xs cursor-pointer" title="พิมพ์บัตรรายการนี้เฉพาะใบเดียว">🖨️</button>
-        ${(currentUser && (currentUser.canEdit || currentUser.role === 'admin')) ? `<button onclick="editAsset(${item.id})" class="text-red-700 hover:text-red-900 p-1.5 font-semibold rounded-lg hover:bg-red-100 transition shadow-2xs cursor-pointer" title="แก้ไขรายการนี้">✏️</button>` : ''}
-        ${(currentUser && (currentUser.canDelete || currentUser.role === 'admin')) ? `<button onclick="deleteAsset(${item.id})" class="text-slate-400 hover:text-rose-600 p-1.5 font-semibold rounded-lg hover:bg-rose-50 transition shadow-2xs cursor-pointer" title="ลบรายการ">🗑️</button>` : ''}
+        ${canEdit ? `<button onclick="editAsset(${item.id})" class="text-red-700 hover:text-red-900 p-1.5 font-semibold rounded-lg hover:bg-red-100 transition shadow-2xs cursor-pointer" title="แก้ไขรายการนี้">✏️</button>` : ''}
+        ${canDelete ? `<button onclick="deleteAsset(${item.id})" class="text-slate-400 hover:text-rose-600 p-1.5 font-semibold rounded-lg hover:bg-rose-50 transition shadow-2xs cursor-pointer" title="ลบรายการ">🗑️</button>` : ''}
       </td>
     `;
     screenTbody.appendChild(tr);
@@ -1978,8 +1999,8 @@ function renderAssetGridCards(list = null) {
     return;
   }
 
-  const canEdit = currentUser && (currentUser.canEdit || currentUser.role === 'admin');
-  const canDelete = currentUser && (currentUser.canDelete || currentUser.role === 'admin');
+  const canEdit = !currentUser || currentUser.canEdit || currentUser.role === 'admin';
+  const canDelete = !currentUser || currentUser.canDelete || currentUser.role === 'admin';
 
   items.forEach(item => {
     const isSelected = selectedAssetIds.has(item.id);
@@ -2897,6 +2918,9 @@ function renderMaterialTable() {
     return;
   }
 
+  const canEdit = !currentUser || currentUser.canEdit || currentUser.role === 'admin';
+  const canDelete = !currentUser || currentUser.canDelete || currentUser.role === 'admin';
+
   list.forEach((item) => {
     const isSelected = selectedMaterialIds.has(item.id);
     const tr = document.createElement('tr');
@@ -2926,8 +2950,8 @@ function renderMaterialTable() {
       <td class="p-2 border border-slate-200 text-right font-bold text-amber-900">${Number(item.total_amount).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
       <td class="p-2 border border-slate-200 text-slate-500">${item.remark || ''}</td>
       <td class="p-2 border border-slate-200 text-center whitespace-nowrap space-x-1" onclick="event.stopPropagation()">
-        ${(currentUser && (currentUser.canEdit || currentUser.role === 'admin')) ? `<button onclick="editMaterial(${item.id})" class="text-red-700 hover:text-red-900 p-1.5 font-semibold rounded-lg hover:bg-red-100 transition shadow-2xs cursor-pointer" title="แก้ไขรายการนี้">✏️</button>` : ''}
-        ${(currentUser && (currentUser.canDelete || currentUser.role === 'admin')) ? `<button onclick="deleteMaterial(${item.id})" class="text-slate-400 hover:text-rose-600 p-1.5 font-semibold rounded-lg hover:bg-rose-50 transition shadow-2xs cursor-pointer" title="ลบรายการ">🗑️</button>` : ''}
+        ${canEdit ? `<button onclick="editMaterial(${item.id})" class="text-red-700 hover:text-red-900 p-1.5 font-semibold rounded-lg hover:bg-red-100 transition shadow-2xs cursor-pointer" title="แก้ไขรายการนี้">✏️</button>` : ''}
+        ${canDelete ? `<button onclick="deleteMaterial(${item.id})" class="text-slate-400 hover:text-rose-600 p-1.5 font-semibold rounded-lg hover:bg-rose-50 transition shadow-2xs cursor-pointer" title="ลบรายการ">🗑️</button>` : ''}
       </td>
     `;
     screenTbody.appendChild(tr);
@@ -4748,6 +4772,7 @@ try {
 } catch (e) {}
 
 // no-op สำหรับรองรับกรณีอุปกรณ์ที่แคชเวอร์ชันเก่าไว้
+window.initDarkMode = function() {};
 window.toggleDarkMode = function() {};
 window.setThemeMode = function() {};
 
