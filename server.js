@@ -20,7 +20,10 @@ function calculateDepreciation(item) {
   if (item.received_date) {
     const parts = item.received_date.split('-');
     if (parts.length > 0) {
-      receivedYear = parseInt(parts[0]);
+      receivedYear = parseInt(parts[0], 10);
+      if (receivedYear > 2400) {
+        receivedYear -= 543; // แปลง พ.ศ. เป็น ค.ศ. ให้ถูกต้องเพื่อป้องกันอายุการใช้งานติดลบ
+      }
     }
   }
   const currentYear = new Date().getFullYear();
