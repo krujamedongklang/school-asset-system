@@ -1,6 +1,6 @@
 // ค่าเริ่มต้นของส่วนราชการและหน่วยงาน (สำหรับแบบฟอร์มพิมพ์)
 const DEFAULT_ORG = 'สำนักงานเขตพื้นที่การศึกษาประถมศึกษาตราด';
-const DEFAULT_DEPT = 'โรงเรียนบ้านดงกลาง';
+const DEFAULT_DEPT = 'โรงเรียนบ้านดงกลาง (ธนาคารกรุงเทพ ๓๑)';
 
 // ฟังก์ชันล้างข้อความ: ถ้าเป็นค่าว่าง หรือผู้ใช้พิมพ์จุด/ขีด/จุดไข่ปลาซ้ำๆ หรือเครื่องหมาย ? ให้แปลงเป็นค่าว่าง '' เพื่อให้เส้นประด้านล่างว่างเปล่า
 function cleanFieldText(val) {
@@ -1208,12 +1208,12 @@ function initOrgSettings() {
   let org = cleanFieldText(localStorage.getItem('gov_org'));
   let dept = cleanFieldText(localStorage.getItem('gov_dept'));
 
-  // ถ้ารายการมีเครื่องหมาย ? (UTF-8 เสียหาย) หรือเป็นหน่วยงานเก่า หรือยังว่าง ให้ปรับเป็นโรงเรียนบ้านดงกลาง / สพป.ตราด ทันที
-  if (!org || org.includes('?') || org.includes('กศน.')) {
+  // ถ้ารายการมีเครื่องหมาย ? (UTF-8 เสียหาย) หรือเป็นหน่วยงานเก่า หรือยังว่าง ให้ปรับเป็นโรงเรียนบ้านดงกลาง (ธนาคารกรุงเทพ ๓๑) / สพป.ตราด ทันที
+  if (!org || org.includes('?') || org.includes('กศน.') || org.includes('นครราชสีมา')) {
     org = DEFAULT_ORG;
     localStorage.setItem('gov_org', org);
   }
-  if (!dept || dept.includes('?') || dept.includes('นครราชสีมา')) {
+  if (!dept || dept.includes('?') || dept.includes('นครราชสีมา') || dept === 'โรงเรียนบ้านดงกลาง') {
     dept = DEFAULT_DEPT;
     localStorage.setItem('gov_dept', dept);
   }
@@ -3333,7 +3333,7 @@ function openAnnualInspectionModal() {
   const mem1 = localStorage.getItem('ai_member1_name') || '';
   const mem2 = localStorage.getItem('ai_member2_name') || '';
   let director = localStorage.getItem('ai_director_name') || '';
-  if (!director || director === 'ผู้อำนวยการโรงเรียนบ้านดงกลาง') director = 'นางสายสายใจ  วิลัยทอง';
+  if (!director || director.includes('ผู้อำนวยการโรงเรียนบ้านดงกลาง')) director = 'นางสายสายใจ  วิลัยทอง';
 
   const orderNo = localStorage.getItem('ai_order_no') || '45/2570';
   const docNo = localStorage.getItem('ai_doc_no') || 'ศธ 04153.25/...';
@@ -3451,7 +3451,7 @@ function handlePrintAnnualInspection(e) {
   const chair = cleanFieldText(document.getElementById('ai-chair-name').value);
   const mem1 = cleanFieldText(document.getElementById('ai-member1-name').value);
   const mem2 = cleanFieldText(document.getElementById('ai-member2-name').value);
-  const director = cleanFieldText(document.getElementById('ai-director-name').value) || 'ผู้อำนวยการโรงเรียนบ้านดงกลาง';
+  const director = cleanFieldText(document.getElementById('ai-director-name').value) || 'ผู้อำนวยการโรงเรียนบ้านดงกลาง (ธนาคารกรุงเทพ ๓๑)';
 
   // บันทึกความจำลง localStorage อัตโนมัติ
   localStorage.setItem('ai_chair_name', chair);
@@ -3723,7 +3723,7 @@ function openDisposalReportModal() {
   const officer = localStorage.getItem('dr_officer_name') || '';
   const head = localStorage.getItem('dr_head_name') || '';
   let director = localStorage.getItem('dr_director_name') || localStorage.getItem('ai_director_name') || '';
-  if (!director || director === 'ผู้อำนวยการโรงเรียนบ้านดงกลาง') director = 'นางสายสายใจ  วิลัยทอง';
+  if (!director || director.includes('ผู้อำนวยการโรงเรียนบ้านดงกลาง')) director = 'นางสายสายใจ  วิลัยทอง';
   const docNo = localStorage.getItem('dr_doc_no') || 'ศธ 04153.25/...';
 
   const inpOff = document.getElementById('dr-officer-name');
@@ -3816,7 +3816,7 @@ function handlePrintDisposalReport(e) {
   const docNo = cleanFieldText(document.getElementById('dr-doc-no').value) || 'ศธ 04153.25/...';
   const officer = cleanFieldText(document.getElementById('dr-officer-name').value);
   const head = cleanFieldText(document.getElementById('dr-head-name').value);
-  const director = cleanFieldText(document.getElementById('dr-director-name').value) || 'ผู้อำนวยการโรงเรียนบ้านดงกลาง';
+  const director = cleanFieldText(document.getElementById('dr-director-name').value) || 'ผู้อำนวยการโรงเรียนบ้านดงกลาง (ธนาคารกรุงเทพ ๓๑)';
 
   // บันทึกความจำลง localStorage อัตโนมัติ
   localStorage.setItem('dr_officer_name', officer);
@@ -4086,7 +4086,7 @@ function updateQrStickerPreview() {
   const sizeSelect = document.getElementById('sticker-layout-size');
   const layoutSize = sizeSelect ? sizeSelect.value : 'compact';
   const headerInput = document.getElementById('sticker-school-header');
-  const schoolHeader = headerInput ? headerInput.value.trim() : 'โรงเรียนบ้านดงกลาง';
+  const schoolHeader = headerInput ? headerInput.value.trim() : 'โรงเรียนบ้านดงกลาง (ธนาคารกรุงเทพ ๓๑)';
 
   if (!items || items.length === 0) {
     previewBox.innerHTML = '<span class="text-slate-400 text-xs">ไม่มีรายการครุภัณฑ์ที่เลือก</span>';
@@ -4188,7 +4188,7 @@ function handlePrintQrStickers() {
   const sizeSelect = document.getElementById('sticker-layout-size');
   const layoutSize = sizeSelect ? sizeSelect.value : 'compact';
   const headerInput = document.getElementById('sticker-school-header');
-  const schoolHeader = headerInput ? headerInput.value.trim() : 'โรงเรียนบ้านดงกลาง';
+  const schoolHeader = headerInput ? headerInput.value.trim() : 'โรงเรียนบ้านดงกลาง (ธนาคารกรุงเทพ ๓๑)';
 
   const printSection = document.getElementById('print-qr-sticker-section');
   if (!printSection) return;
@@ -4683,7 +4683,7 @@ function initPwa() {
     if (readyBadge) readyBadge.classList.add('hidden');
     closeModal('pwaInstallModal');
     if (typeof showToast === 'function') {
-      showToast('🎉 ติดตั้งแอปพลิเคชันโรงเรียนดงกลางสำเร็จแล้ว!', 'success');
+      showToast('🎉 ติดตั้งแอปพลิเคชันโรงเรียนบ้านดงกลาง (ธนาคารกรุงเทพ ๓๑) สำเร็จแล้ว!', 'success');
     }
   });
 }
