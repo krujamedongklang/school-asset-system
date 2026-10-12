@@ -210,6 +210,31 @@ function seedAdminUser() {
 const revokedSessions = new Set();
 const activeSessions = new Set();
 
+// === SERVER IN-MEMORY CACHE (RAM) เพื่อการตอบสนองความเร็วสูงระดับมิลลิวินาที ===
+let assetMemoryCache = null;
+let assetMemoryCacheTime = 0;
+let materialMemoryCache = null;
+let materialMemoryCacheTime = 0;
+const CACHE_TTL_MS = 60 * 1000; // แคชไว้ 60 วินาทีในหน่วยความจำ RAM
+
+function invalidateAssetCache() {
+  assetMemoryCache = null;
+  assetMemoryCacheTime = 0;
+}
+
+function invalidateMaterialCache() {
+  materialMemoryCache = null;
+  materialMemoryCacheTime = 0;
+}
+
+const userMemoryCache = new Map();
+const USER_CACHE_TTL_MS = 30 * 1000; // แคชสิทธิ์ผู้ใช้ 30 วินาที
+
+function invalidateUserCache(userId = null) {
+  if (userId) userMemoryCache.delete(String(userId));
+  else userMemoryCache.clear();
+}
+
 const dbService = {
   // สถานะการเชื่อมต่อ
   async getStatus() {
@@ -275,6 +300,8 @@ const dbService = {
               if (mErr) throw mErr;
             }
 
+            invalidateAssetCache();
+            invalidateMaterialCache();
             resolve({
               success: true,
               message: `ซิงค์ข้อมูลขึ้น Supabase สำเร็จ: ครุภัณฑ์ ${assets.length} รายการ, วัสดุ ${materials.length} รายการ`
@@ -386,6 +413,13 @@ const dbService = {
 
   async getUserById(id) {
     if (!id) return null;
+    const now = Date.now();
+    const cached = userMemoryCache.get(String(id));
+    if (cached && (now - cached.time < USER_CACHE_TTL_MS)) {
+      return cached.user;
+    }
+
+    let userResult = null;
     const hasSb = await this.checkSupabaseUsersTable();
     if (hasSb) {
       try {
@@ -395,7 +429,7 @@ const dbService = {
           .eq('id', id)
           .single();
         if (!error && data) {
-          return {
+          userResult = {
             ...data,
             can_edit: Number(data.can_edit) === 1 || data.can_edit === true ? 1 : 0,
             can_delete: Number(data.can_delete) === 1 || data.can_delete === true ? 1 : 0,
@@ -405,11 +439,18 @@ const dbService = {
       } catch (e) {}
     }
 
-    return new Promise((resolve) => {
-      sqliteDb.get(`SELECT * FROM app_users WHERE id = ?`, [id], (err, row) => {
-        resolve(row || null);
+    if (!userResult) {
+      userResult = await new Promise((resolve) => {
+        sqliteDb.get(`SELECT * FROM app_users WHERE id = ?`, [id], (err, row) => {
+          resolve(row || null);
+        });
       });
-    });
+    }
+
+    if (userResult) {
+      userMemoryCache.set(String(id), { user: userResult, time: now });
+    }
+    return userResult;
   },
 
   async getUserByUsername(username) {
@@ -567,6 +608,7 @@ const dbService = {
       this.backupUsersToSettings().catch(() => {});
     }
 
+    invalidateUserCache(id);
     return true;
   },
 
@@ -610,6 +652,7 @@ const dbService = {
       this.backupUsersToSettings().catch(() => {});
     }
 
+    invalidateUserCache(id);
     return true;
   },
 
@@ -631,6 +674,7 @@ const dbService = {
       this.backupUsersToSettings().catch(() => {});
     }
 
+    invalidateUserCache(id);
     return true;
   },
 
@@ -919,17 +963,29 @@ const dbService = {
 
   // === ASSETS ===
   async getAssets() {
+    const now = Date.now();
+    if (assetMemoryCache && (now - assetMemoryCacheTime < CACHE_TTL_MS)) {
+      return assetMemoryCache;
+    }
+
+    let rows = null;
     if (isSupabaseActive) {
       const { data, error } = await supabaseClient.from('assets').select('*').order('id', { ascending: true });
-      if (!error && Array.isArray(data)) return data;
-      console.warn('Supabase getAssets error, falling back to SQLite:', error?.message);
+      if (!error && Array.isArray(data)) rows = data;
+      else console.warn('Supabase getAssets error, falling back to SQLite:', error?.message);
     }
-    return new Promise((resolve, reject) => {
-      sqliteDb.all('SELECT * FROM assets ORDER BY id ASC', [], (err, rows) => {
-        if (err) return reject(err);
-        resolve(rows || []);
+    if (!rows) {
+      rows = await new Promise((resolve, reject) => {
+        sqliteDb.all('SELECT * FROM assets ORDER BY id ASC', [], (err, dbRows) => {
+          if (err) return reject(err);
+          resolve(dbRows || []);
+        });
       });
-    });
+    }
+
+    assetMemoryCache = rows;
+    assetMemoryCacheTime = now;
+    return rows;
   },
 
   async createAsset(item) {
@@ -959,6 +1015,7 @@ const dbService = {
     if (isSupabaseActive) {
       const { data, error } = await supabaseClient.from('assets').insert([cleanItem]).select().single();
       if (!error && data) {
+        invalidateAssetCache();
         this.backupLocal();
         return data.id;
       }
@@ -979,6 +1036,7 @@ const dbService = {
       ];
       sqliteDb.run(sql, params, function(err) {
         if (err) return reject(err);
+        invalidateAssetCache();
         dbService.backupLocal();
         resolve(this.lastID);
       });
@@ -1012,6 +1070,7 @@ const dbService = {
     if (isSupabaseActive) {
       const { error } = await supabaseClient.from('assets').update(cleanItem).eq('id', id);
       if (!error) {
+        invalidateAssetCache();
         this.backupLocal();
         return true;
       }
@@ -1033,6 +1092,7 @@ const dbService = {
       ];
       sqliteDb.run(sql, params, function(err) {
         if (err) return reject(err);
+        invalidateAssetCache();
         dbService.backupLocal();
         resolve(this.changes > 0);
       });
@@ -1043,6 +1103,7 @@ const dbService = {
     if (isSupabaseActive) {
       const { error } = await supabaseClient.from('assets').delete().eq('id', id);
       if (!error) {
+        invalidateAssetCache();
         this.backupLocal();
         return true;
       }
@@ -1052,6 +1113,7 @@ const dbService = {
     return new Promise((resolve, reject) => {
       sqliteDb.run('DELETE FROM assets WHERE id = ?', [id], function(err) {
         if (err) return reject(err);
+        invalidateAssetCache();
         dbService.backupLocal();
         resolve(this.changes > 0);
       });
@@ -1060,17 +1122,29 @@ const dbService = {
 
   // === MATERIALS ===
   async getMaterials() {
+    const now = Date.now();
+    if (materialMemoryCache && (now - materialMemoryCacheTime < CACHE_TTL_MS)) {
+      return materialMemoryCache;
+    }
+
+    let rows = null;
     if (isSupabaseActive) {
       const { data, error } = await supabaseClient.from('materials').select('*').order('id', { ascending: true });
-      if (!error && Array.isArray(data)) return data;
-      console.warn('Supabase getMaterials error, falling back to SQLite:', error?.message);
+      if (!error && Array.isArray(data)) rows = data;
+      else console.warn('Supabase getMaterials error, falling back to SQLite:', error?.message);
     }
-    return new Promise((resolve, reject) => {
-      sqliteDb.all('SELECT * FROM materials ORDER BY id ASC', [], (err, rows) => {
-        if (err) return reject(err);
-        resolve(rows || []);
+    if (!rows) {
+      rows = await new Promise((resolve, reject) => {
+        sqliteDb.all('SELECT * FROM materials ORDER BY id ASC', [], (err, dbRows) => {
+          if (err) return reject(err);
+          resolve(dbRows || []);
+        });
       });
-    });
+    }
+
+    materialMemoryCache = rows;
+    materialMemoryCacheTime = now;
+    return rows;
   },
 
   async createMaterial(item) {
@@ -1093,6 +1167,7 @@ const dbService = {
     if (isSupabaseActive) {
       const { data, error } = await supabaseClient.from('materials').insert([cleanItem]).select().single();
       if (!error && data) {
+        invalidateMaterialCache();
         this.backupLocal();
         return data.id;
       }
@@ -1109,6 +1184,7 @@ const dbService = {
       ];
       sqliteDb.run(sql, params, function(err) {
         if (err) return reject(err);
+        invalidateMaterialCache();
         dbService.backupLocal();
         resolve(this.lastID);
       });
@@ -1135,6 +1211,7 @@ const dbService = {
     if (isSupabaseActive) {
       const { error } = await supabaseClient.from('materials').update(cleanItem).eq('id', id);
       if (!error) {
+        invalidateMaterialCache();
         this.backupLocal();
         return true;
       }
@@ -1150,6 +1227,7 @@ const dbService = {
       ];
       sqliteDb.run(sql, params, function(err) {
         if (err) return reject(err);
+        invalidateMaterialCache();
         dbService.backupLocal();
         resolve(this.changes > 0);
       });
@@ -1160,6 +1238,7 @@ const dbService = {
     if (isSupabaseActive) {
       const { error } = await supabaseClient.from('materials').delete().eq('id', id);
       if (!error) {
+        invalidateMaterialCache();
         this.backupLocal();
         return true;
       }
@@ -1169,6 +1248,7 @@ const dbService = {
     return new Promise((resolve, reject) => {
       sqliteDb.run('DELETE FROM materials WHERE id = ?', [id], function(err) {
         if (err) return reject(err);
+        invalidateMaterialCache();
         dbService.backupLocal();
         resolve(this.changes > 0);
       });
@@ -1234,6 +1314,8 @@ const dbService = {
         });
         mStmt.finalize(err => {
           if (err) return reject(err);
+          invalidateAssetCache();
+          invalidateMaterialCache();
           saveLocalBackup(assets, materials);
           resolve(true);
         });

@@ -447,6 +447,43 @@ async function logout() {
   showLoginOverlay();
 }
 
+// ==================== INSTANT HYDRATION (แคชในเครื่องเบราว์เซอร์ 0 วินาที) ====================
+function restoreDataFromLocalCache() {
+  try {
+    const cachedA = localStorage.getItem('cached_assets');
+    if (cachedA) {
+      const list = JSON.parse(cachedA);
+      if (Array.isArray(list) && list.length > 0) {
+        assetList = list;
+        if (selectedAssetIds.size === 0) {
+          list.forEach(a => selectedAssetIds.add(a.id));
+        }
+        populateFiscalYearOptions('asset');
+        renderAssetTable();
+        updateAssetSelectionUI();
+        renderAssetPrint();
+      }
+    }
+  } catch (e) {}
+
+  try {
+    const cachedM = localStorage.getItem('cached_materials');
+    if (cachedM) {
+      const list = JSON.parse(cachedM);
+      if (Array.isArray(list) && list.length > 0) {
+        materialList = list;
+        if (selectedMaterialIds.size === 0) {
+          list.forEach(m => selectedMaterialIds.add(m.id));
+        }
+        populateFiscalYearOptions('material');
+        renderMaterialTable();
+        updateMaterialSelectionUI();
+        renderMaterialPrint();
+      }
+    }
+  } catch (e) {}
+}
+
 async function checkAuthAndInitialize() {
   const cachedUser = localStorage.getItem('cached_current_user');
   if (cachedUser) {
@@ -457,55 +494,59 @@ async function checkAuthAndInitialize() {
     } catch (e) {}
   }
 
+  // ดึงข้อมูลแคชในเบราว์เซอร์มาเรนเดอร์ลงตารางทันที 0 วินาที (Instant 0-Second Display)
+  restoreDataFromLocalCache();
+
   const token = getAuthToken();
   if (!token) {
     showLoginOverlay();
     return;
   }
 
-  try {
-    const verifyRes = await fetch('/api/auth/verify', { headers: { 'Authorization': `Bearer ${token}` } });
-    if (verifyRes.ok) {
-      const data = await verifyRes.json();
-      if (data && data.authenticated && data.user) {
-        currentUser = data.user;
-        localStorage.setItem('cached_current_user', JSON.stringify(currentUser));
-        updateNavbarUserPill();
-        applyUserPermissionsToUI();
-        hideLoginOverlay();
-        if (currentUser.role === 'admin') {
-          checkPendingUsersCount();
+  // โหลดข้อมูลแบบคู่ขนาน (Parallel Fetching): ยืนยันสิทธิ์ + ดึงข้อมูลพัสดุและวัสดุพร้อมกันทันที
+  const verifyPromise = (async () => {
+    try {
+      const verifyRes = await fetch('/api/auth/verify', { headers: { 'Authorization': `Bearer ${token}` } });
+      if (verifyRes.ok) {
+        const data = await verifyRes.json();
+        if (data && data.authenticated && data.user) {
+          currentUser = data.user;
+          localStorage.setItem('cached_current_user', JSON.stringify(currentUser));
+          updateNavbarUserPill();
+          applyUserPermissionsToUI();
+          hideLoginOverlay();
+          if (currentUser.role === 'admin') {
+            checkPendingUsersCount();
+          }
+          return true;
+        } else {
+          setAuthToken('');
+          showLoginOverlay();
+          return false;
         }
-      } else {
+      } else if (verifyRes.status === 401 || verifyRes.status === 403) {
         setAuthToken('');
         showLoginOverlay();
-        return;
+        return false;
       }
-    } else {
-      // หากเกิดข้อผิดพลาดในการตรวจสอบ token
-      if (verifyRes.status === 401 || verifyRes.status === 403) {
-        setAuthToken('');
-        showLoginOverlay();
-        return;
+    } catch (err) {
+      console.warn('Auth verify check warning (offline or network error):', err);
+      if (currentUser) {
+        hideLoginOverlay();
       }
     }
-  } catch (err) {
-    console.warn('Auth verify check warning (offline or network error):', err);
-    if (currentUser) {
-      hideLoginOverlay();
-    }
-  }
+    return false;
+  })();
 
-  // โหลดข้อมูลครุภัณฑ์ วัสดุ และสถานะฐานข้อมูล
-  try {
-    await Promise.all([
-      loadAssets(),
-      loadMaterials(),
-      loadDatabaseStatus()
-    ]);
-  } catch (err) {
+  const dataPromises = Promise.all([
+    loadAssets(),
+    loadMaterials(),
+    loadDatabaseStatus()
+  ]).catch(err => {
     console.warn('Loading assets/materials error:', err);
-  }
+  });
+
+  await Promise.all([verifyPromise, dataPromises]);
 }
 
 // ==================== เปลี่ยนรหัสผ่าน ====================
