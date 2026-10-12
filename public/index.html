@@ -1156,6 +1156,13 @@
                   <option value="9">ก.ย.</option>
                 </select>
               </div>
+
+              <div class="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-1.5 min-w-0 col-span-2 sm:col-span-1">
+                <span class="text-[10px] sm:text-xs font-bold text-red-950 truncate">📦 วัสดุ:</span>
+                <select id="material-item-select" onchange="onMaterialFilterChange()" class="w-full sm:w-auto text-[11px] sm:text-xs font-bold border border-amber-300 rounded-lg sm:rounded-xl px-1.5 sm:px-2.5 py-1 bg-amber-50/50 text-red-950 shadow-2xs focus:ring-2 focus:ring-amber-500 cursor-pointer truncate max-w-[200px]">
+                  <option value="all">ทุกชนิดวัสดุ</option>
+                </select>
+              </div>
             </div>
 
             <!-- สรุปจำนวนรายการที่พบ -->
@@ -1515,6 +1522,28 @@
         <div>
           <label class="font-semibold block mb-1 text-slate-700">วันที่ทำรายการ</label>
           <input type="date" id="m_date" required class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+        </div>
+        <div>
+          <label class="font-semibold block mb-1 text-slate-700">ชื่อ/ชนิดวัสดุ <span class="text-red-500">*</span></label>
+          <input type="text" id="m_material_name" list="material-names-datalist" required placeholder="เช่น กระดาษ A4 80 แกรม, ปากกาไวท์บอร์ด" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-medium">
+          <datalist id="material-names-datalist"></datalist>
+        </div>
+        <div>
+          <label class="font-semibold block mb-1 text-slate-700">หน่วยนับ</label>
+          <input type="text" id="m_unit" list="material-units-datalist" placeholder="เช่น รีม, ด้าม, กล่อง, แผ่น, เล่ม" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+          <datalist id="material-units-datalist">
+            <option value="รีม">
+            <option value="ด้าม">
+            <option value="กล่อง">
+            <option value="เล่ม">
+            <option value="ชิ้น">
+            <option value="ชุด">
+            <option value="ม้วน">
+            <option value="ขวด">
+            <option value="ลูก">
+            <option value="แผ่น">
+            <option value="แพ็ค">
+          </datalist>
         </div>
         <div>
           <label class="font-semibold block mb-1 text-slate-700">รับจาก / จ่ายให้</label>
@@ -2588,6 +2617,6 @@
     <option value="นางสาวภัฐธีรา  จุลพันธ์">ธุรการโรงเรียน</option>
   </datalist>
 
-  <script src="app.js?v=12.3"></script>
+  <script src="app.js?v=12.4"></script>
 </body>
 </html>

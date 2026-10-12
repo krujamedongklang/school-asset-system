@@ -1380,6 +1380,7 @@ let assetStatusFilter = 'all';
 let assetViewMode = localStorage.getItem('asset_view_mode') || 'table';
 let materialFiscalYear = '2570';
 let materialMonth = 'all';
+let materialNameFilter = 'all';
 
 let assetSearchQuery = '';
 let materialSearchQuery = '';
@@ -1619,10 +1620,44 @@ function onAssetFilterChange() {
 function onMaterialFilterChange() {
   const fySelect = document.getElementById('material-fiscal-year-select');
   const mSelect = document.getElementById('material-month-select');
+  const matSelect = document.getElementById('material-item-select');
   if (fySelect) materialFiscalYear = fySelect.value;
   if (mSelect) materialMonth = mSelect.value;
+  if (matSelect) materialNameFilter = matSelect.value;
   renderMaterialTable();
   updateMaterialSelectionUI();
+}
+
+function populateMaterialDropdown() {
+  const selectEl = document.getElementById('material-item-select');
+  const datalistEl = document.getElementById('material-names-datalist');
+  const distinctNames = [...new Set(materialList.map(m => (m.material_name || '').trim()).filter(Boolean))].sort();
+
+  if (selectEl) {
+    const currentVal = materialNameFilter;
+    selectEl.innerHTML = '<option value="all">ทุกชนิดวัสดุ</option>';
+    distinctNames.forEach(name => {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      selectEl.appendChild(opt);
+    });
+    if (currentVal !== 'all' && distinctNames.includes(currentVal)) {
+      selectEl.value = currentVal;
+    } else {
+      selectEl.value = 'all';
+      materialNameFilter = 'all';
+    }
+  }
+
+  if (datalistEl) {
+    datalistEl.innerHTML = '';
+    distinctNames.forEach(name => {
+      const opt = document.createElement('option');
+      opt.value = name;
+      datalistEl.appendChild(opt);
+    });
+  }
 }
 
 function escapeHtml(str) {
@@ -1730,10 +1765,20 @@ function getFilteredMaterials() {
       }
     }
 
-    // 3. กรองคำค้นหา
+    // 3. กรองชนิดวัสดุ
+    if (materialNameFilter !== 'all') {
+      const name = (item.material_name || '').trim();
+      if (name !== materialNameFilter) {
+        return false;
+      }
+    }
+
+    // 4. กรองคำค้นหา
     if (materialSearchQuery && materialSearchQuery.trim()) {
       const q = materialSearchQuery.trim().toLowerCase();
       const match =
+        (item.material_name && item.material_name.toLowerCase().includes(q)) ||
+        (item.unit && item.unit.toLowerCase().includes(q)) ||
         (item.party && item.party.toLowerCase().includes(q)) ||
         (item.doc_no && item.doc_no.toLowerCase().includes(q)) ||
         (item.budget_type && item.budget_type.toLowerCase().includes(q)) ||
@@ -1858,10 +1903,10 @@ function updateMaterialKpiCards() {
   materialList.forEach(m => {
     const name = (m.material_name || '').trim();
     if (name) distinctNames.add(name);
-    totalInflowPrice += Number(m.receive_price || 0);
-    if (Number(m.issue_qty || 0) > 0) totalIssues++;
+    totalInflowPrice += (Number(m.qty_in) || 0) * (Number(m.unit_price) || 0);
+    if (Number(m.qty_out || 0) > 0) totalIssues++;
     if (name) {
-      balanceMap[name] = Number(m.balance_qty || 0);
+      balanceMap[name] = Number(m.balance || 0);
     }
   });
 
@@ -2906,6 +2951,7 @@ async function loadMaterials() {
   }
 
   populateFiscalYearOptions('material');
+  populateMaterialDropdown();
   renderMaterialTable();
   updateMaterialSelectionUI();
   renderMaterialPrint();
@@ -2929,7 +2975,7 @@ function renderMaterialTable() {
   }
 
   if (countSpan) {
-    const isFiltered = materialFiscalYear !== 'all' || materialMonth !== 'all' || materialSearchQuery.trim();
+    const isFiltered = materialFiscalYear !== 'all' || materialMonth !== 'all' || materialNameFilter !== 'all' || materialSearchQuery.trim();
     if (isFiltered) {
       countSpan.innerHTML = `แสดง <span class="font-bold text-amber-800">${list.length}</span> รายการ (จากทั้งหมด ${materialList.length} รายการ)`;
     } else {
@@ -2940,6 +2986,9 @@ function renderMaterialTable() {
   if (list.length === 0) {
     const tr = document.createElement('tr');
     let msg = '🔍 ไม่พบรายการวัสดุในเงื่อนไขที่เลือก';
+    if (materialNameFilter !== 'all') {
+      msg += ` ชนิดวัสดุ "${escapeHtml(materialNameFilter)}"`;
+    }
     if (materialFiscalYear !== 'all') {
       msg += ` (ปีงบ ${String(materialFiscalYear).slice(-2)})`;
     }
@@ -2980,7 +3029,10 @@ function renderMaterialTable() {
           onchange="toggleMaterialItemSelection(${item.id}, this.checked)">
       </td>
       <td class="p-2 border border-slate-200">${item.trans_date || ''}</td>
-      <td class="p-2 border border-slate-200 font-semibold text-slate-900">${item.party || ''}</td>
+      <td class="p-2 border border-slate-200">
+        <div class="font-semibold text-slate-900">${safeThaiWordBreak(escapeHtml(item.party || ''))}</div>
+        ${item.material_name ? `<div class="text-[10px] text-amber-800 font-medium mt-0.5 inline-flex items-center gap-1 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/60"><span>📦</span> <span>${escapeHtml(item.material_name)}</span>${item.unit ? `<span class="text-slate-500 font-normal">(${escapeHtml(item.unit)})</span>` : ''}</div>` : ''}
+      </td>
       <td class="p-2 border border-slate-200">${item.doc_no || ''}</td>
       <td class="p-2 border border-slate-200">${item.budget_type || ''}</td>
       <td class="p-2 border border-slate-200 text-center">${item.opening_stock || 0}</td>
@@ -3088,6 +3140,20 @@ function renderMaterialPrint() {
 
   const printData = materialList.filter(m => selectedMaterialIds.has(m.id));
 
+  // ปรับหัวบัตรวัสดุ (เอกสารหมายเลข ๓) ให้ตรงกับชนิดวัสดุที่เลือกพิมพ์
+  const sampleItem = printData.find(m => m.material_name) || printData[0];
+  const activeMatName = materialNameFilter !== 'all' ? materialNameFilter : (sampleItem?.material_name || '');
+  if (activeMatName) {
+    const elName = document.getElementById('disp-name');
+    if (elName) elName.innerText = activeMatName;
+    const elUnit = document.getElementById('disp-unit');
+    if (elUnit && sampleItem?.unit) elUnit.innerText = sampleItem.unit;
+    const elCode = document.getElementById('disp-code');
+    if (elCode && sampleItem?.material_code) elCode.innerText = sampleItem.material_code;
+  } else {
+    initMaterialMeta();
+  }
+
   printData.forEach((item, index) => {
     const openStock = (index === 0 && item.opening_stock > 0) ? item.opening_stock : (item.opening_stock || '');
     const qtyIn = item.qty_in > 0 ? item.qty_in : '';
@@ -3141,6 +3207,15 @@ function openAddMaterialModal() {
   document.getElementById('m_open').value = '0';
   document.getElementById('m_in').value = '0';
   document.getElementById('m_out').value = '0';
+
+  if (materialNameFilter && materialNameFilter !== 'all') {
+    document.getElementById('m_material_name').value = materialNameFilter;
+    const existing = materialList.find(m => (m.material_name || '').trim() === materialNameFilter);
+    if (existing && existing.unit) {
+      document.getElementById('m_unit').value = existing.unit;
+    }
+  }
+
   openModal('materialModal');
 }
 
@@ -3153,6 +3228,8 @@ function editMaterial(id) {
   document.getElementById('modal-material-submit-btn').innerText = '💾 บันทึกการแก้ไข';
 
   document.getElementById('m_date').value = item.trans_date || '';
+  document.getElementById('m_material_name').value = item.material_name || '';
+  document.getElementById('m_unit').value = item.unit || '';
   document.getElementById('m_party').value = item.party || '';
   document.getElementById('m_doc').value = item.doc_no || '';
   document.getElementById('m_budget').value = item.budget_type || '';
@@ -3168,10 +3245,14 @@ function editMaterial(id) {
 async function saveMaterial(e) {
   e.preventDefault();
   const editId = document.getElementById('edit_material_id').value;
+  const matName = cleanFieldText(document.getElementById('m_material_name').value);
+  const unitVal = cleanFieldText(document.getElementById('m_unit').value);
+
   const body = {
     trans_date: document.getElementById('m_date').value,
     material_code: '',
-    material_name: '',
+    material_name: matName,
+    unit: unitVal,
     party: cleanFieldText(document.getElementById('m_party').value),
     doc_no: cleanFieldText(document.getElementById('m_doc').value),
     budget_type: cleanFieldText(document.getElementById('m_budget').value),
@@ -3194,7 +3275,7 @@ async function saveMaterial(e) {
   if (res.ok) {
     closeModal('materialModal');
     showToast(editId ? 'แก้ไขข้อมูลวัสดุเรียบร้อยแล้ว' : 'บันทึกรายการวัสดุเรียบร้อยแล้ว', 'success');
-    loadMaterials();
+    await loadMaterials();
   } else {
     const err = await res.json().catch(() => ({}));
     showToast('เกิดข้อผิดพลาด: ' + (err.error || 'ไม่สามารถบันทึกได้'), 'error');
@@ -3217,6 +3298,7 @@ async function deleteMaterial(id) {
   showToast(`ลบรายการ "${itemName}" เรียบร้อยแล้ว`, 'info');
 
   populateFiscalYearOptions('material');
+  populateMaterialDropdown();
   renderMaterialTable();
   updateMaterialSelectionUI();
   renderMaterialPrint();
@@ -3237,6 +3319,7 @@ async function deleteMaterial(id) {
         materialList = refreshedData;
         localStorage.setItem('cached_materials', JSON.stringify(materialList));
         populateFiscalYearOptions('material');
+        populateMaterialDropdown();
         renderMaterialTable();
         updateMaterialSelectionUI();
         renderMaterialPrint();

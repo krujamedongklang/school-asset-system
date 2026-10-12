@@ -468,18 +468,29 @@ app.delete('/api/assets/:id', requireAuth, requireDelete, async (req, res) => {
 // ดึงรายการวัสดุทั้งหมด
 app.get('/api/materials', requireAuth, async (req, res) => {
   try {
-    const rows = await db.getMaterials();
-    let runningBalance = 0;
-    const processed = rows.map((item, index) => {
-      if (index === 0) {
-        runningBalance = (item.opening_stock || 0) + (item.qty_in || 0) - (item.qty_out || 0);
+    const rawRows = await db.getMaterials();
+    // จัดเรียงตามวันที่ทำรายการและรหัส id เพื่อให้ยอดคงเหลือยกยอดตามลำดับจริง
+    const rows = [...rawRows].sort((a, b) => {
+      const dateA = a.trans_date || '';
+      const dateB = b.trans_date || '';
+      if (dateA !== dateB) return dateA.localeCompare(dateB);
+      return (Number(a.id) || 0) - (Number(b.id) || 0);
+    });
+
+    // คำนวณยอดคงเหลือแยกตามชนิดวัสดุ (Material Group)
+    const groupBalances = {};
+    const processed = rows.map((item) => {
+      const groupKey = (item.material_name || item.material_code || '__default__').trim().toLowerCase();
+      if (groupBalances[groupKey] === undefined) {
+        groupBalances[groupKey] = (Number(item.opening_stock) || 0) + (Number(item.qty_in) || 0) - (Number(item.qty_out) || 0);
       } else {
-        runningBalance = runningBalance + (item.qty_in || 0) - (item.qty_out || 0);
+        groupBalances[groupKey] = groupBalances[groupKey] + (Number(item.qty_in) || 0) - (Number(item.qty_out) || 0);
       }
-      const totalAmount = runningBalance * (item.unit_price || 0);
+      const balance = groupBalances[groupKey];
+      const totalAmount = balance * (Number(item.unit_price) || 0);
       return {
         ...item,
-        balance: runningBalance,
+        balance,
         total_amount: totalAmount
       };
     });

@@ -281,21 +281,48 @@ const dbService = {
             await supabaseClient.from('materials').delete().neq('id', 0);
 
             if (assets && assets.length > 0) {
-              const cleanAssets = assets.map(a => {
-                const copy = { ...a };
-                delete copy.id; // ให้ Supabase สร้าง ID ใหม่เพื่อความถูกต้อง
-                return copy;
-              });
+              const cleanAssets = assets.map(a => ({
+                asset_code: a.asset_code || '',
+                received_date: a.received_date || '',
+                asset_name: a.asset_name || '',
+                spec: a.spec || '',
+                doc_no: a.doc_no || '',
+                cost: Number(a.cost) || 0,
+                useful_life: Number(a.useful_life) || 5,
+                location: a.location || '',
+                status: a.status || 'ใช้งานได้ดี',
+                vendor: a.vendor || '',
+                responsible_person: a.responsible_person || '',
+                department: a.department || null,
+                remark: a.remark || '',
+                category: a.category || 'ครุภัณฑ์คอมพิวเตอร์',
+                model: a.model || '',
+                qty: Number(a.qty) || 1,
+                vendor_address: a.vendor_address || '',
+                vendor_phone: a.vendor_phone || '',
+                budget_source: a.budget_source || 'เงินงบประมาณ',
+                acquisition_method: a.acquisition_method || 'เฉพาะเจาะจง'
+              }));
               const { error: aErr } = await supabaseClient.from('assets').insert(cleanAssets);
               if (aErr) throw aErr;
             }
 
             if (materials && materials.length > 0) {
-              const cleanMaterials = materials.map(m => {
-                const copy = { ...m };
-                delete copy.id;
-                return copy;
-              });
+              const cleanMaterials = materials.map(m => ({
+                trans_date: m.trans_date || '',
+                material_code: m.material_code || '',
+                material_name: m.material_name || '',
+                size_spec: m.size_spec || '',
+                unit: m.unit || '',
+                party: m.party || '',
+                doc_no: m.doc_no || '',
+                budget_type: m.budget_type || '',
+                opening_stock: Number(m.opening_stock) || 0,
+                qty_in: Number(m.qty_in) || 0,
+                qty_out: Number(m.qty_out) || 0,
+                unit_price: Number(m.unit_price) || 0,
+                remark: m.remark || ''
+              }));
               const { error: mErr } = await supabaseClient.from('materials').insert(cleanMaterials);
               if (mErr) throw mErr;
             }
@@ -1016,6 +1043,19 @@ const dbService = {
       const { data, error } = await supabaseClient.from('assets').insert([cleanItem]).select().single();
       if (!error && data) {
         invalidateAssetCache();
+        // Dual-Write: สำรองลง SQLite ในเครื่องพร้อมกันทันที
+        const sqlSqlite = `INSERT OR REPLACE INTO assets (
+          id, asset_code, received_date, asset_name, spec, doc_no, cost, useful_life,
+          location, status, vendor, responsible_person, department, remark,
+          category, model, qty, vendor_address, vendor_phone, budget_source, acquisition_method
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+        const paramsSqlite = [
+          data.id, cleanItem.asset_code, cleanItem.received_date, cleanItem.asset_name, cleanItem.spec, cleanItem.doc_no,
+          cleanItem.cost, cleanItem.useful_life, cleanItem.location, cleanItem.status, cleanItem.vendor,
+          cleanItem.responsible_person, cleanItem.department, cleanItem.remark, cleanItem.category, cleanItem.model,
+          cleanItem.qty, cleanItem.vendor_address, cleanItem.vendor_phone, cleanItem.budget_source, cleanItem.acquisition_method
+        ];
+        sqliteDb.run(sqlSqlite, paramsSqlite, () => {});
         this.backupLocal();
         return data.id;
       }
@@ -1071,6 +1111,20 @@ const dbService = {
       const { error } = await supabaseClient.from('assets').update(cleanItem).eq('id', id);
       if (!error) {
         invalidateAssetCache();
+        // Dual-Write: อัปเดตสำเนาใน SQLite ด้วย
+        const sqlSqlite = `UPDATE assets SET 
+          asset_code = ?, received_date = ?, asset_name = ?, spec = ?, doc_no = ?, cost = ?, useful_life = ?,
+          location = ?, status = ?, vendor = ?, responsible_person = ?, department = ?, remark = ?,
+          category = ?, model = ?, qty = ?, vendor_address = ?, vendor_phone = ?, budget_source = ?, acquisition_method = ?
+          WHERE id = ?`;
+        const paramsSqlite = [
+          cleanItem.asset_code, cleanItem.received_date, cleanItem.asset_name, cleanItem.spec, cleanItem.doc_no,
+          cleanItem.cost, cleanItem.useful_life, cleanItem.location, cleanItem.status, cleanItem.vendor,
+          cleanItem.responsible_person, cleanItem.department, cleanItem.remark, cleanItem.category, cleanItem.model,
+          cleanItem.qty, cleanItem.vendor_address, cleanItem.vendor_phone, cleanItem.budget_source, cleanItem.acquisition_method,
+          id
+        ];
+        sqliteDb.run(sqlSqlite, paramsSqlite, () => {});
         this.backupLocal();
         return true;
       }
@@ -1104,6 +1158,8 @@ const dbService = {
       const { error } = await supabaseClient.from('assets').delete().eq('id', id);
       if (!error) {
         invalidateAssetCache();
+        // Dual-Write: ลบสำเนาใน SQLite ด้วย
+        sqliteDb.run('DELETE FROM assets WHERE id = ?', [id], () => {});
         this.backupLocal();
         return true;
       }
@@ -1168,6 +1224,16 @@ const dbService = {
       const { data, error } = await supabaseClient.from('materials').insert([cleanItem]).select().single();
       if (!error && data) {
         invalidateMaterialCache();
+        // Dual-Write: สำรองข้อมูลลง SQLite ในเครื่องพร้อมกันทันที
+        const sqlSqlite = `INSERT OR REPLACE INTO materials (
+          id, trans_date, material_code, material_name, size_spec, unit, party, doc_no, budget_type, opening_stock, qty_in, qty_out, unit_price, remark
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+        const paramsSqlite = [
+          data.id, cleanItem.trans_date, cleanItem.material_code, cleanItem.material_name, cleanItem.size_spec, cleanItem.unit,
+          cleanItem.party, cleanItem.doc_no, cleanItem.budget_type, cleanItem.opening_stock, cleanItem.qty_in,
+          cleanItem.qty_out, cleanItem.unit_price, cleanItem.remark
+        ];
+        sqliteDb.run(sqlSqlite, paramsSqlite, () => {});
         this.backupLocal();
         return data.id;
       }
@@ -1212,6 +1278,14 @@ const dbService = {
       const { error } = await supabaseClient.from('materials').update(cleanItem).eq('id', id);
       if (!error) {
         invalidateMaterialCache();
+        // Dual-Write: อัปเดตสำเนาใน SQLite ด้วย
+        const sqlSqlite = `UPDATE materials SET trans_date = ?, material_code = ?, material_name = ?, size_spec = ?, unit = ?, party = ?, doc_no = ?, budget_type = ?, opening_stock = ?, qty_in = ?, qty_out = ?, unit_price = ?, remark = ? WHERE id = ?`;
+        const paramsSqlite = [
+          cleanItem.trans_date, cleanItem.material_code, cleanItem.material_name, cleanItem.size_spec, cleanItem.unit,
+          cleanItem.party, cleanItem.doc_no, cleanItem.budget_type, cleanItem.opening_stock, cleanItem.qty_in,
+          cleanItem.qty_out, cleanItem.unit_price, cleanItem.remark, id
+        ];
+        sqliteDb.run(sqlSqlite, paramsSqlite, () => {});
         this.backupLocal();
         return true;
       }
@@ -1239,6 +1313,8 @@ const dbService = {
       const { error } = await supabaseClient.from('materials').delete().eq('id', id);
       if (!error) {
         invalidateMaterialCache();
+        // Dual-Write: ลบสำเนาใน SQLite ด้วย
+        sqliteDb.run('DELETE FROM materials WHERE id = ?', [id], () => {});
         this.backupLocal();
         return true;
       }
@@ -1423,7 +1499,28 @@ const dbService = {
         resolve(true);
       });
     });
+  },
+
+  async syncInitialDataIfEmpty() {
+    if (!isSupabaseActive || !supabaseClient) return;
+    try {
+      const { count: aCount, error: aErr } = await supabaseClient.from('assets').select('*', { count: 'exact', head: true });
+      if (!aErr && (aCount === 0 || aCount === null)) {
+        const localAssets = await new Promise(r => sqliteDb.all('SELECT * FROM assets', [], (e, rows) => r(rows || [])));
+        if (localAssets && localAssets.length > 0) {
+          console.log(`🔄 ตรวจพบ Supabase ว่างเปล่า กำลังซิงค์ข้อมูล ${localAssets.length} รายการจากเครื่องขึ้น Cloud...`);
+          await this.syncToSupabase();
+        }
+      }
+    } catch (e) {
+      console.warn('syncInitialDataIfEmpty warning:', e.message);
+    }
   }
 };
+
+// สั่งซิงค์อัตโนมัติหาก Cloud ว่างเปล่าแต่เครื่องมีข้อมูล
+setTimeout(() => {
+  dbService.syncInitialDataIfEmpty().catch(() => {});
+}, 1000);
 
 module.exports = dbService;
