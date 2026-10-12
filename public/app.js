@@ -1971,7 +1971,7 @@ function renderAssetTable() {
       msg += ` คำค้น "${escapeHtml(assetSearchQuery)}"`;
     }
     tr.innerHTML = `
-      <td colspan="15" class="p-8 text-center text-slate-400 text-xs sm:text-sm">
+      <td colspan="9" class="p-8 text-center text-slate-400 text-xs sm:text-sm">
         ${msg}
       </td>
     `;
@@ -2001,31 +2001,46 @@ function renderAssetTable() {
           onchange="toggleAssetItemSelection(${item.id}, this.checked)">
       </td>
       <td class="p-2 border border-slate-200 text-center font-medium text-slate-500 text-xs">${index + 1}</td>
-      <td class="p-2 border border-slate-200 text-xs text-slate-700 whitespace-nowrap">${item.received_date || ''}</td>
-      <td class="p-2 border border-slate-200 font-bold text-red-950 font-mono text-xs whitespace-nowrap">
-        <div class="flex items-center gap-1.5">
-          <span class="w-6 h-6 rounded-md bg-amber-50 border border-amber-200/70 flex items-center justify-center text-xs shrink-0 shadow-2xs">📦</span>
-          <span>${item.asset_code || ''}</span>
+      <td class="p-2 border border-slate-200 text-xs">
+        <div class="font-bold text-red-950 font-mono text-xs whitespace-nowrap flex items-center gap-1">
+          <span class="text-amber-600 text-xs shrink-0">📦</span> <span>${escapeHtml(item.asset_code || '-')}</span>
+        </div>
+        <div class="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5 whitespace-nowrap">
+          <span>📅</span> <span>${formatThaiDate(item.received_date) || item.received_date || '-'}</span>
+        </div>
+        ${item.doc_no ? `<div class="text-[10px] text-slate-400 mt-0.5 truncate max-w-[130px]" title="เลขที่เอกสาร: ${escapeHtml(item.doc_no)}">📄 ${escapeHtml(item.doc_no)}</div>` : ''}
+      </td>
+      <td class="p-2 border border-slate-200 text-xs">
+        <div class="font-bold text-slate-900 text-xs">${escapeHtml(item.asset_name || '-')}</div>
+        ${item.spec ? `<div class="text-[11px] text-slate-600 mt-0.5 line-clamp-2" title="${escapeHtml(item.spec)}">${escapeHtml(item.spec)}</div>` : ''}
+        <div class="flex flex-wrap items-center gap-1 mt-1">
+          ${item.category ? `<span class="inline-block text-[10px] bg-amber-50 text-amber-900 border border-amber-200/70 px-1.5 py-0.2 rounded font-medium">${escapeHtml(item.category)}</span>` : ''}
+          ${item.model ? `<span class="inline-block text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded">${escapeHtml(item.model)}</span>` : ''}
+          ${item.qty && item.qty > 1 ? `<span class="inline-block text-[10px] bg-blue-50 text-blue-700 font-semibold px-1.5 py-0.2 rounded">${item.qty} หน่วย</span>` : ''}
         </div>
       </td>
-      <td class="p-2 border border-slate-200 font-semibold text-slate-800 text-xs">
-        <div>${escapeHtml(item.asset_name || '')}</div>
-        ${item.category ? `<div class="text-[10px] text-amber-800/80 font-normal mt-0.5">${escapeHtml(item.category)}</div>` : ''}
+      <td class="p-2 border border-slate-200 text-right text-xs">
+        <div class="font-bold text-slate-900 whitespace-nowrap">฿${Number(item.cost || 0).toLocaleString('th-TH', {minimumFractionDigits: 2})}</div>
+        <div class="text-[11px] text-slate-500 mt-0.5 whitespace-nowrap">อายุ ${item.useful_life || 0} ปี</div>
       </td>
-      <td class="p-2 border border-slate-200 text-slate-600 text-xs max-w-[160px] truncate" title="${escapeHtml(item.spec || '')}">${escapeHtml(item.spec || '')}</td>
-      <td class="p-2 border border-slate-200 text-xs text-slate-700">${escapeHtml(item.doc_no || '')}</td>
-      <td class="p-2 border border-slate-200 text-right font-medium text-xs whitespace-nowrap">${Number(item.cost).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-      <td class="p-2 border border-slate-200 text-center text-xs">${item.useful_life}</td>
-      <td class="p-2 border border-slate-200 text-right text-slate-500 text-xs whitespace-nowrap">${Number(item.depr_per_year).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-      <td class="p-2 border border-slate-200 text-right font-bold text-red-900 text-xs whitespace-nowrap">${Number(item.net_book_value).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-      <td class="p-2 border border-slate-200 text-xs text-slate-700 whitespace-nowrap">${escapeHtml(item.location || '')}</td>
+      <td class="p-2 border border-slate-200 text-right text-xs">
+        <div class="font-bold text-red-900 whitespace-nowrap">฿${Number(item.net_book_value || 0).toLocaleString('th-TH', {minimumFractionDigits: 2})}</div>
+        <div class="text-[10px] text-slate-500 mt-0.5 whitespace-nowrap" title="ค่าเสื่อมราคาต่อปี">ค่าเสื่อม ฿${Number(item.depr_per_year || 0).toLocaleString('th-TH', {minimumFractionDigits: 2})}/ปี</div>
+      </td>
+      <td class="p-2 border border-slate-200 text-xs">
+        <div class="font-semibold text-slate-800 flex items-center gap-1 truncate max-w-[150px]" title="ที่ตั้ง: ${escapeHtml(item.location || '-')}">
+          <span class="text-amber-700 text-[11px] shrink-0">📍</span> <span class="truncate">${escapeHtml(item.location || '-')}</span>
+        </div>
+        <div class="text-[11px] text-slate-600 flex items-center gap-1 mt-0.5 truncate max-w-[150px]" title="ผู้รับผิดชอบ: ${escapeHtml(item.responsible_person || '-')}">
+          <span class="text-slate-400 text-[11px] shrink-0">👤</span> <span class="truncate">${escapeHtml(item.responsible_person || '-')}</span>
+        </div>
+      </td>
       <td class="p-2 border border-slate-200 text-center whitespace-nowrap">
         ${getAssetStatusBadge(item.status)}
       </td>
-      <td class="p-2 border border-slate-200 text-xs font-medium text-slate-800 whitespace-nowrap">${escapeHtml(item.responsible_person || '')}</td>
       <td class="p-2 border border-slate-200 text-center whitespace-nowrap space-x-1" onclick="event.stopPropagation()">
-        <button onclick="printSingleQrSticker(${item.id})" class="text-emerald-700 hover:text-emerald-900 p-1.5 font-semibold rounded-lg hover:bg-emerald-100 transition shadow-2xs cursor-pointer" title="พิมพ์สติกเกอร์ QR Code ติดตัวครุภัณฑ์">🏷️</button>
-        <button onclick="printSingleAsset(${item.id})" class="text-amber-600 hover:text-amber-800 p-1.5 font-semibold rounded-lg hover:bg-amber-100 transition shadow-2xs cursor-pointer" title="พิมพ์บัตรรายการนี้เฉพาะใบเดียว">🖨️</button>
+        <button onclick="printSingleQrSticker(${item.id})" class="text-emerald-700 hover:text-emerald-900 p-1.5 font-semibold rounded-lg hover:bg-emerald-100 transition shadow-2xs cursor-pointer" title="พิมพ์สติกเกอร์ QR Code">🏷️</button>
+        <button onclick="printSingleAsset(${item.id})" class="text-amber-600 hover:text-amber-800 p-1.5 font-semibold rounded-lg hover:bg-amber-100 transition shadow-2xs cursor-pointer" title="พิมพ์ทะเบียนคุม">🖨️</button>
         ${canEdit ? `<button onclick="editAsset(${item.id})" class="text-red-700 hover:text-red-900 p-1.5 font-semibold rounded-lg hover:bg-red-100 transition shadow-2xs cursor-pointer" title="แก้ไขรายการนี้">✏️</button>` : ''}
         ${canDelete ? `<button onclick="deleteAsset(${item.id})" class="text-slate-400 hover:text-rose-600 p-1.5 font-semibold rounded-lg hover:bg-rose-50 transition shadow-2xs cursor-pointer" title="ลบรายการ">🗑️</button>` : ''}
       </td>
