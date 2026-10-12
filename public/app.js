@@ -86,6 +86,10 @@ function applyStickerPrintPageStyle() {
         size: A4 portrait !important;
         margin: 6mm 6mm !important;
       }
+      .asset-sticker-large, .asset-sticker-compact {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
     }
   `;
 }
@@ -2361,11 +2365,11 @@ function generateAssetCardHtml(item, isPageBreak = false) {
         <div class="text-left w-auto space-y-0.5">
           <div class="flex">
             <span class="whitespace-nowrap font-medium">ส่วนราชการ&nbsp;&nbsp;</span>
-            <span class="font-normal flex-grow border-b border-dotted border-black min-w-[280px]">${org || '&nbsp;'}</span>
+            <span class="font-normal flex-grow border-b border-dotted border-black min-w-[280px] whitespace-nowrap">${org || '&nbsp;'}</span>
           </div>
           <div class="flex">
             <span class="whitespace-nowrap font-medium">หน่วยงาน&nbsp;&nbsp;&nbsp;&nbsp;</span>
-            <span class="font-normal flex-grow border-b border-dotted border-black min-w-[280px]">${dept || '&nbsp;'}</span>
+            <span class="font-normal flex-grow border-b border-dotted border-black min-w-[280px] whitespace-nowrap">${dept || '&nbsp;'}</span>
           </div>
         </div>
       </div>
@@ -2513,11 +2517,11 @@ function generateCombinedAssetCardHtml(items) {
         <div class="text-left w-auto space-y-0.5">
           <div class="flex">
             <span class="whitespace-nowrap font-medium">ส่วนราชการ&nbsp;&nbsp;</span>
-            <span class="font-normal flex-grow border-b border-dotted border-black min-w-[280px]">${org || '&nbsp;'}</span>
+            <span class="font-normal flex-grow border-b border-dotted border-black min-w-[280px] whitespace-nowrap">${org || '&nbsp;'}</span>
           </div>
           <div class="flex">
             <span class="whitespace-nowrap font-medium">หน่วยงาน&nbsp;&nbsp;&nbsp;&nbsp;</span>
-            <span class="font-normal flex-grow border-b border-dotted border-black min-w-[280px]">${dept || '&nbsp;'}</span>
+            <span class="font-normal flex-grow border-b border-dotted border-black min-w-[280px] whitespace-nowrap">${dept || '&nbsp;'}</span>
           </div>
         </div>
       </div>
@@ -4207,9 +4211,20 @@ function openQrStickerModal(singleAssetId = null) {
   const filterCountEl = document.getElementById('sticker-scope-filter-count');
   const selectedCountEl = document.getElementById('sticker-scope-selected-count');
   const sizeSelect = document.getElementById('sticker-layout-size');
+  const headerInput = document.getElementById('sticker-school-header');
 
   if (filterCountEl) filterCountEl.innerText = filteredCount;
   if (selectedCountEl) selectedCountEl.innerText = selectedCount;
+
+  // ตั้งค่าหัวป้ายโรงเรียนตามที่ผู้ใช้บันทึกไว้ในระบบ หรือใช้ค่ามาตรฐาน
+  if (headerInput) {
+    const savedDept = cleanFieldText(localStorage.getItem('gov_dept'));
+    if (savedDept && (!headerInput.value || headerInput.value.includes('?'))) {
+      headerInput.value = savedDept;
+    } else if (!headerInput.value || headerInput.value.includes('?')) {
+      headerInput.value = DEFAULT_DEPT;
+    }
+  }
 
   // ตั้งค่าตัวเลือกตามกรณี single หรือ bulk
   const radios = document.getElementsByName('sticker_scope');
@@ -4249,7 +4264,7 @@ function updateQrStickerPreview() {
   const sizeSelect = document.getElementById('sticker-layout-size');
   const layoutSize = sizeSelect ? sizeSelect.value : 'compact';
   const headerInput = document.getElementById('sticker-school-header');
-  const schoolHeader = headerInput ? headerInput.value.trim() : 'โรงเรียนบ้านดงกลาง (ธนาคารกรุงเทพ ๓๑)';
+  const schoolHeader = headerInput ? (headerInput.value.trim() || DEFAULT_DEPT) : DEFAULT_DEPT;
 
   if (!items || items.length === 0) {
     previewBox.innerHTML = '<span class="text-slate-400 text-xs">ไม่มีรายการครุภัณฑ์ที่เลือก</span>';
@@ -4264,7 +4279,7 @@ function updateQrStickerPreview() {
   const qrBox = previewBox.querySelector('.qr-canvas-box');
   if (qrBox && window.QRCode) {
     const url = qrBox.dataset.url;
-    const qrSize = (layoutSize === 'large' || layoutSize === 'single') ? 72 : 48;
+    const qrSize = (layoutSize === 'large' || layoutSize === 'single') ? 70 : 46;
     new QRCode(qrBox, {
       text: url,
       width: qrSize,
@@ -4293,48 +4308,62 @@ function renderSingleStickerHtml(item, layoutSize, schoolHeader, isPreview = fal
   const location = item.location || '-';
   const spec = item.spec || '';
 
+  // คำนวณขนาดตัวอักษรหัวป้ายโรงเรียนแบบ Dynamic ให้พอดี 1 บรรทัด ไม่ตกบรรทัดในทุกขนาด
+  const headerLen = (schoolHeader || '').length;
+
   if (layoutSize === 'large' || layoutSize === 'single') {
-    // ขนาดใหญ่ (2 คอลัมน์ x 5 แถว บนหน้า A4)
+    // ขนาดใหญ่ (2 คอลัมน์ x 5 แถว บนหน้า A4, 95mm x 52mm)
+    // สำหรับ 95mm (~356px) พร้อมป้าย "ทะเบียนครุภัณฑ์" ฝั่งขวา
+    // ข้อความ 37 ตัวอักษร เช่น "โรงเรียนบ้านดงกลาง (ธนาคารกรุงเทพ ๓๑)" ใช้ 8.2pt พร้อม letter-spacing จะพอดีแถวเดียวสวยงาม
+    const largeFontSize = headerLen > 32 ? '8.2pt' : (headerLen > 24 ? '8.8pt' : '9.5pt');
+
     return `
-      <div class="asset-sticker-large" style="border: 1.5px solid #000; border-radius: 6px; padding: 2.5mm 3mm; box-sizing: border-box; width: ${isPreview ? '320px' : '95mm'}; height: ${isPreview ? 'auto' : '52mm'}; min-height: 52mm; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; background: #fff; font-family: 'Sarabun', sans-serif;">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #000; padding-bottom: 1px; margin-bottom: 2px;">
-          <span style="font-size: 10pt; font-weight: bold; color: #000;">${schoolHeader}</span>
-          <span style="font-size: 7.5pt; font-weight: bold; background: #e5e7eb; padding: 1px 4px; border-radius: 3px; color: #000;">ทะเบียนครุภัณฑ์</span>
+      <div class="asset-sticker-large" style="border: 1.5px solid #000; border-radius: 6px; padding: 2.2mm 2.8mm; box-sizing: border-box; width: ${isPreview ? '356px' : '95mm'}; height: ${isPreview ? 'auto' : '52mm'}; min-height: 52mm; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; background: #fff; font-family: 'Sarabun', sans-serif;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #000; padding-bottom: 1.5px; margin-bottom: 2px; gap: 4px; overflow: hidden; width: 100%;">
+          <span style="font-size: ${largeFontSize}; font-weight: bold; color: #000; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.2px; line-height: 1.2; flex: 1; min-width: 0;" title="${escapeHtml(schoolHeader)}">
+            ${escapeHtml(schoolHeader)}
+          </span>
+          <span style="font-size: 6.8pt; font-weight: bold; background: #f1f5f9; border: 0.5px solid #94a3b8; padding: 1px 4px; border-radius: 3px; color: #0f172a; white-space: nowrap !important; flex-shrink: 0; line-height: 1.2;">
+            ทะเบียนครุภัณฑ์
+          </span>
         </div>
-        <div style="display: flex; gap: 3mm; align-items: center; flex: 1; overflow: hidden;">
+        <div style="display: flex; gap: 2.8mm; align-items: center; flex: 1; overflow: hidden;">
           <div style="flex: 1; min-width: 0; line-height: 1.25;">
-            <div style="font-size: 10.5pt; font-weight: bold; color: #000; word-break: break-all;">${code}</div>
-            <div style="font-size: 8.5pt; font-weight: bold; color: #111; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.15; margin: 1px 0;">${name}</div>
-            ${spec ? `<div style="font-size: 7.5pt; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">สเปก: ${spec}</div>` : ''}
-            <div style="font-size: 7.5pt; color: #222;">วันที่รับ: ${dateStr} (ปีงบ ${fiscalYear})</div>
-            <div style="font-size: 7.5pt; color: #222; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">สถานที่: ${location}</div>
-            <div style="font-size: 7.5pt; color: #000; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">ผู้รับผิดชอบ: ${person}</div>
+            <div style="font-size: 10pt; font-weight: bold; color: #000; word-break: break-all; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(code)}</div>
+            <div style="font-size: 8.5pt; font-weight: bold; color: #111; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.15; margin: 1px 0;">${escapeHtml(name)}</div>
+            ${spec ? `<div style="font-size: 7.5pt; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">สเปก: ${escapeHtml(spec)}</div>` : ''}
+            <div style="font-size: 7.5pt; color: #222; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">วันที่รับ: ${escapeHtml(dateStr)} (ปีงบ ${fiscalYear})</div>
+            <div style="font-size: 7.5pt; color: #222; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">สถานที่: ${escapeHtml(location)}</div>
+            <div style="font-size: 7.5pt; color: #000; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">ผู้รับผิดชอบ: ${escapeHtml(person)}</div>
           </div>
-          <div style="width: 82px; height: 82px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-            <div class="qr-canvas-box" data-url="${qrUrl}" style="width: 72px; height: 72px;"></div>
-            <div style="font-size: 6pt; color: #444; text-align: center; margin-top: 1px; font-weight: 500;">สแกนตรวจสอบ</div>
+          <div style="width: 80px; height: 80px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <div class="qr-canvas-box" data-url="${qrUrl}" style="width: 70px; height: 70px;"></div>
+            <div style="font-size: 6pt; color: #444; text-align: center; margin-top: 1px; font-weight: 500; white-space: nowrap;">สแกนตรวจสอบ</div>
           </div>
         </div>
       </div>
     `;
   }
 
-  // ขนาดมาตรฐาน Compact (3 คอลัมน์ x 8 แถว บนหน้า A4)
+  // ขนาดมาตรฐาน Compact (3 คอลัมน์ x 8 แถว บนหน้า A4, 63.5mm x 33mm)
+  // ความกว้าง 63.5mm (~240px) ข้อความ 37 ตัวอักษร ใช้ 6.8pt พร้อม letter-spacing -0.25px จะไม่ตกบรรทัดและไม่ล้น
+  const compactFontSize = headerLen > 32 ? '6.8pt' : (headerLen > 24 ? '7.3pt' : '8pt');
+
   return `
-    <div class="asset-sticker-compact" style="border: 1px dashed #555; border-radius: 4px; padding: 1.8mm 2mm; box-sizing: border-box; width: ${isPreview ? '230px' : '63.5mm'}; height: ${isPreview ? 'auto' : '33mm'}; min-height: 33mm; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; background: #fff; font-family: 'Sarabun', sans-serif;">
-      <div style="font-size: 8pt; font-weight: bold; text-align: center; border-bottom: 1px solid #111; padding-bottom: 1px; margin-bottom: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #000;">
-        ${schoolHeader}
+    <div class="asset-sticker-compact" style="border: 1px dashed #555; border-radius: 4px; padding: 1.5mm 1.8mm; box-sizing: border-box; width: ${isPreview ? '240px' : '63.5mm'}; height: ${isPreview ? 'auto' : '33mm'}; min-height: 33mm; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; background: #fff; font-family: 'Sarabun', sans-serif;">
+      <div style="font-size: ${compactFontSize}; font-weight: bold; text-align: center; border-bottom: 1px solid #111; padding-bottom: 1px; margin-bottom: 1.5px; white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.25px; line-height: 1.2; color: #000; width: 100%;" title="${escapeHtml(schoolHeader)}">
+        ${escapeHtml(schoolHeader)}
       </div>
-      <div style="display: flex; gap: 2mm; align-items: center; flex: 1; overflow: hidden;">
+      <div style="display: flex; gap: 1.8mm; align-items: center; flex: 1; overflow: hidden;">
         <div style="flex: 1; min-width: 0; line-height: 1.15;">
-          <div style="font-size: 8pt; font-weight: bold; color: #000; word-break: break-all;">${code}</div>
-          <div style="font-size: 7pt; font-weight: 600; color: #111; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; margin-bottom: 1px;">${name}</div>
-          <div style="font-size: 6.5pt; color: #333;">ปีงบ: ${shortYear} (${dateStr})</div>
-          <div style="font-size: 6.5pt; color: #000; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">ผู้ดูแล: ${person}</div>
+          <div style="font-size: 7.8pt; font-weight: bold; color: #000; word-break: break-all; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(code)}</div>
+          <div style="font-size: 6.8pt; font-weight: 600; color: #111; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; margin-bottom: 1px; line-height: 1.15;">${escapeHtml(name)}</div>
+          <div style="font-size: 6.2pt; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">ปีงบ: ${shortYear} (${escapeHtml(dateStr)})</div>
+          <div style="font-size: 6.2pt; color: #000; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">ผู้ดูแล: ${escapeHtml(person)}</div>
         </div>
-        <div style="width: 54px; height: 54px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-          <div class="qr-canvas-box" data-url="${qrUrl}" style="width: 48px; height: 48px;"></div>
-          <div style="font-size: 5pt; color: #555; text-align: center; margin-top: 1px;">สแกนดูข้อมูล</div>
+        <div style="width: 52px; height: 52px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+          <div class="qr-canvas-box" data-url="${qrUrl}" style="width: 46px; height: 46px;"></div>
+          <div style="font-size: 5pt; color: #555; text-align: center; margin-top: 1px; white-space: nowrap;">สแกนดูข้อมูล</div>
         </div>
       </div>
     </div>
@@ -4351,7 +4380,7 @@ function handlePrintQrStickers() {
   const sizeSelect = document.getElementById('sticker-layout-size');
   const layoutSize = sizeSelect ? sizeSelect.value : 'compact';
   const headerInput = document.getElementById('sticker-school-header');
-  const schoolHeader = headerInput ? headerInput.value.trim() : 'โรงเรียนบ้านดงกลาง (ธนาคารกรุงเทพ ๓๑)';
+  const schoolHeader = headerInput ? (headerInput.value.trim() || DEFAULT_DEPT) : DEFAULT_DEPT;
 
   const printSection = document.getElementById('print-qr-sticker-section');
   if (!printSection) return;
@@ -4408,7 +4437,7 @@ function handlePrintQrStickers() {
 
   // Render QR Codes on all rendered canvas boxes
   const qrBoxes = printSection.querySelectorAll('.qr-canvas-box');
-  const qrPixSize = (layoutSize === 'large' || layoutSize === 'single') ? 72 : 48;
+  const qrPixSize = (layoutSize === 'large' || layoutSize === 'single') ? 70 : 46;
 
   qrBoxes.forEach(box => {
     const url = box.dataset.url;
