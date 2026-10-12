@@ -36,10 +36,12 @@
           } catch(e) {}
         }
 
-        // ตรวจสอบแท็บที่เปิดค้างไว้ล่าสุด (วัสดุ หรือ ครุภัณฑ์) จาก localStorage เพื่อเตรียมพร้อมหน้าจอล่วงหน้า ป้องกันการกะพริบตอนรีเฟรช
+        // ตรวจสอบแท็บที่เปิดค้างไว้ล่าสุด (วัสดุ หรือ ครุภัณฑ์) จาก localStorage ทันที
         var savedTab = localStorage.getItem('school_active_tab');
         if (savedTab === 'material') {
-          document.documentElement.classList.add('init-tab-material');
+          document.documentElement.classList.add('tab-material-mode');
+        } else {
+          document.documentElement.classList.remove('tab-material-mode');
         }
       } catch (e) {}
     })();
@@ -55,9 +57,29 @@
   <script src="html5-qrcode.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    /* ป้องกันการกะพริบสลับแท็บตอนรีเฟรชหน้าเว็บ */
-    html.init-tab-material #tab-asset-screen { display: none !important; }
-    html.init-tab-material #tab-material-screen { display: block !important; }
+    /* โหมดป้องกันการกะพริบสลับแท็บตอนรีเฟรช 0.0 วินาที (Zero-Flicker Tab Mode) */
+    html.tab-material-mode #tab-asset-screen {
+      display: none !important;
+    }
+    html.tab-material-mode #tab-material-screen {
+      display: block !important;
+    }
+    html.tab-material-mode #tab-asset-btn {
+      background: transparent !important;
+      color: rgba(254, 243, 199, 0.9) !important;
+      font-weight: 600 !important;
+      box-shadow: none !important;
+    }
+    html.tab-material-mode #tab-asset-btn:hover {
+      background-color: rgba(255, 255, 255, 0.1) !important;
+      color: #ffffff !important;
+    }
+    html.tab-material-mode #tab-material-btn {
+      background: linear-gradient(to right, #fbbf24, #f59e0b) !important;
+      color: #450a0a !important;
+      font-weight: 700 !important;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1) !important;
+    }
 
     /* รองรับการหมุนหน้าจอแนวนอน (Landscape Mode) บนมือถือและไอแพด */
     @media screen and (orientation: landscape) and (max-height: 540px) {
@@ -2645,6 +2667,6 @@
     <option value="นางสาวภัฐธีรา  จุลพันธ์">ธุรการโรงเรียน</option>
   </datalist>
 
-  <script src="app.js?v=12.8"></script>
+  <script src="app.js?v=12.9"></script>
 </body>
 </html>

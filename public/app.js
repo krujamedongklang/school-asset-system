@@ -24,6 +24,11 @@ function getInitialTab() {
 }
 
 let currentTab = getInitialTab();
+if (currentTab === 'material') {
+  try {
+    document.documentElement.classList.add('tab-material-mode');
+  } catch (e) {}
+}
 let assetList = [];
 let materialList = [];
 
@@ -464,6 +469,16 @@ async function logout() {
 
 // ==================== INSTANT HYDRATION (แคชในเครื่องเบราว์เซอร์ 0 วินาที) ====================
 function restoreDataFromLocalCache() {
+  if (currentTab === 'material') {
+    restoreMaterialCache();
+    restoreAssetCache();
+  } else {
+    restoreAssetCache();
+    restoreMaterialCache();
+  }
+}
+
+function restoreAssetCache() {
   try {
     const cachedA = localStorage.getItem('cached_assets');
     if (cachedA) {
@@ -480,7 +495,9 @@ function restoreDataFromLocalCache() {
       }
     }
   } catch (e) {}
+}
 
+function restoreMaterialCache() {
   try {
     const cachedM = localStorage.getItem('cached_materials');
     if (cachedM) {
@@ -1269,8 +1286,12 @@ function switchTab(tab) {
     console.warn('Tab persistence error:', e);
   }
 
-  // ปลดคลาสเริ่มต้นที่ใช้ป้องกันการกะพริบ
-  document.documentElement.classList.remove('init-tab-material');
+  // จัดการคลาส Zero-Flicker สำหรับแท็บวัสดุ
+  if (tab === 'material') {
+    document.documentElement.classList.add('tab-material-mode');
+  } else {
+    document.documentElement.classList.remove('tab-material-mode');
+  }
 
   const screenAsset = document.getElementById('tab-asset-screen');
   const screenMaterial = document.getElementById('tab-material-screen');
@@ -1296,6 +1317,11 @@ function switchTab(tab) {
     if (btnMaterial) btnMaterial.className = activeClass;
   }
 }
+
+// ซิงค์การแสดงผลหน้าจอทันทีที่โหลดสคริปต์
+try {
+  switchTab(currentTab);
+} catch (e) {}
 
 // ==================== ส่วนราชการ & หน่วยงาน (สำหรับพิมพ์) ====================
 function initOrgSettings() {
