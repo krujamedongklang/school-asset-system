@@ -2032,14 +2032,16 @@ function updateMaterialKpiCards() {
   const elEntries = document.getElementById('kpi-mat-total-entries');
   const elTypes = document.getElementById('kpi-mat-types-count');
   const elInflow = document.getElementById('kpi-mat-inflow-cost');
+  const elInflowSub = document.getElementById('kpi-mat-inflow-sub');
   const elIssues = document.getElementById('kpi-mat-issue-count');
   const elActive = document.getElementById('kpi-mat-active-items');
 
   if (elEntries) elEntries.textContent = totalEntries.toLocaleString('th-TH');
   if (elTypes) elTypes.textContent = `${distinctNames.size} ชนิด`;
   if (elInflow) elInflow.textContent = totalInflowPrice.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-  if (elIssues) elIssues.textContent = `${totalIssues} ครั้ง`;
-  if (elActive) elActive.textContent = `${activeWithStock} ชนิด`;
+  if (elInflowSub) elInflowSub.textContent = `฿${totalInflowPrice.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+  if (elIssues) elIssues.textContent = totalIssues.toLocaleString('th-TH');
+  if (elActive) elActive.textContent = activeWithStock.toLocaleString('th-TH');
 }
 
 // เรนเดอร์ตารางบนหน้าจอเว็บ (กรองตามปีงบประมาณ, เดือน, และคำค้นหาอัตโนมัติ)
@@ -3117,7 +3119,7 @@ function renderMaterialTable() {
 
   if (list.length === 0) {
     const tr = document.createElement('tr');
-    let msg = '🔍 ไม่พบรายการวัสดุในเงื่อนไขที่เลือก';
+    let msg = 'ไม่พบรายการวัสดุในเงื่อนไขที่เลือก';
     if (materialNameFilter !== 'all') {
       msg += ` ชนิดวัสดุ "${escapeHtml(materialNameFilter)}"`;
     }
@@ -3132,8 +3134,14 @@ function renderMaterialTable() {
       msg += ` คำค้น "${escapeHtml(materialSearchQuery)}"`;
     }
     tr.innerHTML = `
-      <td colspan="13" class="p-8 text-center text-slate-400 text-xs sm:text-sm">
-        ${msg}
+      <td colspan="14" class="p-10 text-center">
+        <div class="flex flex-col items-center justify-center gap-2">
+          <span class="text-4xl text-slate-300">📦</span>
+          <p class="text-slate-500 font-medium text-xs sm:text-sm">🔍 ${msg}</p>
+          <button onclick="clearMaterialSearch(); onMaterialFilterChange();" class="mt-2 text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3.5 py-1.5 rounded-xl transition cursor-pointer shadow-2xs">
+            🔄 แสดงรายการวัสดุทั้งหมด
+          </button>
+        </div>
       </td>
     `;
     screenTbody.appendChild(tr);
@@ -3143,10 +3151,10 @@ function renderMaterialTable() {
   const canEdit = !currentUser || currentUser.canEdit || currentUser.role === 'admin';
   const canDelete = !currentUser || currentUser.canDelete || currentUser.role === 'admin';
 
-  list.forEach((item) => {
+  list.forEach((item, index) => {
     const isSelected = selectedMaterialIds.has(item.id);
     const tr = document.createElement('tr');
-    tr.className = `hover:bg-amber-50/60 border-b border-amber-100/70 cursor-pointer transition ${isSelected ? 'bg-amber-50/40' : ''}`;
+    tr.className = `hover:bg-amber-50/70 border-b border-amber-100/70 cursor-pointer transition-colors duration-150 ${isSelected ? 'bg-amber-50/50' : ''}`;
     
     tr.onclick = (e) => {
       if (!e.target.closest('button, input')) {
@@ -3154,29 +3162,93 @@ function renderMaterialTable() {
       }
     };
 
+    const isInflow = Number(item.qty_in || 0) > 0;
+    const isOutflow = Number(item.qty_out || 0) > 0;
+    let badgeType = '';
+    if (isInflow) {
+      badgeType = `<span class="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 shrink-0">📥 รับเข้า</span>`;
+    } else if (isOutflow) {
+      badgeType = `<span class="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded bg-blue-50 text-blue-800 border border-blue-200 shrink-0">📤 จ่ายออก</span>`;
+    } else {
+      badgeType = `<span class="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-50 text-amber-800 border border-amber-200 shrink-0">📋 ยกมา</span>`;
+    }
+
+    const formattedDate = formatThaiDate(item.trans_date) || item.trans_date || '-';
+
     tr.innerHTML = `
       <td class="p-2 border border-slate-200 text-center" onclick="event.stopPropagation()">
         <input type="checkbox" class="w-4 h-4 accent-amber-500 rounded cursor-pointer" 
           ${isSelected ? 'checked' : ''} 
           onchange="toggleMaterialItemSelection(${item.id}, this.checked)">
       </td>
-      <td class="p-2 border border-slate-200">${item.trans_date || ''}</td>
-      <td class="p-2 border border-slate-200">
-        <div class="font-semibold text-slate-900">${safeThaiWordBreak(escapeHtml(item.party || ''))}</div>
-        ${item.material_name ? `<div class="text-[10px] text-amber-800 font-medium mt-0.5 inline-flex items-center gap-1 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/60"><span>📦</span> <span>${escapeHtml(item.material_name)}</span>${item.unit ? `<span class="text-slate-500 font-normal">(${escapeHtml(item.unit)})</span>` : ''}</div>` : ''}
+      <td class="p-2 border border-slate-200 text-center font-medium text-slate-500 text-xs">${index + 1}</td>
+      <td class="p-2 border border-slate-200 text-xs whitespace-nowrap">
+        <div class="font-bold text-slate-800 flex items-center gap-1">
+          <span class="text-amber-600 text-xs shrink-0">📅</span>
+          <span>${formattedDate}</span>
+        </div>
+        ${item.trans_date && item.trans_date !== formattedDate ? `<div class="text-[10px] text-slate-400 font-mono mt-0.5 pl-4">${item.trans_date}</div>` : ''}
       </td>
-      <td class="p-2 border border-slate-200">${item.doc_no || ''}</td>
-      <td class="p-2 border border-slate-200">${item.budget_type || ''}</td>
-      <td class="p-2 border border-slate-200 text-center">${item.opening_stock || 0}</td>
-      <td class="p-2 border border-slate-200 text-center text-emerald-700 font-semibold">${item.qty_in || 0}</td>
-      <td class="p-2 border border-slate-200 text-center text-rose-700 font-semibold">${item.qty_out || 0}</td>
-      <td class="p-2 border border-slate-200 text-center font-bold bg-amber-50/70 text-slate-900">${item.balance}</td>
-      <td class="p-2 border border-slate-200 text-right">${Number(item.unit_price).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-      <td class="p-2 border border-slate-200 text-right font-bold text-amber-900">${Number(item.total_amount).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-      <td class="p-2 border border-slate-200 text-slate-500">${item.remark || ''}</td>
+      <td class="p-2 border border-slate-200 text-xs">
+        <div class="flex items-center gap-1.5 flex-wrap">
+          ${badgeType}
+          <span class="font-bold text-slate-900">${safeThaiWordBreak(escapeHtml(item.party || '-'))}</span>
+        </div>
+        ${item.material_name ? `
+          <div class="text-[10px] text-amber-900 font-medium mt-1 inline-flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/70">
+            <span>📦</span>
+            <span class="font-semibold">${escapeHtml(item.material_name)}</span>
+            ${item.unit ? `<span class="text-slate-500 font-normal">(${escapeHtml(item.unit)})</span>` : ''}
+          </div>
+        ` : ''}
+      </td>
+      <td class="p-2 border border-slate-200 text-xs whitespace-nowrap">
+        ${item.doc_no ? `
+          <div class="font-mono font-medium text-slate-700 flex items-center gap-1" title="เลขที่เอกสาร: ${escapeHtml(item.doc_no)}">
+            <span class="text-slate-400 text-[10px]">📄</span>
+            <span>${escapeHtml(item.doc_no)}</span>
+          </div>
+        ` : '<span class="text-slate-300">-</span>'}
+      </td>
+      <td class="p-2 border border-slate-200 text-xs whitespace-nowrap">
+        ${item.budget_type ? `
+          <span class="inline-block text-[10px] bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-medium border border-slate-200">
+            ${escapeHtml(item.budget_type)}
+          </span>
+        ` : '<span class="text-slate-300">-</span>'}
+      </td>
+      <td class="p-2 border border-slate-200 text-center font-mono text-xs text-slate-500">${item.opening_stock !== undefined && item.opening_stock !== null ? Number(item.opening_stock) : 0}</td>
+      <td class="p-2 border border-slate-200 text-center font-mono text-xs font-bold ${isInflow ? 'text-emerald-700 bg-emerald-50/50' : 'text-slate-300'}">
+        ${isInflow ? `+${Number(item.qty_in)}` : '0'}
+      </td>
+      <td class="p-2 border border-slate-200 text-center font-mono text-xs font-bold ${isOutflow ? 'text-rose-700 bg-rose-50/50' : 'text-slate-300'}">
+        ${isOutflow ? `-${Number(item.qty_out)}` : '0'}
+      </td>
+      <td class="p-2 border border-slate-200 text-center whitespace-nowrap">
+        <span class="font-extrabold font-mono text-xs text-amber-950 bg-amber-100/70 border border-amber-300/60 px-2 py-0.5 rounded shadow-2xs inline-block min-w-[36px]">
+          ${item.balance !== undefined ? item.balance : 0}
+        </span>
+      </td>
+      <td class="p-2 border border-slate-200 text-right font-mono text-xs whitespace-nowrap text-slate-700">
+        ฿${Number(item.unit_price || 0).toLocaleString('th-TH', {minimumFractionDigits: 2})}
+      </td>
+      <td class="p-2 border border-slate-200 text-right whitespace-nowrap">
+        <div class="font-bold font-mono text-xs text-red-950">฿${Number(item.total_amount || 0).toLocaleString('th-TH', {minimumFractionDigits: 2})}</div>
+      </td>
+      <td class="p-2 border border-slate-200 text-xs text-slate-600">
+        <div class="line-clamp-2" title="${escapeHtml(item.remark || '')}">${escapeHtml(item.remark || '-')}</div>
+      </td>
       <td class="p-2 border border-slate-200 text-center whitespace-nowrap space-x-1" onclick="event.stopPropagation()">
-        ${canEdit ? `<button onclick="editMaterial(${item.id})" class="text-red-700 hover:text-red-900 p-1.5 font-semibold rounded-lg hover:bg-red-100 transition shadow-2xs cursor-pointer" title="แก้ไขรายการนี้">✏️</button>` : ''}
-        ${canDelete ? `<button onclick="deleteMaterial(${item.id})" class="text-slate-400 hover:text-rose-600 p-1.5 font-semibold rounded-lg hover:bg-rose-50 transition shadow-2xs cursor-pointer" title="ลบรายการ">🗑️</button>` : ''}
+        ${canEdit ? `
+          <button onclick="editMaterial(${item.id})" class="text-amber-700 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 p-1.5 rounded-lg border border-amber-200/70 transition shadow-2xs cursor-pointer inline-flex items-center" title="แก้ไขรายการนี้">
+            ✏️
+          </button>
+        ` : ''}
+        ${canDelete ? `
+          <button onclick="deleteMaterial(${item.id})" class="text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 p-1.5 rounded-lg border border-rose-200/70 transition shadow-2xs cursor-pointer inline-flex items-center" title="ลบรายการ">
+            🗑️
+          </button>
+        ` : ''}
       </td>
     `;
     screenTbody.appendChild(tr);
