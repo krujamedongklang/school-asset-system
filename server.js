@@ -404,33 +404,6 @@ app.post('/api/assets', requireAuth, requireAdd, async (req, res) => {
   }
 });
 
-// นำเข้าครุภัณฑ์จำนวนมาก (Bulk Import จาก Excel / CSV)
-app.post('/api/assets/bulk', requireAuth, requireAdd, async (req, res) => {
-  try {
-    const items = Array.isArray(req.body.items) ? req.body.items : [];
-    if (items.length === 0) {
-      return res.status(400).json({ error: 'ไม่พบรายการที่ต้องการนำเข้า' });
-    }
-
-    let successCount = 0;
-    for (const item of items) {
-      await db.createAsset(item);
-      successCount++;
-    }
-
-    await recordAudit(req, {
-      action: 'IMPORT_EXCEL',
-      entityType: 'asset',
-      entityId: '',
-      entityName: `นำเข้าครุภัณฑ์ (${successCount} รายการ)`,
-      details: `นำเข้าข้อมูลครุภัณฑ์จาก Excel/CSV สำเร็จจำนวน ${successCount} รายการ`
-    });
-
-    res.json({ success: true, count: successCount, message: `นำเข้าครุภัณฑ์เรียบร้อยแล้ว ${successCount} รายการ` });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 // แก้ไขครุภัณฑ์
 app.put('/api/assets/:id', requireAuth, requireEdit, async (req, res) => {
@@ -545,33 +518,6 @@ app.post('/api/materials', requireAuth, requireAdd, async (req, res) => {
   }
 });
 
-// นำเข้าวัสดุจำนวนมาก (Bulk Import จาก Excel / CSV)
-app.post('/api/materials/bulk', requireAuth, requireAdd, async (req, res) => {
-  try {
-    const items = Array.isArray(req.body.items) ? req.body.items : [];
-    if (items.length === 0) {
-      return res.status(400).json({ error: 'ไม่พบรายการที่ต้องการนำเข้า' });
-    }
-
-    let successCount = 0;
-    for (const item of items) {
-      await db.createMaterial(item);
-      successCount++;
-    }
-
-    await recordAudit(req, {
-      action: 'IMPORT_EXCEL',
-      entityType: 'material',
-      entityId: '',
-      entityName: `นำเข้าวัสดุ (${successCount} รายการ)`,
-      details: `นำเข้าข้อมูลวัสดุจาก Excel/CSV สำเร็จจำนวน ${successCount} รายการ`
-    });
-
-    res.json({ success: true, count: successCount, message: `นำเข้าวัสดุเรียบร้อยแล้ว ${successCount} รายการ` });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 // แก้ไขรายการวัสดุ
 app.put('/api/materials/:id', requireAuth, requireEdit, async (req, res) => {
