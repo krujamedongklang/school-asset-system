@@ -1502,25 +1502,10 @@ const dbService = {
   },
 
   async syncInitialDataIfEmpty() {
-    if (!isSupabaseActive || !supabaseClient) return;
-    try {
-      const { count: aCount, error: aErr } = await supabaseClient.from('assets').select('*', { count: 'exact', head: true });
-      if (!aErr && (aCount === 0 || aCount === null)) {
-        const localAssets = await new Promise(r => sqliteDb.all('SELECT * FROM assets', [], (e, rows) => r(rows || [])));
-        if (localAssets && localAssets.length > 0) {
-          console.log(`🔄 ตรวจพบ Supabase ว่างเปล่า กำลังซิงค์ข้อมูล ${localAssets.length} รายการจากเครื่องขึ้น Cloud...`);
-          await this.syncToSupabase();
-        }
-      }
-    } catch (e) {
-      console.warn('syncInitialDataIfEmpty warning:', e.message);
-    }
+    // ปิดการซิงค์อัตโนมัติจาก SQLite ขึ้น Supabase ตอนเริ่มเซิร์ฟเวอร์
+    // เพื่อป้องกันไม่ให้ข้อมูลทดสอบเก่าในไฟล์ SQLite ถูกอัปโหลดกลับขึ้น Cloud เมื่อผู้ใช้ลบข้อมูลหมดแล้วหรือเมื่ออัปเดตระบบ
+    return;
   }
 };
-
-// สั่งซิงค์อัตโนมัติหาก Cloud ว่างเปล่าแต่เครื่องมีข้อมูล
-setTimeout(() => {
-  dbService.syncInitialDataIfEmpty().catch(() => {});
-}, 1000);
 
 module.exports = dbService;
