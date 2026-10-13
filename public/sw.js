@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dongklang-asset-v13.4';
+const CACHE_NAME = 'dongklang-asset-v13.5';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -6,6 +6,7 @@ const STATIC_ASSETS = [
   '/logo.jpg',
   '/qrcode.min.js',
   '/html5-qrcode.min.js',
+  '/xlsx.full.min.js',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/icons/apple-touch-icon.png',

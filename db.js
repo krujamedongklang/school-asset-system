@@ -83,8 +83,11 @@ sqliteDb.serialize(() => {
     vendor_address TEXT,
     vendor_phone TEXT,
     budget_source TEXT,
-    acquisition_method TEXT
-  )`);
+    acquisition_method TEXT,
+    image_url TEXT
+  )`, () => {
+    sqliteDb.run(`ALTER TABLE assets ADD COLUMN image_url TEXT`, () => {});
+  });
 
   sqliteDb.run(`CREATE TABLE IF NOT EXISTS materials (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1010,12 +1013,36 @@ const dbService = {
       });
     }
 
+    // ถอดรหัสรูปถ่ายครุภัณฑ์ image_url ถ้าถูกฝังไว้ใน remark สำหรับ Supabase
+    if (Array.isArray(rows)) {
+      rows = rows.map(a => {
+        let img = a.image_url || '';
+        let rmk = a.remark || '';
+        if (rmk && rmk.includes('[ภาพ:')) {
+          const m = rmk.match(/\[ภาพ:\s*([^\]]+)\]/);
+          if (m) {
+            if (!img) img = m[1];
+            rmk = rmk.replace(m[0], '').trim();
+          }
+        }
+        return {
+          ...a,
+          image_url: img,
+          remark: rmk
+        };
+      });
+    }
+
     assetMemoryCache = rows;
     assetMemoryCacheTime = now;
     return rows;
   },
 
   async createAsset(item) {
+    const rawRemark = (item.remark || '').replace(/\[ภาพ:\s*[^\]]+\]/g, '').trim();
+    const photoUrl = item.image_url || '';
+    const supabaseRemark = photoUrl ? (rawRemark ? `${rawRemark} [ภาพ:${photoUrl}]` : `[ภาพ:${photoUrl}]`) : rawRemark;
+
     const cleanItem = {
       asset_code: item.asset_code || '',
       received_date: item.received_date || '',
@@ -1029,31 +1056,36 @@ const dbService = {
       vendor: item.vendor || '',
       responsible_person: item.responsible_person || '',
       department: item.department || null,
-      remark: item.remark || '',
+      remark: rawRemark,
       category: item.category || 'ครุภัณฑ์คอมพิวเตอร์',
       model: item.model || '',
       qty: Number(item.qty) || 1,
       vendor_address: item.vendor_address || '',
       vendor_phone: item.vendor_phone || '',
       budget_source: item.budget_source || 'เงินงบประมาณ',
-      acquisition_method: item.acquisition_method || 'เฉพาะเจาะจง'
+      acquisition_method: item.acquisition_method || 'เฉพาะเจาะจง',
+      image_url: photoUrl
     };
 
     if (isSupabaseActive) {
-      const { data, error } = await supabaseClient.from('assets').insert([cleanItem]).select().single();
+      const supabasePayload = { ...cleanItem, remark: supabaseRemark };
+      delete supabasePayload.image_url;
+
+      const { data, error } = await supabaseClient.from('assets').insert([supabasePayload]).select().single();
       if (!error && data) {
         invalidateAssetCache();
         // Dual-Write: สำรองลง SQLite ในเครื่องพร้อมกันทันที
         const sqlSqlite = `INSERT OR REPLACE INTO assets (
           id, asset_code, received_date, asset_name, spec, doc_no, cost, useful_life,
           location, status, vendor, responsible_person, department, remark,
-          category, model, qty, vendor_address, vendor_phone, budget_source, acquisition_method
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+          category, model, qty, vendor_address, vendor_phone, budget_source, acquisition_method, image_url
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
         const paramsSqlite = [
           data.id, cleanItem.asset_code, cleanItem.received_date, cleanItem.asset_name, cleanItem.spec, cleanItem.doc_no,
           cleanItem.cost, cleanItem.useful_life, cleanItem.location, cleanItem.status, cleanItem.vendor,
           cleanItem.responsible_person, cleanItem.department, cleanItem.remark, cleanItem.category, cleanItem.model,
-          cleanItem.qty, cleanItem.vendor_address, cleanItem.vendor_phone, cleanItem.budget_source, cleanItem.acquisition_method
+          cleanItem.qty, cleanItem.vendor_address, cleanItem.vendor_phone, cleanItem.budget_source, cleanItem.acquisition_method,
+          cleanItem.image_url
         ];
         sqliteDb.run(sqlSqlite, paramsSqlite, () => {});
         this.backupLocal();
@@ -1066,13 +1098,14 @@ const dbService = {
       const sql = `INSERT INTO assets (
         asset_code, received_date, asset_name, spec, doc_no, cost, useful_life,
         location, status, vendor, responsible_person, department, remark,
-        category, model, qty, vendor_address, vendor_phone, budget_source, acquisition_method
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+        category, model, qty, vendor_address, vendor_phone, budget_source, acquisition_method, image_url
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
       const params = [
         cleanItem.asset_code, cleanItem.received_date, cleanItem.asset_name, cleanItem.spec, cleanItem.doc_no,
         cleanItem.cost, cleanItem.useful_life, cleanItem.location, cleanItem.status, cleanItem.vendor,
         cleanItem.responsible_person, cleanItem.department, cleanItem.remark, cleanItem.category, cleanItem.model,
-        cleanItem.qty, cleanItem.vendor_address, cleanItem.vendor_phone, cleanItem.budget_source, cleanItem.acquisition_method
+        cleanItem.qty, cleanItem.vendor_address, cleanItem.vendor_phone, cleanItem.budget_source, cleanItem.acquisition_method,
+        cleanItem.image_url
       ];
       sqliteDb.run(sql, params, function(err) {
         if (err) return reject(err);
@@ -1084,6 +1117,10 @@ const dbService = {
   },
 
   async updateAsset(id, item) {
+    const rawRemark = (item.remark || '').replace(/\[ภาพ:\s*[^\]]+\]/g, '').trim();
+    const photoUrl = item.image_url !== undefined ? item.image_url : '';
+    const supabaseRemark = photoUrl ? (rawRemark ? `${rawRemark} [ภาพ:${photoUrl}]` : `[ภาพ:${photoUrl}]`) : rawRemark;
+
     const cleanItem = {
       asset_code: item.asset_code || '',
       received_date: item.received_date || '',
@@ -1097,31 +1134,36 @@ const dbService = {
       vendor: item.vendor || '',
       responsible_person: item.responsible_person || '',
       department: item.department || null,
-      remark: item.remark || '',
+      remark: rawRemark,
       category: item.category || 'ครุภัณฑ์คอมพิวเตอร์',
       model: item.model || '',
       qty: Number(item.qty) || 1,
       vendor_address: item.vendor_address || '',
       vendor_phone: item.vendor_phone || '',
       budget_source: item.budget_source || 'เงินงบประมาณ',
-      acquisition_method: item.acquisition_method || 'เฉพาะเจาะจง'
+      acquisition_method: item.acquisition_method || 'เฉพาะเจาะจง',
+      image_url: photoUrl
     };
 
     if (isSupabaseActive) {
-      const { error } = await supabaseClient.from('assets').update(cleanItem).eq('id', id);
+      const supabasePayload = { ...cleanItem, remark: supabaseRemark };
+      delete supabasePayload.image_url;
+
+      const { error } = await supabaseClient.from('assets').update(supabasePayload).eq('id', id);
       if (!error) {
         invalidateAssetCache();
         // Dual-Write: อัปเดตสำเนาใน SQLite ด้วย
         const sqlSqlite = `UPDATE assets SET 
           asset_code = ?, received_date = ?, asset_name = ?, spec = ?, doc_no = ?, cost = ?, useful_life = ?,
           location = ?, status = ?, vendor = ?, responsible_person = ?, department = ?, remark = ?,
-          category = ?, model = ?, qty = ?, vendor_address = ?, vendor_phone = ?, budget_source = ?, acquisition_method = ?
+          category = ?, model = ?, qty = ?, vendor_address = ?, vendor_phone = ?, budget_source = ?, acquisition_method = ?, image_url = ?
           WHERE id = ?`;
         const paramsSqlite = [
           cleanItem.asset_code, cleanItem.received_date, cleanItem.asset_name, cleanItem.spec, cleanItem.doc_no,
           cleanItem.cost, cleanItem.useful_life, cleanItem.location, cleanItem.status, cleanItem.vendor,
           cleanItem.responsible_person, cleanItem.department, cleanItem.remark, cleanItem.category, cleanItem.model,
           cleanItem.qty, cleanItem.vendor_address, cleanItem.vendor_phone, cleanItem.budget_source, cleanItem.acquisition_method,
+          cleanItem.image_url,
           id
         ];
         sqliteDb.run(sqlSqlite, paramsSqlite, () => {});
@@ -1135,13 +1177,14 @@ const dbService = {
       const sql = `UPDATE assets SET 
         asset_code = ?, received_date = ?, asset_name = ?, spec = ?, doc_no = ?, cost = ?, useful_life = ?,
         location = ?, status = ?, vendor = ?, responsible_person = ?, department = ?, remark = ?,
-        category = ?, model = ?, qty = ?, vendor_address = ?, vendor_phone = ?, budget_source = ?, acquisition_method = ?
+        category = ?, model = ?, qty = ?, vendor_address = ?, vendor_phone = ?, budget_source = ?, acquisition_method = ?, image_url = ?
         WHERE id = ?`;
       const params = [
         cleanItem.asset_code, cleanItem.received_date, cleanItem.asset_name, cleanItem.spec, cleanItem.doc_no,
         cleanItem.cost, cleanItem.useful_life, cleanItem.location, cleanItem.status, cleanItem.vendor,
         cleanItem.responsible_person, cleanItem.department, cleanItem.remark, cleanItem.category, cleanItem.model,
         cleanItem.qty, cleanItem.vendor_address, cleanItem.vendor_phone, cleanItem.budget_source, cleanItem.acquisition_method,
+        cleanItem.image_url,
         id
       ];
       sqliteDb.run(sql, params, function(err) {

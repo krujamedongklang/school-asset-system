@@ -929,15 +929,33 @@
               </span>
 
               <!-- รายงานตรวจสอบประจำปี -->
-              <button onclick="openAnnualInspectionModal()" class="flex-1 sm:flex-initial justify-center bg-white hover:bg-blue-50 text-blue-900 hover:text-blue-950 border border-blue-200/90 font-bold px-3 py-1.5 rounded-xl shadow-2xs transition flex items-center gap-1.5 text-xs whitespace-nowrap cursor-pointer transform active:scale-95" title="สร้างและพิมพ์รายงานผลการตรวจสอบพัสดุประจำปีงบประมาณ">
+              <button type="button" onclick="openAnnualInspectionModal()" class="flex-1 sm:flex-initial justify-center bg-white hover:bg-blue-50 text-blue-900 hover:text-blue-950 border border-blue-200/90 font-bold px-3 py-1.5 rounded-xl shadow-2xs transition flex items-center gap-1.5 text-xs whitespace-nowrap cursor-pointer transform active:scale-95" title="สร้างและพิมพ์รายงานผลการตรวจสอบพัสดุประจำปีงบประมาณ">
                 <span>📋</span>
                 <span>รายงานตรวจสอบประจำปี</span>
               </button>
 
               <!-- รายงานขอจำหน่าย -->
-              <button onclick="openDisposalReportModal()" class="flex-1 sm:flex-initial justify-center bg-white hover:bg-rose-50 text-rose-800 hover:text-rose-900 border border-rose-200/90 font-bold px-3 py-1.5 rounded-xl shadow-2xs transition flex items-center gap-1.5 text-xs whitespace-nowrap cursor-pointer transform active:scale-95" title="สร้างและพิมพ์รายงานขออนุมัติจำหน่ายครุภัณฑ์ชำรุด/เสื่อมสภาพ">
+              <button type="button" onclick="openDisposalReportModal()" class="flex-1 sm:flex-initial justify-center bg-white hover:bg-rose-50 text-rose-800 hover:text-rose-900 border border-rose-200/90 font-bold px-3 py-1.5 rounded-xl shadow-2xs transition flex items-center gap-1.5 text-xs whitespace-nowrap cursor-pointer transform active:scale-95" title="สร้างและพิมพ์รายงานขออนุมัติจำหน่ายครุภัณฑ์ชำรุด/เสื่อมสภาพ">
                 <span>🗑️</span>
                 <span>รายงานขอจำหน่าย</span>
+              </button>
+            </div>
+
+            <!-- เส้นคั่นแบ่งกลุ่มสายตาบนหน้าจอขนาดใหญ่ -->
+            <div class="hidden xl:block h-5 w-px bg-slate-200 self-center"></div>
+
+            <!-- กลุ่มที่ 3: จัดการไฟล์ Excel -->
+            <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <span class="text-[11px] font-bold text-slate-600 hidden sm:inline-flex items-center gap-1 pl-1">
+                <span>📊</span> <span>Excel:</span>
+              </span>
+              <button type="button" onclick="exportAssetsExcel()" class="flex-1 sm:flex-initial justify-center bg-white hover:bg-emerald-50 text-emerald-800 hover:text-emerald-900 border border-emerald-300 font-bold px-3 py-1.5 rounded-xl shadow-2xs transition flex items-center gap-1.5 text-xs whitespace-nowrap cursor-pointer transform active:scale-95" title="ส่งออกข้อมูลครุภัณฑ์เป็นไฟล์ Excel (.xlsx)">
+                <span>📥</span>
+                <span>ส่งออก Excel</span>
+              </button>
+              <button type="button" onclick="openExcelImportModal('asset')" class="flex-1 sm:flex-initial justify-center bg-white hover:bg-teal-50 text-teal-800 hover:text-teal-900 border border-teal-300 font-bold px-3 py-1.5 rounded-xl shadow-2xs transition flex items-center gap-1.5 text-xs whitespace-nowrap cursor-pointer transform active:scale-95" title="นำเข้าข้อมูลครุภัณฑ์จากไฟล์ Excel หรือ CSV">
+                <span>📤</span>
+                <span>นำเข้า Excel</span>
               </button>
             </div>
           </div>
@@ -1159,9 +1177,24 @@
             </button>
 
             <!-- ปุ่มตั้งค่าหัวบัตรวัสดุ -->
-            <button onclick="openModal('materialMetaModal')" class="flex-1 sm:flex-initial justify-center bg-white hover:bg-amber-50 text-amber-900 border border-amber-300/80 font-bold px-3 py-1.5 rounded-xl shadow-2xs transition flex items-center gap-1.5 text-xs whitespace-nowrap cursor-pointer transform active:scale-95" title="ตั้งค่าข้อมูลหัวบัตรวัสดุ (ชื่อ, ขนาด, หน่วยนับ, สถานที่เก็บ)">
+            <button type="button" onclick="openModal('materialMetaModal')" class="flex-1 sm:flex-initial justify-center bg-white hover:bg-amber-50 text-amber-900 border border-amber-300/80 font-bold px-3 py-1.5 rounded-xl shadow-2xs transition flex items-center gap-1.5 text-xs whitespace-nowrap cursor-pointer transform active:scale-95" title="ตั้งค่าข้อมูลหัวบัตรวัสดุ (ชื่อ, ขนาด, หน่วยนับ, สถานที่เก็บ)">
               <span>📝</span>
               <span>ข้อมูลหัวบัตรวัสดุ</span>
+            </button>
+
+            <!-- เส้นคั่น -->
+            <div class="hidden sm:block h-5 w-px bg-slate-200 self-center"></div>
+
+            <!-- ปุ่มส่งออก Excel -->
+            <button type="button" onclick="exportMaterialsExcel()" class="flex-1 sm:flex-initial justify-center bg-white hover:bg-emerald-50 text-emerald-800 hover:text-emerald-900 border border-emerald-300 font-bold px-3 py-1.5 rounded-xl shadow-2xs transition flex items-center gap-1.5 text-xs whitespace-nowrap cursor-pointer transform active:scale-95" title="ส่งออกข้อมูลบัญชีคุมวัสดุเป็นไฟล์ Excel (.xlsx)">
+              <span>📥</span>
+              <span>ส่งออก Excel</span>
+            </button>
+
+            <!-- ปุ่มนำเข้า Excel -->
+            <button type="button" onclick="openExcelImportModal('material')" class="flex-1 sm:flex-initial justify-center bg-white hover:bg-teal-50 text-teal-800 hover:text-teal-900 border border-teal-300 font-bold px-3 py-1.5 rounded-xl shadow-2xs transition flex items-center gap-1.5 text-xs whitespace-nowrap cursor-pointer transform active:scale-95" title="นำเข้าข้อมูลวัสดุจากไฟล์ Excel หรือ CSV">
+              <span>📤</span>
+              <span>นำเข้า Excel</span>
             </button>
           </div>
 
@@ -1476,6 +1509,44 @@
       </div>
       <form id="form-asset" onsubmit="saveAsset(event)" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-3.5 text-xs">
         <input type="hidden" id="edit_asset_id">
+
+        <!-- ส่วนแนบรูปถ่ายครุภัณฑ์ (Asset Photo: ถ่ายจากกล้องมือถือ หรือ อัปโหลด) -->
+        <div class="col-span-1 sm:col-span-2 md:col-span-3 p-3 bg-amber-50/60 border border-amber-200/90 rounded-2xl">
+          <div class="flex items-center justify-between mb-2">
+            <label class="font-bold text-slate-800 flex items-center gap-1.5 text-xs">
+              <span>📷</span> <span>รูปถ่ายครุภัณฑ์ (ถ่ายจากกล้อง หรือ เลือกรูปภาพ)</span>
+            </label>
+            <span class="text-[10px] text-slate-400">รองรับรูปถ่ายทุกขนาด (ระบบย่อขนาดให้อัตโนมัติ)</span>
+          </div>
+          <div class="flex flex-col sm:flex-row items-center gap-3">
+            <!-- กรอบพรีวิวรูปภาพ -->
+            <div id="asset-photo-preview-box" class="w-24 h-24 sm:w-28 sm:h-28 rounded-xl border-2 border-dashed border-amber-300 bg-white flex flex-col items-center justify-center overflow-hidden shrink-0 relative group shadow-2xs">
+              <img id="asset-photo-preview-img" src="" alt="รูปครุภัณฑ์" class="w-full h-full object-cover hidden">
+              <div id="asset-photo-placeholder" class="flex flex-col items-center justify-center text-slate-400 p-2 text-center pointer-events-none">
+                <span class="text-2xl mb-0.5">🖼️</span>
+                <span class="text-[10px] leading-tight font-medium text-slate-400">ยังไม่มีรูป</span>
+              </div>
+              <button type="button" id="asset-photo-remove-btn" onclick="removeAssetPhoto()" class="hidden absolute top-1 right-1 bg-rose-600 hover:bg-rose-700 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold shadow-md transition" title="ลบรูปภาพ">&times;</button>
+            </div>
+            <!-- ปุ่มกดถ่ายรูป / เลือกไฟล์ -->
+            <div class="flex-grow space-y-1.5 w-full sm:w-auto">
+              <input type="file" id="a_photo_file" accept="image/*" class="hidden" onchange="handleAssetPhotoSelected(event)">
+              <div class="flex flex-wrap gap-2">
+                <button type="button" onclick="document.getElementById('a_photo_file').click()" class="px-3 py-1.5 bg-white border border-amber-400 hover:bg-amber-50 text-red-950 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer">
+                  <span>📸</span> <span>ถ่ายรูป / เลือกไฟล์ภาพ</span>
+                </button>
+                <button type="button" id="asset-photo-clear-btn" onclick="removeAssetPhoto()" class="hidden px-2.5 py-1.5 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-700 font-medium rounded-xl text-xs flex items-center gap-1 transition cursor-pointer">
+                  <span>🗑️</span> <span>ลบรูป</span>
+                </button>
+              </div>
+              <input type="hidden" id="a_photo_data">
+              <div class="text-[11px] text-slate-500">
+                รูปถ่ายจะแสดงในตาราง, การ์ดครุภัณฑ์, และแสดงเมื่อสแกน QR Code ตรวจนับ
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="col-span-1 sm:col-span-2 md:col-span-2">
           <label class="font-semibold block mb-1 text-slate-700">รายการ (ชื่อทรัพย์สิน/ยี่ห้อ/รุ่น/รายละเอียด) *</label>
           <input type="text" id="a_name" required placeholder="เช่น เครื่องฉาย Projector Acer" class="w-full border border-slate-300 p-2.5 sm:p-2 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
@@ -2732,6 +2803,82 @@
     </div>
   </div>
 
+  <!-- MODAL: นำเข้าข้อมูลจาก Excel / CSV (Bulk Excel Import) -->
+  <div id="excelImportModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs hidden flex items-center justify-center p-2.5 sm:p-4 z-50 no-print">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-4 sm:p-6 max-h-[92vh] overflow-y-auto touch-scroll border border-amber-200/80">
+      <div class="flex justify-between items-center mb-3 sm:mb-4 border-b border-amber-100 pb-2.5 sm:pb-3">
+        <h3 id="excel-import-modal-title" class="text-base font-bold text-red-950 flex items-center gap-2">
+          <span>📤</span> <span>นำเข้าข้อมูลจากไฟล์ Excel (.xlsx / .csv)</span>
+        </h3>
+        <button type="button" onclick="closeModal('excelImportModal')" class="text-slate-400 hover:text-slate-600 text-2xl font-bold leading-none p-1 -mr-1 cursor-pointer">&times;</button>
+      </div>
+
+      <div class="space-y-3.5 text-xs">
+        <!-- คำแนะนำและปุ่มโหลด Template -->
+        <div class="bg-amber-50/70 border border-amber-200/80 p-3 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div class="text-slate-700">
+            <div class="font-bold text-amber-950 flex items-center gap-1.5 mb-0.5">
+              <span>💡</span> <span id="excel-import-template-label">ดาวน์โหลดไฟล์แม่แบบ (Template)</span>
+            </div>
+            <div class="text-[11px] text-slate-500">กรอกข้อมูลตามหัวตารางในไฟล์แม่แบบ แล้วอัปโหลดกลับเข้ามาที่นี่</div>
+          </div>
+          <button type="button" onclick="downloadExcelTemplate()" class="shrink-0 px-3 py-1.5 bg-white border border-amber-400 hover:bg-amber-100 text-amber-950 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-2xs transition cursor-pointer">
+            <span>📥</span> <span>โหลดไฟล์แม่แบบ</span>
+          </button>
+        </div>
+
+        <!-- พื้นที่อัปโหลดไฟล์ (Drop Zone) -->
+        <div id="excel-drop-zone" onclick="document.getElementById('excel-file-input').click()" class="border-2 border-dashed border-slate-300 hover:border-amber-500 rounded-2xl p-6 text-center cursor-pointer bg-slate-50/50 hover:bg-amber-50/30 transition group">
+          <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleExcelFileSelected(event)">
+          <div class="text-3xl mb-1 group-hover:scale-110 transition-transform">📊</div>
+          <div class="font-bold text-slate-700 text-sm mb-0.5">แตะเพื่อเลือกไฟล์ Excel หรือลากไฟล์มาวางที่นี่</div>
+          <div class="text-[11px] text-slate-400">รองรับไฟล์นามสกุล <strong>.xlsx, .xls, .csv</strong></div>
+          <div id="excel-file-selected-name" class="mt-2 hidden inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-800 font-bold rounded-full text-xs">
+            <span>📄</span> <span id="excel-file-name-text"></span>
+          </div>
+        </div>
+
+        <!-- แผงแสดงตัวอย่างรายการ (Preview Table) -->
+        <div id="excel-preview-panel" class="hidden space-y-2 border-t border-slate-100 pt-3">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-slate-700 flex items-center gap-1.5">
+              <span>👀</span> <span>ตัวอย่างข้อมูลที่ตรวจพบ:</span>
+            </span>
+            <span id="excel-preview-count-badge" class="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 font-bold rounded-full text-xs">0 รายการ</span>
+          </div>
+          <div class="max-h-52 overflow-x-auto overflow-y-auto border border-slate-200 rounded-xl">
+            <table class="w-full text-left text-[11px] border-collapse" id="excel-preview-table">
+              <thead class="bg-slate-100 text-slate-700 sticky top-0" id="excel-preview-thead"></thead>
+              <tbody class="divide-y divide-slate-100" id="excel-preview-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ปุ่มควบคุมด้านล่าง -->
+        <div class="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeModal('excelImportModal')" class="w-full sm:w-auto px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 font-medium transition text-center cursor-pointer">ยกเลิก</button>
+          <button type="button" id="excel-confirm-import-btn" onclick="confirmExcelImport()" disabled class="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer">
+            <span>🚀</span> <span>ยืนยันการนำเข้าข้อมูล</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: พรีวิวรูปภาพขนาดใหญ่ (Image Lightbox Modal) -->
+  <div id="imageLightboxModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-5 z-[10001] no-print" onclick="closeLightboxModal(event)">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-3 sm:p-5 overflow-hidden flex flex-col items-center border border-amber-200/40 relative" onclick="event.stopPropagation()">
+      <button type="button" onclick="closeModal('imageLightboxModal')" class="absolute top-3 right-3 text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold leading-none cursor-pointer transition">&times;</button>
+      <div class="w-full max-h-[70vh] flex items-center justify-center overflow-hidden rounded-2xl bg-slate-900/5 mb-3">
+        <img id="lightbox-img" src="" alt="รูปถ่ายครุภัณฑ์" class="max-w-full max-h-[68vh] object-contain rounded-xl shadow-xs">
+      </div>
+      <div class="w-full text-center px-2">
+        <h4 id="lightbox-title" class="font-bold text-sm sm:text-base text-red-950 truncate">รูปถ่ายครุภัณฑ์</h4>
+        <p id="lightbox-sub" class="text-xs text-slate-500 font-mono mt-0.5 truncate"></p>
+      </div>
+    </div>
+  </div>
+
   <!-- Datalist รายชื่อครูและบุคลากรโรงเรียนบ้านดงกลาง สำหรับ Auto-complete -->
   <datalist id="school-staff-datalist">
     <option value="นางสายสายใจ  วิลัยทอง">ผู้อำนวยการโรงเรียน</option>
@@ -2753,6 +2900,7 @@
     <option value="นางสาวภัฐธีรา  จุลพันธ์">ธุรการโรงเรียน</option>
   </datalist>
 
-  <script src="app.js?v=13.4"></script>
+  <script src="xlsx.full.min.js"></script>
+  <script src="app.js?v=13.5"></script>
 </body>
 </html>

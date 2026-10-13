@@ -2296,12 +2296,19 @@ function renderAssetTable() {
         ${item.doc_no ? `<div class="text-[10px] text-slate-400 mt-0.5 truncate max-w-[130px]" title="เลขที่เอกสาร: ${escapeHtml(item.doc_no)}">📄 ${escapeHtml(item.doc_no)}</div>` : ''}
       </td>
       <td class="p-2 border border-slate-200 text-xs">
-        <div class="font-bold text-slate-900 text-xs">${escapeHtml(item.asset_name || '-')}</div>
-        ${item.spec ? `<div class="text-[11px] text-slate-600 mt-0.5 line-clamp-2" title="${escapeHtml(item.spec)}">${escapeHtml(item.spec)}</div>` : ''}
-        <div class="flex flex-wrap items-center gap-1 mt-1">
-          ${item.category ? `<span class="inline-block text-[10px] bg-amber-50 text-amber-900 border border-amber-200/70 px-1.5 py-0.2 rounded font-medium">${escapeHtml(item.category)}</span>` : ''}
-          ${item.model ? `<span class="inline-block text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded">${escapeHtml(item.model)}</span>` : ''}
-          ${item.qty && item.qty > 1 ? `<span class="inline-block text-[10px] bg-blue-50 text-blue-700 font-semibold px-1.5 py-0.2 rounded">${item.qty} หน่วย</span>` : ''}
+        <div class="flex items-start gap-2">
+          ${item.image_url ? `
+            <img src="${escapeHtml(item.image_url)}" onclick="event.stopPropagation(); openLightboxModal('${escapeHtml(item.image_url)}', '${escapeHtml(item.asset_name || '')}', '${escapeHtml(item.asset_code || '')}')" class="w-10 h-10 rounded-lg object-cover border border-amber-300 shadow-2xs cursor-pointer hover:scale-110 hover:shadow-md transition-transform shrink-0 mt-0.5" alt="รูปครุภัณฑ์" title="แตะเพื่อดูรูปขนาดใหญ่">
+          ` : ''}
+          <div class="min-w-0 flex-1">
+            <div class="font-bold text-slate-900 text-xs">${escapeHtml(item.asset_name || '-')}</div>
+            ${item.spec ? `<div class="text-[11px] text-slate-600 mt-0.5 line-clamp-2" title="${escapeHtml(item.spec)}">${escapeHtml(item.spec)}</div>` : ''}
+            <div class="flex flex-wrap items-center gap-1 mt-1">
+              ${item.category ? `<span class="inline-block text-[10px] bg-amber-50 text-amber-900 border border-amber-200/70 px-1.5 py-0.2 rounded font-medium">${escapeHtml(item.category)}</span>` : ''}
+              ${item.model ? `<span class="inline-block text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded">${escapeHtml(item.model)}</span>` : ''}
+              ${item.qty && item.qty > 1 ? `<span class="inline-block text-[10px] bg-blue-50 text-blue-700 font-semibold px-1.5 py-0.2 rounded">${item.qty} หน่วย</span>` : ''}
+            </div>
+          </div>
         </div>
       </td>
       <td class="p-2 border border-slate-200 text-right text-xs">
@@ -2420,12 +2427,17 @@ function renderAssetGridCards(list = null) {
         </div>
 
         <!-- Thumbnail / Category Badge Box -->
-        <div class="h-24 sm:h-28 rounded-xl bg-gradient-to-br from-amber-50/80 via-slate-50 to-amber-100/30 border border-amber-100/70 flex flex-col items-center justify-center mb-3 relative overflow-hidden group-hover:scale-[1.01] transition-transform">
-          <span class="text-3xl sm:text-4xl filter drop-shadow-xs">📦</span>
-          <span class="text-[10px] font-semibold text-amber-800/80 mt-1 px-2 py-0.5 bg-white/80 rounded-full border border-amber-200/50 backdrop-blur-xs truncate max-w-[90%]">
-            ${escapeHtml(item.category || 'ครุภัณฑ์การศึกษา')}
-          </span>
-          <span class="absolute top-1.5 right-1.5 text-[9px] font-mono text-slate-400 bg-white/70 px-1 rounded">
+        <div class="h-28 rounded-xl bg-gradient-to-br from-amber-50/80 via-slate-50 to-amber-100/30 border border-amber-100/70 flex flex-col items-center justify-center mb-3 relative overflow-hidden group-hover:scale-[1.01] transition-transform">
+          ${item.image_url ? `
+            <img src="${escapeHtml(item.image_url)}" onclick="event.stopPropagation(); openLightboxModal('${escapeHtml(item.image_url)}', '${escapeHtml(item.asset_name || '')}', '${escapeHtml(item.asset_code || '')}')" class="w-full h-full object-cover cursor-pointer" alt="รูปครุภัณฑ์" title="แตะเพื่อดูรูปขนาดใหญ่">
+            <span class="absolute bottom-1.5 left-2 text-[9px] font-semibold text-white bg-black/65 px-2 py-0.5 rounded-full backdrop-blur-xs flex items-center gap-1 shadow-xs">📷 มีรูปถ่าย</span>
+          ` : `
+            <span class="text-3xl sm:text-4xl filter drop-shadow-xs">📦</span>
+            <span class="text-[10px] font-semibold text-amber-800/80 mt-1 px-2 py-0.5 bg-white/80 rounded-full border border-amber-200/50 backdrop-blur-xs truncate max-w-[90%]">
+              ${escapeHtml(item.category || 'ครุภัณฑ์การศึกษา')}
+            </span>
+          `}
+          <span class="absolute top-1.5 right-1.5 text-[9px] font-mono text-slate-500 bg-white/80 px-1.5 py-0.2 rounded shadow-2xs">
             ID:${item.id}
           </span>
         </div>
@@ -3005,6 +3017,7 @@ function openAddAssetModal() {
   document.getElementById('modal-asset-title').innerText = '➕ ลงทะเบียนครุภัณฑ์ใหม่';
   document.getElementById('modal-asset-submit-btn').innerText = '💾 บันทึกข้อมูล';
   document.getElementById('form-asset').reset();
+  removeAssetPhoto();
   document.getElementById('a_date').value = new Date().toISOString().split('T')[0];
   document.getElementById('a_qty').value = '1';
   document.getElementById('a_life').value = '5';
@@ -3034,6 +3047,12 @@ function editAsset(id) {
   document.getElementById('edit_asset_id').value = item.id;
   document.getElementById('modal-asset-title').innerText = '✏️ แก้ไขข้อมูลครุภัณฑ์';
   document.getElementById('modal-asset-submit-btn').innerText = '💾 บันทึกการแก้ไข';
+
+  if (item.image_url) {
+    setAssetPhoto(item.image_url);
+  } else {
+    removeAssetPhoto();
+  }
 
   document.getElementById('a_name').value = item.asset_name || '';
   document.getElementById('a_code').value = item.asset_code || '';
@@ -3127,6 +3146,8 @@ async function saveAsset(e) {
     chosenPerson = cleanFieldText(document.getElementById('a_person')?.value);
   }
 
+  const photoData = document.getElementById('a_photo_data')?.value || '';
+
   const body = {
     asset_name: cleanFieldText(document.getElementById('a_name').value),
     asset_code: cleanFieldText(document.getElementById('a_code').value),
@@ -3146,7 +3167,8 @@ async function saveAsset(e) {
     budget_source: document.getElementById('a_budget_source').value,
     acquisition_method: document.getElementById('a_acquisition_method').value,
     responsible_person: chosenPerson,
-    remark: fullRemark
+    remark: fullRemark,
+    image_url: photoData
   };
 
   const url = editId ? `/api/assets/${editId}` : '/api/assets';
@@ -5605,9 +5627,14 @@ function renderScanAssetCard(asset) {
     <!-- บัตรข้อมูลครุภัณฑ์ -->
     <div class="bg-gradient-to-br from-red-50/50 via-white to-amber-50/50 p-3.5 rounded-2xl border border-amber-300/80 shadow-xs space-y-2.5">
       <div class="flex items-start justify-between gap-2 border-b border-amber-200/60 pb-2">
-        <div class="min-w-0">
-          <div class="text-[10px] font-bold text-amber-800 uppercase tracking-wider">รายการครุภัณฑ์</div>
-          <div class="text-sm sm:text-base font-bold text-red-950 leading-tight">${escapeHtml(asset.asset_name || '-')}</div>
+        <div class="flex items-start gap-2.5 min-w-0 flex-1">
+          ${asset.image_url ? `
+            <img src="${escapeHtml(asset.image_url)}" onclick="openLightboxModal('${escapeHtml(asset.image_url)}', '${escapeHtml(asset.asset_name || '')}', '${escapeHtml(asset.asset_code || '')}')" class="w-12 h-12 rounded-xl object-cover border border-amber-300 shadow-2xs shrink-0 cursor-pointer hover:scale-105 transition" alt="รูปครุภัณฑ์" title="กดเพื่อดูรูปขยาย">
+          ` : ''}
+          <div class="min-w-0 flex-1">
+            <div class="text-[10px] font-bold text-amber-800 uppercase tracking-wider">รายการครุภัณฑ์</div>
+            <div class="text-sm sm:text-base font-bold text-red-950 leading-tight">${escapeHtml(asset.asset_name || '-')}</div>
+          </div>
         </div>
         <span class="px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold border shrink-0 ${statusBadgeClass}">
           ${escapeHtml(asset.status || 'ใช้งานได้ดี')}
@@ -5802,6 +5829,647 @@ window.handleScanImageFile = handleScanImageFile;
 window.resumeScanner = resumeScanner;
 window.handleSaveScanAudit = handleSaveScanAudit;
 window.openAddAssetWithCode = openAddAssetWithCode;
+
+// ==============================================================
+// ระบบแนบรูปถ่ายครุภัณฑ์ (Asset Photos & Lightbox Viewer)
+// ==============================================================
+function handleAssetPhotoSelected(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  if (!file.type.startsWith('image/')) {
+    alert('กรุณาเลือกไฟล์รูปภาพเท่านั้น (JPG, PNG, WebP)');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      // ปรับลดขนาดรูปภาพอัตโนมัติ (Canvas Compression) เพื่อประหยัดพื้นที่ฐานข้อมูล
+      const MAX_DIM = 960;
+      let width = img.width;
+      let height = img.height;
+
+      if (width > MAX_DIM || height > MAX_DIM) {
+        if (width > height) {
+          height = Math.round((height * MAX_DIM) / width);
+          width = MAX_DIM;
+        } else {
+          width = Math.round((width * MAX_DIM) / height);
+          height = MAX_DIM;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // บีบอัดเป็น JPEG คุณภาพ 0.82 (ไฟล์ขนาด ~30-60 KB)
+      const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+      setAssetPhoto(compressedDataUrl);
+      showToast('แนบรูปถ่ายครุภัณฑ์เรียบร้อยแล้ว', 'success');
+    };
+    img.onerror = function() {
+      showToast('ไม่สามารถประมวลผลรูปภาพได้', 'error');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
+
+function setAssetPhoto(dataUrl) {
+  const photoInput = document.getElementById('a_photo_data');
+  const previewImg = document.getElementById('asset-photo-preview-img');
+  const placeholder = document.getElementById('asset-photo-placeholder');
+  const removeBtn = document.getElementById('asset-photo-remove-btn');
+  const clearBtn = document.getElementById('asset-photo-clear-btn');
+
+  if (photoInput) photoInput.value = dataUrl || '';
+
+  if (dataUrl) {
+    if (previewImg) {
+      previewImg.src = dataUrl;
+      previewImg.classList.remove('hidden');
+    }
+    if (placeholder) placeholder.classList.add('hidden');
+    if (removeBtn) removeBtn.classList.remove('hidden');
+    if (clearBtn) clearBtn.classList.remove('hidden');
+  } else {
+    removeAssetPhoto();
+  }
+}
+
+function removeAssetPhoto() {
+  const photoInput = document.getElementById('a_photo_data');
+  const previewImg = document.getElementById('asset-photo-preview-img');
+  const placeholder = document.getElementById('asset-photo-placeholder');
+  const removeBtn = document.getElementById('asset-photo-remove-btn');
+  const clearBtn = document.getElementById('asset-photo-clear-btn');
+  const fileInput = document.getElementById('a_photo_file');
+
+  if (photoInput) photoInput.value = '';
+  if (previewImg) {
+    previewImg.src = '';
+    previewImg.classList.add('hidden');
+  }
+  if (placeholder) placeholder.classList.remove('hidden');
+  if (removeBtn) removeBtn.classList.add('hidden');
+  if (clearBtn) clearBtn.classList.add('hidden');
+  if (fileInput) fileInput.value = '';
+}
+
+function openLightboxModal(src, title, subtitle) {
+  if (!src) return;
+  const imgEl = document.getElementById('lightbox-img');
+  const titleEl = document.getElementById('lightbox-title');
+  const subEl = document.getElementById('lightbox-sub');
+
+  if (imgEl) imgEl.src = src;
+  if (titleEl) titleEl.innerText = title || 'รูปภาพครุภัณฑ์';
+  if (subEl) subEl.innerText = subtitle ? `รหัสทะเบียน: ${subtitle}` : '';
+
+  openModal('imageLightboxModal');
+}
+
+function closeLightboxModal(event) {
+  if (event && event.target && event.target.id !== 'imageLightboxModal') return;
+  closeModal('imageLightboxModal');
+}
+
+// ==============================================================
+// ระบบส่งออกไฟล์ Excel (.xlsx) สำหรับครุภัณฑ์และวัสดุ
+// ==============================================================
+function exportAssetsExcel(filteredOnly = false) {
+  if (typeof XLSX === 'undefined') {
+    alert('ระบบกำลังดาวน์โหลดโมดูล Excel กรุณารอครู่หนึ่งแล้วลองใหม่อีกครั้ง');
+    return;
+  }
+
+  const items = filteredOnly ? getFilteredAssets() : (assetList && assetList.length > 0 ? assetList : getFilteredAssets());
+  if (!items || items.length === 0) {
+    showToast('ไม่มีรายการครุภัณฑ์ให้ส่งออก', 'info');
+    return;
+  }
+
+  const rows = items.map((item, idx) => {
+    const cost = Number(item.cost || 0);
+    const qty = Number(item.qty || 1);
+    const totalCost = Number(item.total_cost || (cost * qty));
+    const usefulLife = Number(item.useful_life || 0);
+    const deprRate = usefulLife > 0 ? (100 / usefulLife).toFixed(2) + '%' : (item.depr_rate || '20%');
+    const accDepr = item.acc_depr !== undefined ? Number(item.acc_depr) : 0;
+    const netValue = item.net_book_value !== undefined ? Number(item.net_book_value) : cost;
+    const cleanRemark = (item.remark || '').replace(/\[ภาพ:[^\]]+\]/g, '').trim();
+
+    return {
+      'ลำดับ': idx + 1,
+      'รหัสทรัพย์สิน': item.asset_code || '',
+      'รายการ/ชื่อครุภัณฑ์': item.asset_name || '',
+      'ประเภท/หมวดหมู่': item.category || '',
+      'ลักษณะ/รายละเอียด': item.spec || '',
+      'รุ่น/แบบ': item.model || '',
+      'วันที่ได้มา': item.received_date || '',
+      'เลขที่เอกสาร': item.doc_no || '',
+      'จำนวน': qty,
+      'ราคาต่อหน่วย (บาท)': cost,
+      'มูลค่ารวม (บาท)': totalCost,
+      'อายุการใช้งาน (ปี)': usefulLife,
+      'อัตราค่าเสื่อมราคา': deprRate,
+      'ค่าเสื่อมราคาสะสม (บาท)': accDepr,
+      'มูลค่าสุทธิคงเหลือ (บาท)': netValue,
+      'สถานที่ตั้ง/เก็บ': item.location || '',
+      'ผู้รับผิดชอบ': item.responsible_person || '',
+      'แหล่งเงินงบประมาณ': item.budget_source || '',
+      'วิธีการได้มา': item.acquisition_method || '',
+      'ผู้ขาย/บริจาค': item.vendor || '',
+      'เบอร์โทรผู้ขาย': item.vendor_phone || '',
+      'สถานะ': item.status || 'ใช้งานได้ดี',
+      'หมายเหตุ': cleanRemark
+    };
+  });
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [
+    { wch: 6 },  // ลำดับ
+    { wch: 22 }, // รหัสทรัพย์สิน
+    { wch: 34 }, // รายการ
+    { wch: 20 }, // หมวดหมู่
+    { wch: 26 }, // ลักษณะ
+    { wch: 18 }, // รุ่น
+    { wch: 14 }, // วันที่
+    { wch: 16 }, // เอกสาร
+    { wch: 8 },  // จำนวน
+    { wch: 16 }, // ราคาต่อหน่วย
+    { wch: 16 }, // มูลค่ารวม
+    { wch: 14 }, // อายุใช้งาน
+    { wch: 14 }, // อัตราเสื่อม
+    { wch: 16 }, // เสื่อมสะสม
+    { wch: 16 }, // สุทธิ
+    { wch: 22 }, // สถานที่
+    { wch: 20 }, // ผู้รับผิดชอบ
+    { wch: 16 }, // แหล่งเงิน
+    { wch: 16 }, // วิธีได้มา
+    { wch: 22 }, // ผู้ขาย
+    { wch: 14 }, // เบอร์โทร
+    { wch: 14 }, // สถานะ
+    { wch: 25 }  // หมายเหตุ
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'ทะเบียนคุมครุภัณฑ์');
+  const dateStr = new Date().toISOString().split('T')[0];
+  XLSX.writeFile(wb, `ทะเบียนคุมครุภัณฑ์_โรงเรียนบ้านดงกลาง_${dateStr}.xlsx`);
+  showToast(`ส่งออกไฟล์ Excel สำเร็จ (${rows.length} รายการ)`, 'success');
+}
+
+function exportMaterialsExcel(filteredOnly = false) {
+  if (typeof XLSX === 'undefined') {
+    alert('ระบบกำลังดาวน์โหลดโมดูล Excel กรุณารอครู่หนึ่งแล้วลองใหม่อีกครั้ง');
+    return;
+  }
+
+  const items = filteredOnly ? getFilteredMaterials() : (materialList && materialList.length > 0 ? materialList : getFilteredMaterials());
+  if (!items || items.length === 0) {
+    showToast('ไม่มีรายการวัสดุให้ส่งออก', 'info');
+    return;
+  }
+
+  const rows = items.map((item, idx) => ({
+    'ลำดับ': idx + 1,
+    'วันเดือนปี': item.trans_date || '',
+    'รับจาก / จ่ายให้': item.party || '',
+    'ชื่อหรือชนิดวัสดุ': item.material_name || '',
+    'ขนาดหรือลักษณะ': item.size_spec || '',
+    'หน่วยนับ': item.unit || '',
+    'เลขที่เอกสาร': item.doc_no || '',
+    'ประเภทเงิน': item.budget_type || '',
+    'จำนวนคงเหลือยกมา': Number(item.opening_stock || 0),
+    'จำนวนรับเข้า': Number(item.qty_in || 0),
+    'จำนวนจ่ายออก': Number(item.qty_out || 0),
+    'จำนวนคงเหลือ': Number(item.balance !== undefined ? item.balance : 0),
+    'ราคาต่อหน่วย (บาท)': Number(item.unit_price || 0),
+    'มูลค่ารวม (บาท)': Number(item.total_amount !== undefined ? item.total_amount : ((Number(item.qty_in || 0) || Number(item.qty_out || 0) || Number(item.opening_stock || 0)) * Number(item.unit_price || 0))),
+    'หมายเหตุ': item.remark || ''
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [
+    { wch: 6 },  // ลำดับ
+    { wch: 14 }, // วันเดือนปี
+    { wch: 24 }, // รับจาก/จ่ายให้
+    { wch: 30 }, // ชื่อวัสดุ
+    { wch: 22 }, // ขนาด/ลักษณะ
+    { wch: 10 }, // หน่วยนับ
+    { wch: 16 }, // เอกสาร
+    { wch: 16 }, // ประเภทเงิน
+    { wch: 14 }, // ยกมา
+    { wch: 12 }, // รับเข้า
+    { wch: 12 }, // จ่ายออก
+    { wch: 14 }, // คงเหลือ
+    { wch: 16 }, // ราคาต่อหน่วย
+    { wch: 18 }, // มูลค่ารวม
+    { wch: 22 }  // หมายเหตุ
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'บัญชีคุมวัสดุ');
+  const dateStr = new Date().toISOString().split('T')[0];
+  XLSX.writeFile(wb, `บัญชีคุมวัสดุ_โรงเรียนบ้านดงกลาง_${dateStr}.xlsx`);
+  showToast(`ส่งออกไฟล์ Excel สำเร็จ (${rows.length} รายการ)`, 'success');
+}
+
+// ==============================================================
+// ระบบนำเข้าไฟล์ Excel / CSV (Bulk Excel Import & Templates)
+// ==============================================================
+let currentExcelImportType = 'asset'; // 'asset' หรือ 'material'
+let parsedExcelRows = [];
+
+function openExcelImportModal(type = 'asset') {
+  currentExcelImportType = type;
+  parsedExcelRows = [];
+
+  const titleEl = document.getElementById('excel-import-modal-title');
+  const tplLabel = document.getElementById('excel-import-template-label');
+  const fileInput = document.getElementById('excel-file-input');
+  const nameBox = document.getElementById('excel-file-selected-name');
+  const previewPanel = document.getElementById('excel-preview-panel');
+  const confirmBtn = document.getElementById('excel-confirm-import-btn');
+
+  if (fileInput) fileInput.value = '';
+  if (nameBox) nameBox.classList.add('hidden');
+  if (previewPanel) previewPanel.classList.add('hidden');
+  if (confirmBtn) {
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = '<span>📥</span> <span>ยืนยันการนำเข้า</span>';
+  }
+
+  if (type === 'material') {
+    if (titleEl) titleEl.innerHTML = '<span>📦</span> <span>นำเข้าข้อมูลวัสดุจาก Excel (.xlsx / .csv)</span>';
+    if (tplLabel) tplLabel.innerText = 'ดาวน์โหลดแบบฟอร์มวัสดุ (Template)';
+  } else {
+    if (titleEl) titleEl.innerHTML = '<span>📊</span> <span>นำเข้าข้อมูลครุภัณฑ์จาก Excel (.xlsx / .csv)</span>';
+    if (tplLabel) tplLabel.innerText = 'ดาวน์โหลดแบบฟอร์มครุภัณฑ์ (Template)';
+  }
+
+  openModal('excelImportModal');
+}
+
+function downloadExcelTemplate() {
+  if (typeof XLSX === 'undefined') {
+    alert('ระบบกำลังดาวน์โหลดโมดูล Excel กรุณารอครู่หนึ่งแล้วลองใหม่อีกครั้ง');
+    return;
+  }
+
+  if (currentExcelImportType === 'material') {
+    const templateData = [
+      {
+        'วันเดือนปี(YYYY-MM-DD)*': '2026-10-01',
+        'ชื่อหรือชนิดวัสดุ*': 'กระดาษ A4 80 แกรม Double A',
+        'รับจาก / จ่ายให้*': 'ร้านศึกษาภัณฑ์ พาณิชย์',
+        'ขนาดหรือลักษณะ': 'ขนาด A4 500 แผ่น/รีม',
+        'หน่วยนับ*': 'รีม',
+        'เลขที่เอกสาร': 'บิล 1245/69',
+        'ประเภทเงิน': 'เงินงบประมาณ',
+        'จำนวนคงเหลือยกมา': 0,
+        'จำนวนรับเข้า': 10,
+        'จำนวนจ่ายออก': 0,
+        'ราคาต่อหน่วย(บาท)': 135,
+        'หมายเหตุ': 'สำหรับงานพิมพ์เอกสารธุรการ'
+      },
+      {
+        'วันเดือนปี(YYYY-MM-DD)*': '2026-10-05',
+        'ชื่อหรือชนิดวัสดุ*': 'ปากกาเคมีไวท์บอร์ด ตราม้า สีน้ำเงิน',
+        'รับจาก / จ่ายให้*': 'ครูผู้สอนชั้น ป.4',
+        'ขนาดหรือลักษณะ': 'หัวแหลม 2 มม.',
+        'หน่วยนับ*': 'ด้าม',
+        'เลขที่เอกสาร': 'ขอเบิก 03/69',
+        'ประเภทเงิน': 'เงินงบประมาณ',
+        'จำนวนคงเหลือยกมา': 20,
+        'จำนวนรับเข้า': 0,
+        'จำนวนจ่ายออก': 2,
+        'ราคาต่อหน่วย(บาท)': 25,
+        'หมายเหตุ': 'เบิกใช้สอนห้อง ป.4'
+      }
+    ];
+    const ws = XLSX.utils.json_to_sheet(templateData);
+    ws['!cols'] = [
+      { wch: 18 }, { wch: 30 }, { wch: 22 }, { wch: 20 },
+      { wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 14 },
+      { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 22 }
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'แบบฟอร์มวัสดุ');
+    XLSX.writeFile(wb, 'แบบฟอร์มนำเข้าวัสดุ_โรงเรียนบ้านดงกลาง.xlsx');
+    showToast('ดาวน์โหลดแบบฟอร์มวัสดุสำเร็จ', 'success');
+  } else {
+    const templateData = [
+      {
+        'รหัสทรัพย์สิน*': '7440-001-0001/2569',
+        'รายการ/ชื่อครุภัณฑ์*': 'เครื่องคอมพิวเตอร์ตั้งโต๊ะ All-in-One Acer Aspire',
+        'หมวดหมู่': 'ครุภัณฑ์คอมพิวเตอร์',
+        'ลักษณะ/รายละเอียด': 'จอ 23.8 นิ้ว Core i5 RAM 16GB SSD 512GB',
+        'รุ่นแบบ': 'C24-1700',
+        'วันที่ได้มา(YYYY-MM-DD)': '2026-05-15',
+        'เลขที่เอกสาร': 'บส.12/2569',
+        'จำนวน': 1,
+        'ราคาต่อหน่วย(บาท)': 24500,
+        'อายุการใช้งาน(ปี)': 5,
+        'สถานที่ตั้ง/เก็บ': 'ห้องปฏิบัติการคอมพิวเตอร์',
+        'ผู้รับผิดชอบ': 'นายครูคอม รักเรียน',
+        'แหล่งเงิน': 'เงินงบประมาณ',
+        'วิธีการได้มา': 'เฉพาะเจาะจง',
+        'ผู้ขาย/บริจาค': 'บจก. ไอทีคอมพิวเตอร์ เซ็นเตอร์',
+        'เบอร์โทรผู้ขาย': '044-123456',
+        'สถานะ': 'ใช้งานได้ดี',
+        'หมายเหตุ': 'พร้อมชุดคีย์บอร์ดและเมาส์ไร้สาย'
+      },
+      {
+        'รหัสทรัพย์สิน*': '7440-002-0001/2569',
+        'รายการ/ชื่อครุภัณฑ์*': 'เครื่องพิมพ์เลเซอร์มัลติฟังก์ชัน HP LaserJet MFP',
+        'หมวดหมู่': 'ครุภัณฑ์สำนักงาน',
+        'ลักษณะ/รายละเอียด': 'พิมพ์ ขาวดำ-สี ถ่ายเอกสาร สแกน',
+        'รุ่นแบบ': 'M283fdw',
+        'วันที่ได้มา(YYYY-MM-DD)': '2026-06-10',
+        'เลขที่เอกสาร': 'บส.18/2569',
+        'จำนวน': 1,
+        'ราคาต่อหน่วย(บาท)': 16800,
+        'อายุการใช้งาน(ปี)': 5,
+        'สถานที่ตั้ง/เก็บ': 'ห้องธุรการ',
+        'ผู้รับผิดชอบ': 'นางพัสดุ ดงกลาง',
+        'แหล่งเงิน': 'เงินงบประมาณ',
+        'วิธีการได้มา': 'เฉพาะเจาะจง',
+        'ผู้ขาย/บริจาค': 'หจก. ออฟฟิศซัพพลาย นครราชสีมา',
+        'เบอร์โทรผู้ขาย': '044-654321',
+        'สถานะ': 'ใช้งานได้ดี',
+        'หมายเหตุ': ''
+      }
+    ];
+    const ws = XLSX.utils.json_to_sheet(templateData);
+    ws['!cols'] = [
+      { wch: 22 }, { wch: 34 }, { wch: 20 }, { wch: 26 },
+      { wch: 16 }, { wch: 18 }, { wch: 14 }, { wch: 8 },
+      { wch: 16 }, { wch: 14 }, { wch: 22 }, { wch: 18 },
+      { wch: 14 }, { wch: 14 }, { wch: 24 }, { wch: 14 },
+      { wch: 14 }, { wch: 22 }
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'แบบฟอร์มครุภัณฑ์');
+    XLSX.writeFile(wb, 'แบบฟอร์มนำเข้าครุภัณฑ์_โรงเรียนบ้านดงกลาง.xlsx');
+    showToast('ดาวน์โหลดแบบฟอร์มครุภัณฑ์สำเร็จ', 'success');
+  }
+}
+
+function handleExcelFileSelected(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  if (typeof XLSX === 'undefined') {
+    alert('ระบบกำลังดาวน์โหลดโมดูล Excel กรุณารอครู่หนึ่งแล้วลองใหม่อีกครั้ง');
+    return;
+  }
+
+  const nameBox = document.getElementById('excel-file-selected-name');
+  const nameText = document.getElementById('excel-file-name-text');
+  if (nameBox && nameText) {
+    nameText.innerText = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+    nameBox.classList.remove('hidden');
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const firstSheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[firstSheetName];
+      const rawRows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+      if (!rawRows || rawRows.length === 0) {
+        alert('ไม่พบข้อมูลในไฟล์ Excel ที่เลือก');
+        return;
+      }
+
+      // ฟังก์ชันค้นหาคอลัมน์แบบยืดหยุ่น (ทนต่อการเว้นวรรค ดอกจัน ตัวพิมพ์เล็ก-ใหญ่)
+      const getField = (row, candidates) => {
+        const rowKeys = Object.keys(row);
+        for (const candidate of candidates) {
+          const candNorm = candidate.toLowerCase().replace(/[\s\*\(\)\-\_\/]/g, '');
+          for (const key of rowKeys) {
+            const keyNorm = key.toLowerCase().replace(/[\s\*\(\)\-\_\/]/g, '');
+            if (keyNorm === candNorm || keyNorm.includes(candNorm) || candNorm.includes(keyNorm)) {
+              const val = row[key];
+              if (val !== undefined && val !== null && String(val).trim() !== '') {
+                return String(val).trim();
+              }
+            }
+          }
+        }
+        return '';
+      };
+
+      parsedExcelRows = [];
+
+      if (currentExcelImportType === 'material') {
+        rawRows.forEach((row) => {
+          const name = getField(row, ['ชื่อหรือชนิดวัสดุ', 'ชื่อวัสดุ', 'รายการ', 'วัสดุ', 'material_name', 'name']);
+          if (!name) return;
+
+          parsedExcelRows.push({
+            trans_date: getField(row, ['วันเดือนปี', 'วันที่', 'trans_date', 'date']) || new Date().toISOString().split('T')[0],
+            material_code: getField(row, ['รหัสวัสดุ', 'รหัส', 'material_code', 'code']),
+            material_name: name,
+            size_spec: getField(row, ['ขนาดหรือลักษณะ', 'ขนาด', 'ลักษณะ', 'size_spec', 'spec']),
+            unit: getField(row, ['หน่วยนับ', 'หน่วย', 'unit']) || 'ชิ้น',
+            party: getField(row, ['รับจาก / จ่ายให้', 'รับจาก', 'จ่ายให้', 'party']),
+            doc_no: getField(row, ['เลขที่เอกสาร', 'เอกสาร', 'doc_no', 'doc']),
+            budget_type: getField(row, ['ประเภทเงิน', 'งบประมาณ', 'budget_type', 'budget']) || 'เงินงบประมาณ',
+            opening_stock: parseFloat(getField(row, ['จำนวนคงเหลือยกมา', 'ยกมา', 'opening_stock'])) || 0,
+            qty_in: parseFloat(getField(row, ['จำนวนรับเข้า', 'รับเข้า', 'จำนวนรับ', 'qty_in'])) || 0,
+            qty_out: parseFloat(getField(row, ['จำนวนจ่ายออก', 'จ่ายออก', 'จำนวนจ่าย', 'qty_out'])) || 0,
+            unit_price: parseFloat(getField(row, ['ราคาต่อหน่วย', 'ราคา', 'unit_price', 'price', 'cost'])) || 0,
+            remark: getField(row, ['หมายเหตุ', 'remark', 'note'])
+          });
+        });
+      } else {
+        rawRows.forEach((row) => {
+          const code = getField(row, ['รหัสทรัพย์สิน', 'รหัส', 'asset_code', 'code', 'รหัสครุภัณฑ์']);
+          const name = getField(row, ['รายการ/ชื่อครุภัณฑ์', 'ชื่อครุภัณฑ์', 'รายการ', 'asset_name', 'name']);
+          if (!code && !name) return;
+
+          parsedExcelRows.push({
+            asset_code: code,
+            asset_name: name || code,
+            category: getField(row, ['ประเภท/หมวดหมู่', 'หมวดหมู่', 'ประเภท', 'category']) || 'ครุภัณฑ์คอมพิวเตอร์',
+            spec: getField(row, ['ลักษณะ/รายละเอียด', 'ลักษณะ', 'รายละเอียด', 'spec']),
+            model: getField(row, ['รุ่น/แบบ', 'รุ่นแบบ', 'รุ่น', 'model']),
+            received_date: getField(row, ['วันที่ได้มา', 'วันที่', 'received_date', 'date']) || new Date().toISOString().split('T')[0],
+            doc_no: getField(row, ['เลขที่เอกสาร', 'เอกสาร', 'doc_no', 'doc']),
+            qty: parseInt(getField(row, ['จำนวน', 'qty', 'quantity'])) || 1,
+            cost: parseFloat(getField(row, ['ราคาต่อหน่วย', 'ราคา', 'cost', 'price'])) || 0,
+            useful_life: parseInt(getField(row, ['อายุการใช้งาน', 'อายุใช้งาน', 'useful_life', 'life'])) || 5,
+            location: getField(row, ['สถานที่ตั้ง/เก็บ', 'สถานที่ตั้ง', 'สถานที่', 'ที่ตั้ง', 'location']),
+            responsible_person: getField(row, ['ผู้รับผิดชอบ', 'ผู้ถือครอง', 'responsible_person', 'person']),
+            budget_source: getField(row, ['แหล่งเงินงบประมาณ', 'แหล่งเงิน', 'budget_source', 'budget']) || 'เงินงบประมาณ',
+            acquisition_method: getField(row, ['วิธีการได้มา', 'วิธีได้มา', 'acquisition_method', 'method']) || 'เฉพาะเจาะจง',
+            vendor: getField(row, ['ผู้ขาย/บริจาค', 'ผู้ขาย', 'ร้านค้า', 'vendor']),
+            vendor_address: getField(row, ['ที่อยู่ผู้ขาย', 'ที่อยู่', 'vendor_address']),
+            vendor_phone: getField(row, ['เบอร์โทรผู้ขาย', 'เบอร์โทร', 'โทรศัพท์', 'vendor_phone', 'phone']),
+            status: getField(row, ['สถานะ', 'status']) || 'ใช้งานได้ดี',
+            remark: getField(row, ['หมายเหตุ', 'remark', 'note'])
+          });
+        });
+      }
+
+      if (parsedExcelRows.length === 0) {
+        alert('ไม่สามารถอ่านข้อมูลแถวที่ถูกต้องได้ กรุณาตรวจสอบว่าตรงกับรูปแบบ Template หรือไม่');
+        return;
+      }
+
+      renderExcelPreview();
+    } catch (err) {
+      console.error('Error parsing excel:', err);
+      alert('เกิดข้อผิดพลาดในการอ่านไฟล์: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function renderExcelPreview() {
+  const previewPanel = document.getElementById('excel-preview-panel');
+  const countBadge = document.getElementById('excel-preview-count-badge');
+  const thead = document.getElementById('excel-preview-thead');
+  const tbody = document.getElementById('excel-preview-tbody');
+  const confirmBtn = document.getElementById('excel-confirm-import-btn');
+
+  if (!previewPanel || !thead || !tbody) return;
+
+  if (countBadge) countBadge.innerText = `${parsedExcelRows.length} รายการ`;
+  previewPanel.classList.remove('hidden');
+
+  if (currentExcelImportType === 'material') {
+    thead.innerHTML = `
+      <tr>
+        <th class="p-2 border border-slate-200">ลำดับ</th>
+        <th class="p-2 border border-slate-200">วันที่</th>
+        <th class="p-2 border border-slate-200">ชื่อหรือชนิดวัสดุ</th>
+        <th class="p-2 border border-slate-200">รับจาก/จ่ายให้</th>
+        <th class="p-2 border border-slate-200">หน่วย</th>
+        <th class="p-2 border border-slate-200 text-center">รับ</th>
+        <th class="p-2 border border-slate-200 text-center">จ่าย</th>
+        <th class="p-2 border border-slate-200 text-right">ราคา/หน่วย</th>
+      </tr>
+    `;
+    tbody.innerHTML = parsedExcelRows.slice(0, 30).map((row, idx) => `
+      <tr class="hover:bg-amber-50/50">
+        <td class="p-1.5 border border-slate-200 text-center">${idx + 1}</td>
+        <td class="p-1.5 border border-slate-200 whitespace-nowrap">${escapeHtml(row.trans_date)}</td>
+        <td class="p-1.5 border border-slate-200 font-bold text-slate-900">${escapeHtml(row.material_name)}</td>
+        <td class="p-1.5 border border-slate-200">${escapeHtml(row.party || '-')}</td>
+        <td class="p-1.5 border border-slate-200 text-center">${escapeHtml(row.unit || '-')}</td>
+        <td class="p-1.5 border border-slate-200 text-center font-bold text-emerald-700">${row.qty_in || 0}</td>
+        <td class="p-1.5 border border-slate-200 text-center font-bold text-rose-700">${row.qty_out || 0}</td>
+        <td class="p-1.5 border border-slate-200 text-right font-mono">฿${Number(row.unit_price || 0).toLocaleString()}</td>
+      </tr>
+    `).join('');
+  } else {
+    thead.innerHTML = `
+      <tr>
+        <th class="p-2 border border-slate-200">ลำดับ</th>
+        <th class="p-2 border border-slate-200">รหัสทรัพย์สิน</th>
+        <th class="p-2 border border-slate-200">รายการ/ชื่อครุภัณฑ์</th>
+        <th class="p-2 border border-slate-200">หมวดหมู่</th>
+        <th class="p-2 border border-slate-200 text-center">จำนวน</th>
+        <th class="p-2 border border-slate-200 text-right">ราคา/หน่วย</th>
+        <th class="p-2 border border-slate-200">สถานที่ตั้ง</th>
+        <th class="p-2 border border-slate-200">สถานะ</th>
+      </tr>
+    `;
+    tbody.innerHTML = parsedExcelRows.slice(0, 30).map((row, idx) => `
+      <tr class="hover:bg-amber-50/50">
+        <td class="p-1.5 border border-slate-200 text-center">${idx + 1}</td>
+        <td class="p-1.5 border border-slate-200 font-mono font-bold text-red-950">${escapeHtml(row.asset_code || '-')}</td>
+        <td class="p-1.5 border border-slate-200 font-bold text-slate-900">${escapeHtml(row.asset_name || '-')}</td>
+        <td class="p-1.5 border border-slate-200">${escapeHtml(row.category || '-')}</td>
+        <td class="p-1.5 border border-slate-200 text-center font-bold">${row.qty || 1}</td>
+        <td class="p-1.5 border border-slate-200 text-right font-mono">฿${Number(row.cost || 0).toLocaleString()}</td>
+        <td class="p-1.5 border border-slate-200">${escapeHtml(row.location || '-')}</td>
+        <td class="p-1.5 border border-slate-200 text-center">${escapeHtml(row.status || 'ใช้งานได้ดี')}</td>
+      </tr>
+    `).join('');
+  }
+
+  if (confirmBtn) {
+    confirmBtn.disabled = parsedExcelRows.length === 0;
+    confirmBtn.innerHTML = `<span>📥</span> <span>ยืนยันการนำเข้า (${parsedExcelRows.length} รายการ)</span>`;
+  }
+}
+
+async function confirmExcelImport() {
+  if (!parsedExcelRows || parsedExcelRows.length === 0) {
+    alert('ไม่มีข้อมูลที่สามารถนำเข้าได้');
+    return;
+  }
+
+  const label = currentExcelImportType === 'material' ? 'วัสดุ' : 'ครุภัณฑ์';
+  if (!confirm(`ยืนยันการนำเข้าข้อมูล${label}จำนวน ${parsedExcelRows.length} รายการเข้าสู่ระบบ?`)) {
+    return;
+  }
+
+  const confirmBtn = document.getElementById('excel-confirm-import-btn');
+  if (confirmBtn) {
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = '<span>⏳</span> <span>กำลังบันทึกข้อมูล...</span>';
+  }
+
+  try {
+    const endpoint = currentExcelImportType === 'material' ? '/api/materials/bulk' : '/api/assets/bulk';
+    const res = await authFetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: parsedExcelRows })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      showToast(data.message || `นำเข้า${label}สำเร็จ ${parsedExcelRows.length} รายการ`, 'success');
+      closeModal('excelImportModal');
+
+      if (currentExcelImportType === 'material') {
+        await loadMaterials();
+      } else {
+        await loadAssets();
+      }
+    } else {
+      const err = await res.json().catch(() => ({}));
+      showToast('นำเข้าไม่สำเร็จ: ' + (err.error || 'ข้อผิดพลาดระบบ'), 'error');
+    }
+  } catch (err) {
+    showToast('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'error');
+  } finally {
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+      confirmBtn.innerHTML = '<span>📥</span> <span>ยืนยันการนำเข้า</span>';
+    }
+  }
+}
+
+// เปิดเผยฟังก์ชันสู่ window object เพื่อให้ inline onclick ใช้งานได้
+window.handleAssetPhotoSelected = handleAssetPhotoSelected;
+window.setAssetPhoto = setAssetPhoto;
+window.removeAssetPhoto = removeAssetPhoto;
+window.openLightboxModal = openLightboxModal;
+window.closeLightboxModal = closeLightboxModal;
+window.exportAssetsExcel = exportAssetsExcel;
+window.exportMaterialsExcel = exportMaterialsExcel;
+window.openExcelImportModal = openExcelImportModal;
+window.downloadExcelTemplate = downloadExcelTemplate;
+window.handleExcelFileSelected = handleExcelFileSelected;
+window.confirmExcelImport = confirmExcelImport;
+
 
 
 
