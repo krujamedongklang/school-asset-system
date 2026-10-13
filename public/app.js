@@ -414,16 +414,16 @@ function updateNavbarUserPill() {
 
   if (roleEl) {
     if (currentUser.role === 'admin') {
-      roleEl.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-400 text-red-950 shadow-2xs whitespace-nowrap';
+      roleEl.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-400 text-red-950 shadow-2xs whitespace-nowrap shrink-0';
       roleEl.textContent = '👑 แอดมิน';
     } else if (currentUser.canEdit && currentUser.canDelete) {
-      roleEl.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-400 text-emerald-950 shadow-2xs whitespace-nowrap';
+      roleEl.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-400 text-emerald-950 shadow-2xs whitespace-nowrap shrink-0';
       roleEl.textContent = '✏️ เจ้าหน้าที่';
     } else if (currentUser.canEdit) {
-      roleEl.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-300 text-sky-950 shadow-2xs whitespace-nowrap';
+      roleEl.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-300 text-sky-950 shadow-2xs whitespace-nowrap shrink-0';
       roleEl.textContent = '✏️ แก้ไขได้';
     } else {
-      roleEl.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-800 shadow-2xs whitespace-nowrap';
+      roleEl.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-800 shadow-2xs whitespace-nowrap shrink-0';
       roleEl.textContent = '👁️ ทั่วไป';
     }
   }
