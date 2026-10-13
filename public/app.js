@@ -1239,9 +1239,123 @@ async function handleSyncToSupabase() {
   }
 }
 
+// ==================== ระบบดึงลงเพื่อรีเฟรชบนมือถือ (Mobile Pull-to-Refresh) ====================
+function initPullToRefresh() {
+  const indicator = document.getElementById('pull-to-refresh-indicator');
+  const ptrPill = document.getElementById('ptr-pill');
+  const ptrIcon = document.getElementById('ptr-icon');
+  const ptrText = document.getElementById('ptr-text');
+  if (!indicator || !ptrPill || !ptrIcon || !ptrText) return;
+
+  let startY = 0;
+  let startX = 0;
+  let currentY = 0;
+  let isPulling = false;
+  let isRefreshing = false;
+  const THRESHOLD = 65;
+  const MAX_PULL = 115;
+
+  document.addEventListener('touchstart', (e) => {
+    if (isRefreshing || window.innerWidth >= 1024) return;
+    if (window.scrollY > 5) return;
+    if (document.querySelector('[id$="Modal"]:not(.hidden)')) return;
+    const loginEl = document.getElementById('login-overlay');
+    if (loginEl && getComputedStyle(loginEl).display !== 'none' && !loginEl.classList.contains('hidden')) return;
+
+    const scrollableParent = e.target.closest('.overflow-y-auto');
+    if (scrollableParent && scrollableParent.scrollTop > 0) return;
+
+    startY = e.touches[0].clientY;
+    startX = e.touches[0].clientX;
+    currentY = startY;
+    isPulling = true;
+    indicator.style.transition = 'none';
+  }, { passive: true });
+
+  document.addEventListener('touchmove', (e) => {
+    if (!isPulling || isRefreshing) return;
+    if (window.scrollY > 5) {
+      isPulling = false;
+      indicator.style.opacity = '0';
+      indicator.style.transform = 'translate(-50%, -60px)';
+      return;
+    }
+
+    currentY = e.touches[0].clientY;
+    const currentX = e.touches[0].clientX;
+    const deltaY = currentY - startY;
+    const deltaX = currentX - startX;
+
+    // หากเลื่อนแนวนอนมากกว่าแนวตั้ง (เช่น เลื่อนตารางซ้าย-ขวา) ให้ยกเลิก Pull-to-refresh
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
+      isPulling = false;
+      indicator.style.opacity = '0';
+      indicator.style.transform = 'translate(-50%, -60px)';
+      return;
+    }
+
+    if (deltaY > 12) {
+      const pullDist = Math.min(MAX_PULL, (deltaY - 12) * 0.55);
+      const progress = Math.min(1, pullDist / THRESHOLD);
+      indicator.style.opacity = String(Math.min(1, progress * 1.25));
+      indicator.style.transform = `translate(-50%, ${pullDist - 45}px)`;
+
+      if (pullDist >= THRESHOLD) {
+        ptrIcon.style.transform = 'rotate(180deg)';
+        ptrText.textContent = 'ปล่อยเพื่อรีเฟรชหน้าระบบ';
+        ptrPill.className = 'bg-amber-50/95 backdrop-blur-md border-2 border-emerald-500 shadow-xl rounded-full px-4 py-1.5 flex items-center gap-2 text-xs font-bold text-emerald-900 whitespace-nowrap';
+      } else {
+        ptrIcon.style.transform = 'rotate(0deg)';
+        ptrText.textContent = 'ลากลงเพื่อรีเฟรช...';
+        ptrPill.className = 'bg-white/95 backdrop-blur-md border-2 border-amber-400 shadow-xl rounded-full px-4 py-1.5 flex items-center gap-2 text-xs font-bold text-red-950 whitespace-nowrap';
+      }
+    } else {
+      indicator.style.opacity = '0';
+      indicator.style.transform = 'translate(-50%, -60px)';
+    }
+  }, { passive: true });
+
+  const finishPull = async () => {
+    if (!isPulling || isRefreshing) return;
+    isPulling = false;
+    const deltaY = currentY - startY;
+    const pullDist = deltaY > 12 ? Math.min(MAX_PULL, (deltaY - 12) * 0.55) : 0;
+
+    indicator.style.transition = 'all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)';
+
+    if (pullDist >= THRESHOLD && window.scrollY <= 5) {
+      isRefreshing = true;
+      indicator.style.opacity = '1';
+      indicator.style.transform = 'translate(-50%, 14px)';
+      ptrIcon.style.transform = 'rotate(0deg)';
+      ptrIcon.className = 'inline-block animate-spin text-sm';
+      ptrIcon.textContent = '🔄';
+      ptrText.textContent = 'กำลังรีเฟรชหน้าระบบ...';
+
+      try {
+        if ('serviceWorker' in navigator) {
+          const reg = await navigator.serviceWorker.getRegistration();
+          if (reg) await reg.update();
+        }
+      } catch (err) {}
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 220);
+    } else {
+      indicator.style.opacity = '0';
+      indicator.style.transform = 'translate(-50%, -60px)';
+    }
+  };
+
+  document.addEventListener('touchend', finishPull, { passive: true });
+  document.addEventListener('touchcancel', finishPull, { passive: true });
+}
+
 // ==================== DOM READY ====================
 document.addEventListener('DOMContentLoaded', async () => {
   try { initPwa(); } catch(e) { console.warn('PWA init error:', e); }
+  try { initPullToRefresh(); } catch(e) { console.warn('Pull-to-refresh init error:', e); }
   try { initOrgSettings(); } catch(e) { console.warn('Org settings init error:', e); }
   try { initMaterialMeta(); } catch(e) { console.warn('Material meta init error:', e); }
 
@@ -1815,6 +1929,50 @@ function clearMaterialSearch() {
   updateMaterialSelectionUI();
 }
 
+function resetAssetFilters() {
+  assetFiscalYear = 'all';
+  assetMonth = 'all';
+  assetStatusFilter = 'all';
+  assetSearchQuery = '';
+  try {
+    localStorage.setItem('asset_fiscal_year', 'all');
+    localStorage.setItem('asset_month', 'all');
+    localStorage.setItem('asset_status_filter', 'all');
+  } catch(e) {}
+  const fySelect = document.getElementById('asset-fy-select');
+  const mSelect = document.getElementById('asset-month-select');
+  const stSelect = document.getElementById('asset-status-filter');
+  const inp = document.getElementById('asset-search-input');
+  if (fySelect) fySelect.value = 'all';
+  if (mSelect) mSelect.value = 'all';
+  if (stSelect) stSelect.value = 'all';
+  if (inp) inp.value = '';
+  renderAssetTable();
+  updateAssetSelectionUI();
+}
+
+function resetMaterialFilters() {
+  materialFiscalYear = 'all';
+  materialMonth = 'all';
+  materialNameFilter = 'all';
+  materialSearchQuery = '';
+  try {
+    localStorage.setItem('material_fiscal_year', 'all');
+    localStorage.setItem('material_month', 'all');
+    localStorage.setItem('material_name_filter', 'all');
+  } catch(e) {}
+  const fySelect = document.getElementById('material-fy-select');
+  const mSelect = document.getElementById('material-month-select');
+  const matSelect = document.getElementById('material-item-select');
+  const inp = document.getElementById('material-search-input');
+  if (fySelect) fySelect.value = 'all';
+  if (mSelect) mSelect.value = 'all';
+  if (matSelect) matSelect.value = 'all';
+  if (inp) inp.value = '';
+  renderMaterialTable();
+  updateMaterialSelectionUI();
+}
+
 function getFilteredAssets() {
   return assetList.filter(item => {
     // 1. กรองปีงบประมาณ
@@ -2074,6 +2232,7 @@ function renderAssetTable() {
 
   if (list.length === 0) {
     const tr = document.createElement('tr');
+    const isAnyFiltered = assetFiscalYear !== 'all' || assetMonth !== 'all' || assetStatusFilter !== 'all' || assetSearchQuery.trim();
     let msg = '🔍 ไม่พบรายการครุภัณฑ์ในเงื่อนไขที่เลือก';
     if (assetFiscalYear !== 'all') {
       msg += ` (ปีงบ ${String(assetFiscalYear).slice(-2)})`;
@@ -2090,8 +2249,15 @@ function renderAssetTable() {
       msg += ` คำค้น "${escapeHtml(assetSearchQuery)}"`;
     }
     tr.innerHTML = `
-      <td colspan="9" class="p-8 text-center text-slate-400 text-xs sm:text-sm">
-        ${msg}
+      <td colspan="9" class="p-0 sm:p-8 text-center text-slate-400 text-xs sm:text-sm">
+        <div class="sticky left-0 w-[calc(100vw-2.25rem)] sm:w-full py-6 px-3 sm:p-0 mx-auto flex flex-col items-center justify-center gap-2">
+          <p class="text-slate-500 font-medium text-xs sm:text-sm whitespace-normal break-words">${msg}</p>
+          ${isAnyFiltered ? `
+            <button onclick="resetAssetFilters()" class="mt-1 text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3.5 py-1.5 rounded-xl transition cursor-pointer shadow-2xs">
+              🔄 แสดงรายการครุภัณฑ์ทั้งหมด
+            </button>
+          ` : ''}
+        </div>
       </td>
     `;
     screenTbody.appendChild(tr);
@@ -3119,6 +3285,7 @@ function renderMaterialTable() {
 
   if (list.length === 0) {
     const tr = document.createElement('tr');
+    const isAnyFiltered = materialFiscalYear !== 'all' || materialMonth !== 'all' || materialNameFilter !== 'all' || materialSearchQuery.trim();
     let msg = 'ไม่พบรายการวัสดุในเงื่อนไขที่เลือก';
     if (materialNameFilter !== 'all') {
       msg += ` ชนิดวัสดุ "${escapeHtml(materialNameFilter)}"`;
@@ -3134,13 +3301,15 @@ function renderMaterialTable() {
       msg += ` คำค้น "${escapeHtml(materialSearchQuery)}"`;
     }
     tr.innerHTML = `
-      <td colspan="14" class="p-10 text-center">
-        <div class="flex flex-col items-center justify-center gap-2">
-          <span class="text-4xl text-slate-300">📦</span>
-          <p class="text-slate-500 font-medium text-xs sm:text-sm">🔍 ${msg}</p>
-          <button onclick="clearMaterialSearch(); onMaterialFilterChange();" class="mt-2 text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3.5 py-1.5 rounded-xl transition cursor-pointer shadow-2xs">
-            🔄 แสดงรายการวัสดุทั้งหมด
-          </button>
+      <td colspan="14" class="p-0 sm:p-10 text-center">
+        <div class="sticky left-0 w-[calc(100vw-2.25rem)] sm:w-full py-6 px-3 sm:p-0 mx-auto flex flex-col items-center justify-center gap-2">
+          <span class="text-3xl sm:text-4xl text-slate-300">📦</span>
+          <p class="text-slate-500 font-medium text-xs sm:text-sm whitespace-normal break-words">🔍 ${msg}</p>
+          ${isAnyFiltered ? `
+            <button onclick="resetMaterialFilters()" class="mt-1 text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3.5 py-1.5 rounded-xl transition cursor-pointer shadow-2xs">
+              🔄 แสดงรายการวัสดุทั้งหมด
+            </button>
+          ` : ''}
         </div>
       </td>
     `;
