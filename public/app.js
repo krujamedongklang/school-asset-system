@@ -1727,14 +1727,14 @@ function populateFiscalYearOptions(tab) {
 
   const optAll = document.createElement('option');
   optAll.value = 'all';
-  optAll.innerText = 'ทุกปีงบประมาณ (ทั้งหมด)';
+  optAll.innerText = 'ทุกปีงบ';
   selectEl.appendChild(optAll);
 
   availableYears.forEach(year => {
     const opt = document.createElement('option');
     opt.value = String(year);
     const shortYear = String(year).slice(-2);
-    opt.innerText = `ปีงบประมาณ ${year} (ปีงบ ${shortYear})`;
+    opt.innerText = `ปี ${year} (${shortYear})`;
     selectEl.appendChild(opt);
   });
 
@@ -3853,14 +3853,14 @@ function openAnnualInspectionModal() {
     selectEl.innerHTML = '';
     const optAll = document.createElement('option');
     optAll.value = 'all';
-    optAll.innerText = 'ทุกปีงบประมาณ (สะสมทั้งหมด)';
+    optAll.innerText = 'ทุกปีงบ (สะสมทั้งหมด)';
     selectEl.appendChild(optAll);
 
     availableYears.forEach(year => {
       const opt = document.createElement('option');
       opt.value = String(year);
       const shortYear = String(year).slice(-2);
-      opt.innerText = `ปีงบประมาณ ${year} (ปีงบ ${shortYear})`;
+      opt.innerText = `ปี ${year} (ปีงบ ${shortYear})`;
       selectEl.appendChild(opt);
     });
 
@@ -4250,14 +4250,14 @@ function openDisposalReportModal() {
     selectEl.innerHTML = '';
     const optAll = document.createElement('option');
     optAll.value = 'all';
-    optAll.innerText = 'ทุกปีงบประมาณ (รายการที่ขอจำหน่ายทั้งหมด)';
+    optAll.innerText = 'ทุกปีงบ (ขอจำหน่ายทั้งหมด)';
     selectEl.appendChild(optAll);
 
     availableYears.forEach(year => {
       const opt = document.createElement('option');
       opt.value = String(year);
       const shortYear = String(year).slice(-2);
-      opt.innerText = `ปีงบประมาณ ${year} (ปีงบ ${shortYear})`;
+      opt.innerText = `ปี ${year} (ปีงบ ${shortYear})`;
       selectEl.appendChild(opt);
     });
     selectEl.value = 'all';
