@@ -3498,7 +3498,7 @@ function updateMaterialSelectionUI() {
   }
 
   if (btnPrintText) {
-    btnPrintText.innerText = count > 0 ? `พิมพ์บัญชีคุมวัสดุ (${count} รายการ)` : 'พิมพ์บัญชีคุมวัสดุ (PDF)';
+    btnPrintText.innerText = count > 0 ? `พิมพ์บัญชีคุมวัสดุ (${count} รายการ)` : 'พิมพ์บัญชีคุมวัสดุ';
   }
 
   if (selectAllChk) {
