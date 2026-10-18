@@ -232,6 +232,7 @@ function invalidateMaterialCache() {
 
 const userMemoryCache = new Map();
 const USER_CACHE_TTL_MS = 30 * 1000; // แคชสิทธิ์ผู้ใช้ 30 วินาที
+const userActiveSessionsCache = new Map(); // แคช Session ID ล่าสุดของแต่ละ username ป้องกันล็อกอินซ้ำซ้อน
 
 function invalidateUserCache(userId = null) {
   if (userId) userMemoryCache.delete(String(userId));
@@ -789,42 +790,18 @@ const dbService = {
     let user = await this.getUserByUsername(targetUsername);
 
     if (!user) {
-      if (targetUsername === 'admin') {
-        const isValid = await this.checkPassword(pass);
-        if (isValid) {
-          seedAdminUser();
-          user = await this.getUserByUsername('admin');
-        }
-      }
-      if (!user) {
-        return { success: false, error: 'ไม่พบชื่อผู้ใช้งานนี้ในระบบ' };
-      }
+      return { success: false, error: 'ไม่พบชื่อผู้ใช้งานนี้ในระบบ' };
     }
 
     const inputHash = hashPassword(pass);
-    const plainMap = await this.getPlainPasswordMap();
-    const storedPlain = user.password_plain || plainMap[(user.username || '').toLowerCase()] || '';
-    const isPlainMatch = (user.password_hash === pass) || (storedPlain && storedPlain === pass);
+    const isHashMatch = (user.password_hash === inputHash);
+    const isPlainMatch = (user.password_hash === pass) || (user.password_plain && user.password_plain === pass);
 
-    let isAdminSpecialMatch = false;
-    if (user.username === 'admin') {
-      if (pass === '123456789' || pass === '123456' || pass === DEFAULT_PASS) {
-        isAdminSpecialMatch = true;
-      }
+    if (!isHashMatch && !isPlainMatch) {
+      return { success: false, error: 'รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง' };
     }
 
-    if (user.password_hash !== inputHash && !isPlainMatch && !isAdminSpecialMatch) {
-      if (user.username === 'admin') {
-        const isLegacyValid = await this.checkPassword(pass);
-        if (isLegacyValid) {
-          await this.updateUserPassword(user.id, pass);
-        } else {
-          return { success: false, error: 'รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง' };
-        }
-      } else {
-        return { success: false, error: 'รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง' };
-      }
-    } else if ((isPlainMatch || isAdminSpecialMatch) && user.password_hash !== inputHash) {
+    if (isPlainMatch && !isHashMatch) {
       // แปลงเป็น Salted Hash อัตโนมัติและบันทึกรหัสใหม่
       try {
         await this.updateUserPassword(user.id, pass);
@@ -839,7 +816,7 @@ const dbService = {
       return { success: false, error: 'บัญชีนี้ถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ' };
     }
 
-    const token = this.createSession(user);
+    const token = await this.createSession(user);
     return {
       success: true,
       token,
@@ -857,7 +834,7 @@ const dbService = {
     };
   },
 
-  createSession(user = null) {
+  async createSession(user = null) {
     if (!user) {
       user = {
         id: 1,
@@ -870,9 +847,21 @@ const dbService = {
         can_add: 1
       };
     }
+
+    // สร้าง Unique Session ID สำหรับการล็อกอินครั้งนี้
+    const sessionId = (crypto.randomUUID ? crypto.randomUUID() : (Date.now() + '_' + Math.random().toString(36).slice(2)));
+    const cleanUsername = (user.username || '').toLowerCase();
+
+    // บันทึก Session ID ล่าสุดลงหน่วยความจำ และฐานข้อมูล (เมื่ออุปกรณ์อื่นล็อกอิน Session ID จะถูกแทนที่ ทำให้อุปกรณ์เดิมถูกเตะออก)
+    userActiveSessionsCache.set(cleanUsername, sessionId);
+    try {
+      await this.setSetting('active_session_' + cleanUsername, sessionId);
+    } catch (e) {}
+
     const payload = {
       id: user.id,
       username: user.username,
+      sessionId,
       fullName: user.full_name,
       position: user.position || '',
       role: user.role || 'user',
@@ -897,58 +886,59 @@ const dbService = {
     const [payloadStr, sig] = parts;
 
     const expectedSig = crypto.createHmac('sha256', JWT_SECRET).update(payloadStr).digest('base64url');
-    if (sig === expectedSig) {
-      try {
-        const payload = JSON.parse(Buffer.from(payloadStr, 'base64url').toString('utf8'));
-        const maxAge = 30 * 24 * 60 * 60 * 1000;
-        if (Date.now() - payload.iat > maxAge) return null;
-
-        const user = await this.getUserById(payload.id);
-        if (!user || user.status !== 'active') return null;
-
-        return {
-          id: user.id,
-          username: user.username,
-          fullName: user.full_name,
-          position: user.position || '',
-          role: user.role,
-          canEdit: user.role === 'admin' ? true : (Number(user.can_edit) === 1),
-          canDelete: user.role === 'admin' ? true : (Number(user.can_delete) === 1),
-          canAdd: user.role === 'admin' ? true : (Number(user.can_add) === 1),
-          status: user.status
-        };
-      } catch (e) {
-        return null;
-      }
+    if (sig !== expectedSig) {
+      return null;
     }
 
-    const timeStr = payloadStr;
-    const timestamp = parseInt(timeStr, 10);
-    if (!isNaN(timestamp)) {
+    try {
+      const payload = JSON.parse(Buffer.from(payloadStr, 'base64url').toString('utf8'));
       const maxAge = 30 * 24 * 60 * 60 * 1000;
-      if (Date.now() - timestamp <= maxAge && timestamp <= Date.now() + 60000) {
-        const adminHash = await this.getAdminHash();
-        const legacySig = crypto.createHmac('sha256', adminHash).update(timeStr).digest('hex');
-        if (sig === legacySig) {
-          const admin = await this.getUserByUsername('admin');
-          if (admin && admin.status === 'active') {
-            return {
-              id: admin.id,
-              username: admin.username,
-              fullName: admin.full_name,
-              position: admin.position || '',
-              role: 'admin',
-              canEdit: true,
-              canDelete: true,
-              canAdd: true,
-              status: 'active'
-            };
+      if (Date.now() - payload.iat > maxAge) return null;
+
+      const user = await this.getUserById(payload.id);
+      if (!user || user.status !== 'active') return null;
+
+      const cleanUsername = (user.username || '').toLowerCase();
+
+      // ตรวจสอบความถูกต้องของ Session ID: หากมีเซสชันใหม่กว่าเข้ามา ให้เตะเซสชันนี้ออกทันที
+      if (payload.sessionId) {
+        let activeSessionId = userActiveSessionsCache.get(cleanUsername);
+        if (!activeSessionId) {
+          activeSessionId = await this.getSetting('active_session_' + cleanUsername);
+          if (activeSessionId) {
+            userActiveSessionsCache.set(cleanUsername, activeSessionId);
           }
         }
-      }
-    }
 
-    return null;
+        if (activeSessionId && activeSessionId !== payload.sessionId) {
+          return { kicked: true, username: user.username };
+        }
+      }
+
+      return {
+        id: user.id,
+        username: user.username,
+        fullName: user.full_name,
+        position: user.position || '',
+        role: user.role,
+        canEdit: user.role === 'admin' ? true : (Number(user.can_edit) === 1),
+        canDelete: user.role === 'admin' ? true : (Number(user.can_delete) === 1),
+        canAdd: user.role === 'admin' ? true : (Number(user.can_add) === 1),
+        status: user.status
+      };
+    } catch (e) {
+      return null;
+    }
+  },
+
+  async revokeUserSessions(username) {
+    if (!username) return;
+    const cleanUsername = username.toLowerCase();
+    const revokedId = 'revoked_' + Date.now();
+    userActiveSessionsCache.set(cleanUsername, revokedId);
+    try {
+      await this.setSetting('active_session_' + cleanUsername, revokedId);
+    } catch (e) {}
   },
 
   removeSession(token) {

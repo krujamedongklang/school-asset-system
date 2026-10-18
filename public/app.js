@@ -169,9 +169,22 @@ async function authFetch(url, options = {}) {
   }
   const res = await fetch(url, { ...options, headers });
   if (res.status === 401) {
-    // ถ้าเซสชันหมดอายุหรือไม่ได้รับอนุญาต
+    let isKicked = false;
+    let errMsg = '';
+    try {
+      const cloned = res.clone();
+      const errData = await cloned.json();
+      isKicked = !!errData.kicked;
+      errMsg = errData.error || '';
+    } catch (e) {}
+
     setAuthToken('');
+    currentUser = null;
     showLoginOverlay();
+
+    if (isKicked || (errMsg && errMsg.includes('เข้าสู่ระบบซ้อน'))) {
+      alert('⚠️ มีผู้ใช้งานเข้าสู่ระบบด้วยบัญชีนี้จากอุปกรณ์อื่น\n\nระบบจำเป็นต้องนำคุณออกจากระบบบนอุปกรณ์นี้เพื่อความปลอดภัย');
+    }
   }
   return res;
 }
@@ -579,6 +592,42 @@ async function checkAuthAndInitialize() {
   });
 
   await Promise.all([verifyPromise, dataPromises]);
+
+  // เริ่มต้น Heartbeat ตรวจสอบเซสชันสม่ำเสมอทุก 15 วินาที เพื่อเตะออกทันทีหากมีผู้อื่นล็อกอินซ้อนในบัญชีเดียวกัน
+  if (!window._sessionHeartbeatTimer) {
+    window._sessionHeartbeatTimer = setInterval(async () => {
+      const token = getAuthToken();
+      if (!token) return;
+      try {
+        const res = await fetch('/api/auth/verify', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.status === 401) {
+          let isKicked = false;
+          try {
+            const d = await res.json();
+            isKicked = !!d.kicked;
+          } catch (e) {}
+          setAuthToken('');
+          currentUser = null;
+          showLoginOverlay();
+          if (isKicked) {
+            alert('⚠️ มีผู้ใช้งานเข้าสู่ระบบด้วยบัญชีนี้จากอุปกรณ์อื่น\n\nระบบจำเป็นต้องนำคุณออกจากระบบบนอุปกรณ์นี้เพื่อความปลอดภัย');
+          }
+        } else if (res.ok) {
+          const d = await res.json();
+          if (d.authenticated === false) {
+            setAuthToken('');
+            currentUser = null;
+            showLoginOverlay();
+            if (d.kicked) {
+              alert('⚠️ มีผู้ใช้งานเข้าสู่ระบบด้วยบัญชีนี้จากอุปกรณ์อื่น\n\nระบบจำเป็นต้องนำคุณออกจากระบบบนอุปกรณ์นี้เพื่อความปลอดภัย');
+            }
+          }
+        }
+      } catch (e) {}
+    }, 15000);
+  }
 }
 
 // ==================== เปลี่ยนรหัสผ่าน ====================
@@ -612,6 +661,9 @@ async function handleChangePassword(e) {
     const data = await res.json();
 
     if (res.ok && data.success) {
+      if (data.token) {
+        setAuthToken(data.token);
+      }
       msgEl.textContent = '✅ ' + (data.message || 'เปลี่ยนรหัสผ่านเรียบร้อยแล้ว');
       msgEl.className = 'text-xs p-2.5 rounded-xl text-center font-medium bg-emerald-50 text-emerald-800 border border-emerald-200';
       document.getElementById('inp-current-pass').value = '';

@@ -62,8 +62,12 @@ async function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
   const user = await db.verifySession(token);
-  if (!user) {
-    return res.status(401).json({ error: 'กรุณาเข้าสู่ระบบก่อนดำเนินการ' });
+  if (!user || user.kicked) {
+    const isKicked = !!(user && user.kicked);
+    const message = isKicked
+      ? 'มีผู้อื่นเข้าสู่ระบบด้วยบัญชีนี้จากอุปกรณ์อื่นแล้ว ระบบจึงออกจากระบบบนอุปกรณ์นี้'
+      : 'กรุณาเข้าสู่ระบบก่อนดำเนินการ';
+    return res.status(401).json({ error: message, kicked: isKicked });
   }
   req.user = user;
   next();
@@ -175,10 +179,15 @@ app.get('/api/auth/verify', async (req, res) => {
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
   const user = await db.verifySession(token);
-  if (user) {
+  if (user && !user.kicked) {
     res.json({ authenticated: true, user });
   } else {
-    res.json({ authenticated: false });
+    const isKicked = !!(user && user.kicked);
+    res.status(isKicked ? 401 : 200).json({
+      authenticated: false,
+      kicked: isKicked,
+      error: isKicked ? 'มีผู้อื่นเข้าสู่ระบบด้วยบัญชีนี้จากอุปกรณ์อื่นแล้ว ระบบจึงออกจากระบบบนอุปกรณ์นี้' : 'เซสชันหมดอายุ'
+    });
   }
 });
 
@@ -195,20 +204,47 @@ app.post('/api/auth/change-password', requireAuth, async (req, res) => {
   const user = await db.getUserById(req.user.id);
   if (!user) return res.status(404).json({ error: 'ไม่พบบัญชีผู้ใช้งาน' });
 
-  const isCurrentValid = (user.password_hash === db.hashPassword(currentPassword)) || (user.password_hash === currentPassword);
+  const inputHash = db.hashPassword(currentPassword);
+  const isCurrentValid = (user.password_hash === inputHash) ||
+                         (user.password_hash === currentPassword) ||
+                         (user.password_plain && user.password_plain === currentPassword);
   if (!isCurrentValid) {
     return res.status(401).json({ error: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' });
   }
 
   await db.updateUserPassword(user.id, newPassword);
-  res.json({ success: true, message: 'เปลี่ยนรหัสผ่านสำเร็จเรียบร้อยแล้ว' });
+
+  // ออก Token เซสชันใหม่สำหรับอุปกรณ์ปัจจุบัน และตัดสิทธิ์อุปกรณ์เดิมทั้งหมดทันที
+  const updatedUser = await db.getUserById(user.id);
+  const newToken = await db.createSession(updatedUser);
+
+  await recordAudit(req, {
+    action: 'CHANGE_PASSWORD',
+    entityType: 'user',
+    entityId: user.id,
+    entityName: user.full_name || user.username,
+    details: `เปลี่ยนรหัสผ่านสำเร็จ (Username: ${user.username})`
+  });
+
+  res.json({ success: true, message: 'เปลี่ยนรหัสผ่านสำเร็จเรียบร้อยแล้ว', token: newToken });
 });
 
 // ออกจากระบบ
-app.post('/api/auth/logout', (req, res) => {
+app.post('/api/auth/logout', async (req, res) => {
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  db.removeSession(token);
+  if (token) {
+    db.removeSession(token);
+    try {
+      const parts = token.split('.');
+      if (parts.length === 2) {
+        const payload = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8'));
+        if (payload && payload.username) {
+          await db.revokeUserSessions(payload.username);
+        }
+      }
+    } catch (e) {}
+  }
   res.json({ success: true, message: 'ออกจากระบบเรียบร้อยแล้ว' });
 });
 
@@ -264,6 +300,9 @@ app.put('/api/admin/users/:id/reset-password', requireAuth, requireAdmin, async 
     const users = await db.getUsers(true);
     const targetUser = users.find(u => String(u.id) === String(req.params.id));
     await db.updateUserPassword(req.params.id, newPassword);
+    if (targetUser && targetUser.username) {
+      await db.revokeUserSessions(targetUser.username);
+    }
 
     await recordAudit(req, {
       action: 'RESET_PASSWORD',
